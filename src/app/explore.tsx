@@ -1,180 +1,246 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  BookOpen,
+  ChevronRight,
+  Filter,
+  Flame,
+  Globe,
+  Search,
+  Shield,
+  Star,
+  Swords,
+  Users,
+} from 'lucide-react-native';
+import { useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ExternalLink } from '@/components/external-link';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'vietnam', label: 'Việt Nam' },
+  { id: 'world', label: 'Thế giới' },
+  { id: 'war', label: 'Chiến tranh' },
+  { id: 'culture', label: 'Văn hoá' },
+  { id: 'people', label: 'Nhân vật' },
+] as const;
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
+type CategoryId = (typeof CATEGORIES)[number]['id'];
 
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
+const TOPICS = [
+  {
+    id: '1',
+    title: 'Kháng chiến chống Mỹ',
+    desc: 'Cuộc chiến tranh giải phóng dân tộc 1954–1975',
+    category: 'vietnam',
+    icon: Shield,
+    color: '#EFF6FF',
+    iconColor: '#3B82F6',
+    hot: true,
+  },
+  {
+    id: '2',
+    title: 'Chiến tranh Thế giới II',
+    desc: 'Xung đột toàn cầu lớn nhất lịch sử loài người',
+    category: 'war',
+    icon: Swords,
+    color: '#FEF3C7',
+    iconColor: '#D97706',
+    hot: true,
+  },
+  {
+    id: '3',
+    title: 'Triều đại nhà Nguyễn',
+    desc: 'Triều đại phong kiến cuối cùng của Việt Nam',
+    category: 'vietnam',
+    icon: Star,
+    color: '#FDF4FF',
+    iconColor: '#A855F7',
+    hot: false,
+  },
+  {
+    id: '4',
+    title: 'Đế chế Mông Cổ',
+    desc: 'Đế quốc lớn nhất trong lịch sử thế giới',
+    category: 'world',
+    icon: Globe,
+    color: '#ECFDF5',
+    iconColor: '#10B981',
+    hot: false,
+  },
+  {
+    id: '5',
+    title: 'Cách mạng tháng Tám',
+    desc: 'Sự kiện lịch sử trọng đại năm 1945',
+    category: 'vietnam',
+    icon: Flame,
+    color: '#FEF2F2',
+    iconColor: '#EF4444',
+    hot: true,
+  },
+  {
+    id: '6',
+    title: 'Văn hoá Đông Sơn',
+    desc: 'Nền văn minh cổ đại trên lãnh thổ Việt Nam',
+    category: 'culture',
+    icon: BookOpen,
+    color: '#F0FDF4',
+    iconColor: '#22C55E',
+    hot: false,
+  },
+  {
+    id: '7',
+    title: 'Danh nhân thế giới',
+    desc: 'Những nhân vật thay đổi dòng chảy lịch sử',
+    category: 'people',
+    icon: Users,
+    color: '#F0F9FF',
+    iconColor: '#0EA5E9',
+    hot: false,
+  },
+  {
+    id: '8',
+    title: 'Chiến tranh Lạnh',
+    desc: 'Cuộc đối đầu Mỹ – Xô sau WWII',
+    category: 'war',
+    icon: Swords,
+    color: '#F8FAFC',
+    iconColor: '#64748B',
+    hot: false,
+  },
+] as const;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function ExploreScreen() {
+  const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+
+  const filtered = TOPICS.filter((t) => {
+    const matchCat = activeCategory === 'all' || t.category === activeCategory;
+    const matchQ =
+      query.trim() === '' ||
+      t.title.toLowerCase().includes(query.toLowerCase()) ||
+      t.desc.toLowerCase().includes(query.toLowerCase());
+    return matchCat && matchQ;
   });
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      {/* ── Header ──────────────────────────────────────────── */}
+      <View className="px-5 pt-4 pb-3">
+        <Text className="text-xl font-bold text-gray-900 mb-4">Khám phá</Text>
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
-            </Pressable>
-          </ExternalLink>
-        </ThemedView>
+        {/* Search bar */}
+        <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 h-12 gap-3">
+          <Search size={18} color="#9CA3AF" />
+          <TextInput
+            className="flex-1 text-gray-900 text-sm"
+            placeholder="Tìm kiếm chủ đề lịch sử..."
+            placeholderTextColor="#9CA3AF"
+            value={query}
+            onChangeText={setQuery}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
+              <Text className="text-gray-400 text-base">✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+      {/* ── Category tabs ───────────────────────────────────── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="px-5 gap-2 pb-4"
+      >
+        {CATEGORIES.map(({ id, label }) => (
+          <Pressable
+            key={id}
+            onPress={() => setActiveCategory(id)}
+            className={`px-4 py-2 rounded-full ${
+              activeCategory === id ? 'bg-primary-500' : 'bg-gray-100'
+            }`}
+          >
+            <Text
+              className={`text-sm font-medium ${
+                activeCategory === id ? 'text-white' : 'text-gray-600'
+              }`}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
 
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
+      {/* ── Results count + filter ───────────────────────────── */}
+      <View className="flex-row items-center justify-between px-5 mb-3">
+        <Text className="text-sm text-gray-500">
+          {filtered.length} chủ đề
+        </Text>
+        <TouchableOpacity className="flex-row items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5">
+          <Filter size={13} color="#6B7280" />
+          <Text className="text-xs text-gray-600 font-medium">Lọc</Text>
+        </TouchableOpacity>
+      </View>
 
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+      {/* ── Topic list ──────────────────────────────────────── */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="px-5 gap-3 pb-28"
+      >
+        {filtered.length === 0 ? (
+          <View className="items-center py-16 gap-3">
+            <Search size={40} color="#D1D5DB" />
+            <Text className="text-gray-400 text-sm text-center">
+              Không tìm thấy kết quả phù hợp.{'\n'}Thử từ khóa khác nhé!
+            </Text>
+          </View>
+        ) : (
+          filtered.map(({ id, title, desc, icon: Icon, color, iconColor, hot }) => (
+            <TouchableOpacity
+              key={id}
+              className="flex-row items-center bg-white border border-gray-100 rounded-2xl p-4 gap-4"
+              style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
+              activeOpacity={0.8}
+            >
+              {/* Icon */}
+              <View
+                className="w-14 h-14 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: color }}
+              >
+                <Icon size={24} color={iconColor} />
+              </View>
 
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+              {/* Text */}
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-sm font-semibold text-gray-900" numberOfLines={1}>
+                    {title}
+                  </Text>
+                  {hot && (
+                    <View className="bg-red-100 rounded-full px-2 py-0.5">
+                      <Text className="text-red-500 text-xs font-medium">HOT</Text>
+                    </View>
+                  )}
+                </View>
+                <Text className="text-xs text-gray-500 leading-4" numberOfLines={2}>
+                  {desc}
+                </Text>
+              </View>
 
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+              <ChevronRight size={16} color="#D1D5DB" />
+            </TouchableOpacity>
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
-  },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
-  },
-  centerText: {
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
-  },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-  },
-});
