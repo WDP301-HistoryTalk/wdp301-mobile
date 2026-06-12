@@ -12,8 +12,8 @@ const Skeleton = ({ radius = 12, style }: SkeletonProps) => {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.45, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: false }),
+        Animated.timing(opacity, { toValue: 0.45, duration: 750, useNativeDriver: false }),
       ])
     );
     loop.start();

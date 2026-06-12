@@ -1,11 +1,11 @@
 import { Link, Slot, usePathname } from 'expo-router';
-import { Compass, House, Users } from 'lucide-react-native';
+import { BookOpen, House, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const TABS = [
-  { href: '/',           label: 'Trang chủ', icon: House   },
-  { href: '/characters', label: 'Nhân vật',  icon: Users   },
-  { href: '/explore',    label: 'Khám phá',  icon: Compass },
+  { href: '/',           label: 'Trang chủ', icon: House    },
+  { href: '/characters', label: 'Nhân vật',  icon: Users    },
+  { href: '/context',    label: 'Bối cảnh',  icon: BookOpen },
 ] as const;
 
 const ORANGE   = '#EA580C';
@@ -21,28 +21,32 @@ export default function AppTabs() {
         <Slot />
       </View>
 
-      {/* Bottom tab bar — pinned flush to bottom edge */}
+      {/* Bottom tab bar */}
       <View style={styles.bar}>
-        {TABS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
-          return (
-            <Link key={href} href={href} asChild>
-              <Pressable
-                style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.65 }]}
-              >
-                <Icon
-                  size={22}
-                  color={active ? ORANGE : INACTIVE}
-                  strokeWidth={active ? 2.5 : 1.75}
-                />
-                <Text style={[styles.tabLabel, { color: active ? ORANGE : INACTIVE }]}>
-                  {label}
-                </Text>
-                {active && <View style={styles.activeDot} />}
-              </Pressable>
-            </Link>
-          );
-        })}
+        <View style={styles.inner}>
+          {TABS.map(({ href, label, icon: Icon }) => {
+            const active = href === '/'
+              ? pathname === '/'
+              : pathname === href || pathname.startsWith(href + '/');
+            return (
+              <Link key={href} href={href} asChild>
+                <Pressable
+                  style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.65 }]}
+                >
+                  <Icon
+                    size={22}
+                    color={active ? ORANGE : INACTIVE}
+                    strokeWidth={active ? 2.5 : 1.75}
+                  />
+                  <Text style={[styles.tabLabel, { color: active ? ORANGE : INACTIVE }]}>
+                    {label}
+                  </Text>
+                  {active && <View style={styles.activeDot} />}
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -62,17 +66,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TAB_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.1)',
     paddingTop: 10,
     paddingBottom: 20,
-    paddingHorizontal: 8,
     zIndex: 200,
   },
+  inner: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+  },
   tabItem: {
-    flex: 1,
+    width: 96,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,

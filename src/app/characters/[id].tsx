@@ -213,23 +213,27 @@ export default function CharacterDetailScreen() {
             <Section title="Bối cảnh lịch sử">
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {char.contexts.map((ctx) => (
-                  <HStack
+                  <TouchableOpacity
                     key={ctx.contextId}
-                    space="xs"
+                    onPress={() => router.push({ pathname: '/context/[id]', params: { id: ctx.contextId } })}
+                    activeOpacity={0.7}
                     style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
                       backgroundColor: '#27272a',
                       borderRadius: 10,
                       paddingHorizontal: 12,
                       paddingVertical: 7,
                       borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.07)',
+                      borderColor: 'rgba(234,88,12,0.2)',
                     }}
                   >
-                    <MapPin size={11} color="#71717a" />
-                    <Text size="xs" className="text-zinc-300 font-medium">
+                    <MapPin size={11} color="#EA580C" />
+                    <Text size="xs" className="text-zinc-200 font-medium">
                       {ctx.name}
                     </Text>
-                  </HStack>
+                  </TouchableOpacity>
                 ))}
               </View>
             </Section>

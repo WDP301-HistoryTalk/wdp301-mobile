@@ -238,7 +238,7 @@ export default function CharactersScreen() {
         renderItem={({ item }) => (
           <CharacterCard
             item={item}
-            onPress={() => router.push(`/characters/${item.id}`)}
+            onPress={() => router.push({ pathname: '/characters/[id]', params: { id: item.id } })}
           />
         )}
         ListHeaderComponent={

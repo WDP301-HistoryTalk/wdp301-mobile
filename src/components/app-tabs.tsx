@@ -28,8 +28,8 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Khám phá</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="context">
+        <NativeTabs.Trigger.Label>Bối cảnh</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/logo.png')}
           renderingMode="template"
