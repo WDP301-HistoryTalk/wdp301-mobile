@@ -1,11 +1,12 @@
 import { Link, Slot, usePathname } from 'expo-router';
-import { BookOpen, House, Users } from 'lucide-react-native';
+import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const TABS = [
   { href: '/',           label: 'Trang chủ', icon: House    },
   { href: '/characters', label: 'Nhân vật',  icon: Users    },
   { href: '/context',    label: 'Bối cảnh',  icon: BookOpen },
+  { href: '/quiz',       label: 'Quiz',       icon: Trophy   },
 ] as const;
 
 const ORANGE   = '#EA580C';
@@ -17,31 +18,38 @@ export default function AppTabs() {
 
   return (
     <View style={styles.root}>
+      {/* Content fills remaining space above the bar */}
       <View style={styles.content}>
         <Slot />
       </View>
 
-      {/* Bottom tab bar */}
+      {/* Tab bar — normal flow, never overlaps content */}
       <View style={styles.bar}>
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === '/'
               ? pathname === '/'
               : pathname === href || pathname.startsWith(href + '/');
+
             return (
               <Link key={href} href={href} asChild>
                 <Pressable
-                  style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.65 }]}
+                  style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.6 }]}
                 >
-                  <Icon
-                    size={22}
-                    color={active ? ORANGE : INACTIVE}
-                    strokeWidth={active ? 2.5 : 1.75}
-                  />
+                  {/* Fixed-height pill slot — always present, transparent when inactive */}
+                  <View style={[styles.pill, { backgroundColor: active ? ORANGE : 'transparent' }]} />
+
+                  <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
+                    <Icon
+                      size={22}
+                      color={active ? ORANGE : INACTIVE}
+                      strokeWidth={active ? 2.4 : 1.75}
+                    />
+                  </View>
+
                   <Text style={[styles.tabLabel, { color: active ? ORANGE : INACTIVE }]}>
                     {label}
                   </Text>
-                  {active && <View style={styles.activeDot} />}
                 </Pressable>
               </Link>
             );
@@ -59,44 +67,52 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    // @ts-ignore
+    overflow: 'hidden',
   },
   bar: {
-    // @ts-ignore — position: fixed is valid in Expo / RN Web
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
     backgroundColor: TAB_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: 10,
+    borderTopColor: 'rgba(255,255,255,0.08)',
     paddingBottom: 20,
-    zIndex: 200,
   },
   inner: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
   },
+
   tabItem: {
-    width: 96,
+    width: 88,
+    paddingHorizontal: 6,
+    paddingTop: 0,
+    paddingBottom: 4,
+    alignItems: 'center',
+    gap: 5,
+  },
+
+  /* Fixed-height slot so ALL tabs take identical vertical space */
+  pill: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 6,
+  },
+
+  iconWrap: {
+    width: 44,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    gap: 3,
   },
+  iconWrapActive: {
+    backgroundColor: 'rgba(234,88,12,0.12)',
+  },
+
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.2,
-  },
-  activeDot: {
-    position: 'absolute',
-    top: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ORANGE,
+    textAlign: 'center',
   },
 });

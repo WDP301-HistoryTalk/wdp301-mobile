@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Calendar, MapPin, Trophy } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Badge, BadgeText } from '@/components/ui/badge';
@@ -194,12 +194,13 @@ export default function ContextDetailScreen() {
                     width: 32, height: 32, borderRadius: 9,
                     backgroundColor: 'rgba(168,85,247,0.15)',
                     alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
                   }}>
                     <Text style={{ fontSize: 14 }}>⏳</Text>
                   </View>
-                  <VStack space="xs">
+                  <VStack space="xs" style={{ flex: 1, minWidth: 0 }}>
                     <Text size="2xs" muted bold className="uppercase tracking-widest">Giai đoạn</Text>
-                    <Text size="sm" bold>{ctx.period}</Text>
+                    <Text size="sm" bold numberOfLines={1} ellipsizeMode="tail">{ctx.period}</Text>
                   </VStack>
                 </HStack>
               ) : null}
@@ -209,12 +210,13 @@ export default function ContextDetailScreen() {
                     width: 32, height: 32, borderRadius: 9,
                     backgroundColor: 'rgba(16,185,129,0.15)',
                     alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
                   }}>
                     <MapPin size={14} color="#10B981" />
                   </View>
-                  <VStack space="xs">
+                  <VStack space="xs" style={{ flex: 1, minWidth: 0 }}>
                     <Text size="2xs" muted bold className="uppercase tracking-widest">Địa điểm</Text>
-                    <Text size="sm" bold>{ctx.location}</Text>
+                    <Text size="sm" bold numberOfLines={1} ellipsizeMode="tail">{ctx.location}</Text>
                   </VStack>
                 </HStack>
               ) : null}
@@ -243,8 +245,40 @@ export default function ContextDetailScreen() {
             </Section>
           ) : null}
 
+          {/* Quiz banner */}
+          <TouchableOpacity
+            onPress={() => router.push('/quiz')}
+            activeOpacity={0.85}
+            style={quizStyles.banner}
+          >
+            <View style={quizStyles.bannerIconWrap}>
+              <Trophy size={26} color="#EA580C" strokeWidth={1.75} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={quizStyles.bannerTitle}>Kiểm tra kiến thức</Text>
+              <Text style={quizStyles.bannerSub}>Làm bộ câu hỏi liên quan đến giai đoạn này</Text>
+            </View>
+            <Text style={{ color: '#EA580C', fontSize: 20, fontWeight: '300', marginLeft: 8 }}>›</Text>
+          </TouchableOpacity>
+
         </VStack>
       </ScrollView>
     </View>
   );
 }
+
+const quizStyles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: 'rgba(234,88,12,0.08)',
+    borderRadius: 18, borderWidth: 1, borderColor: 'rgba(234,88,12,0.25)',
+    padding: 16, marginBottom: 16,
+  },
+  bannerIconWrap: {
+    width: 50, height: 50, borderRadius: 14,
+    backgroundColor: 'rgba(234,88,12,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bannerTitle: { color: '#f4f4f5', fontSize: 15, fontWeight: '700', marginBottom: 3 },
+  bannerSub:   { color: '#71717a', fontSize: 12, lineHeight: 17 },
+});
