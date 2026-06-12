@@ -1,13 +1,15 @@
+import * as SecureStore from 'expo-secure-store';
+
 async function getItemAsync(key: string): Promise<string | null> {
-  try { return localStorage.getItem(key); } catch { return null; }
+  return SecureStore.getItemAsync(key);
 }
 
 async function setItemAsync(key: string, value: string): Promise<void> {
-  try { localStorage.setItem(key, value); } catch { /* ignore */ }
+  return SecureStore.setItemAsync(key, value);
 }
 
 async function deleteItemAsync(key: string): Promise<void> {
-  try { localStorage.removeItem(key); } catch { /* ignore */ }
+  return SecureStore.deleteItemAsync(key);
 }
 
 export const secureStorage = { getItemAsync, setItemAsync, deleteItemAsync };

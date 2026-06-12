@@ -40,7 +40,7 @@ const TOPICS = [
     desc: 'Cuộc chiến tranh giải phóng dân tộc 1954–1975',
     category: 'vietnam',
     icon: Shield,
-    color: '#EFF6FF',
+    color: 'rgba(59, 130, 246, 0.15)',
     iconColor: '#3B82F6',
     hot: true,
   },
@@ -50,7 +50,7 @@ const TOPICS = [
     desc: 'Xung đột toàn cầu lớn nhất lịch sử loài người',
     category: 'war',
     icon: Swords,
-    color: '#FEF3C7',
+    color: 'rgba(217, 119, 6, 0.15)',
     iconColor: '#D97706',
     hot: true,
   },
@@ -60,7 +60,7 @@ const TOPICS = [
     desc: 'Triều đại phong kiến cuối cùng của Việt Nam',
     category: 'vietnam',
     icon: Star,
-    color: '#FDF4FF',
+    color: 'rgba(168, 85, 247, 0.15)',
     iconColor: '#A855F7',
     hot: false,
   },
@@ -70,7 +70,7 @@ const TOPICS = [
     desc: 'Đế quốc lớn nhất trong lịch sử thế giới',
     category: 'world',
     icon: Globe,
-    color: '#ECFDF5',
+    color: 'rgba(16, 185, 129, 0.15)',
     iconColor: '#10B981',
     hot: false,
   },
@@ -80,7 +80,7 @@ const TOPICS = [
     desc: 'Sự kiện lịch sử trọng đại năm 1945',
     category: 'vietnam',
     icon: Flame,
-    color: '#FEF2F2',
+    color: 'rgba(239, 68, 68, 0.15)',
     iconColor: '#EF4444',
     hot: true,
   },
@@ -90,7 +90,7 @@ const TOPICS = [
     desc: 'Nền văn minh cổ đại trên lãnh thổ Việt Nam',
     category: 'culture',
     icon: BookOpen,
-    color: '#F0FDF4',
+    color: 'rgba(34, 197, 94, 0.15)',
     iconColor: '#22C55E',
     hot: false,
   },
@@ -100,7 +100,7 @@ const TOPICS = [
     desc: 'Những nhân vật thay đổi dòng chảy lịch sử',
     category: 'people',
     icon: Users,
-    color: '#F0F9FF',
+    color: 'rgba(14, 165, 233, 0.15)',
     iconColor: '#0EA5E9',
     hot: false,
   },
@@ -110,7 +110,7 @@ const TOPICS = [
     desc: 'Cuộc đối đầu Mỹ – Xô sau WWII',
     category: 'war',
     icon: Swords,
-    color: '#F8FAFC',
+    color: 'rgba(100, 116, 139, 0.15)',
     iconColor: '#64748B',
     hot: false,
   },
@@ -131,25 +131,25 @@ export default function ExploreScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-zinc-950" edges={['top']}>
       {/* ── Header ──────────────────────────────────────────── */}
       <View className="px-5 pt-4 pb-3">
-        <Text className="text-xl font-bold text-gray-900 mb-4">Khám phá</Text>
+        <Text className="text-xl font-bold text-zinc-100 mb-4">Khám phá</Text>
 
         {/* Search bar */}
-        <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 h-12 gap-3">
-          <Search size={18} color="#9CA3AF" />
+        <View className="flex-row items-center bg-zinc-900 rounded-2xl px-4 h-12 gap-3">
+          <Search size={18} color="#71717a" />
           <TextInput
-            className="flex-1 text-gray-900 text-sm"
+            className="flex-1 text-zinc-100 text-sm"
             placeholder="Tìm kiếm chủ đề lịch sử..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#71717a"
             value={query}
             onChangeText={setQuery}
             returnKeyType="search"
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
-              <Text className="text-gray-400 text-base">✕</Text>
+              <Text className="text-zinc-400 text-base">✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -166,12 +166,12 @@ export default function ExploreScreen() {
             key={id}
             onPress={() => setActiveCategory(id)}
             className={`px-4 py-2 rounded-full ${
-              activeCategory === id ? 'bg-primary-500' : 'bg-gray-100'
+              activeCategory === id ? 'bg-primary-500' : 'bg-zinc-900'
             }`}
           >
             <Text
               className={`text-sm font-medium ${
-                activeCategory === id ? 'text-white' : 'text-gray-600'
+                activeCategory === id ? 'text-white' : 'text-zinc-400'
               }`}
             >
               {label}
@@ -182,12 +182,12 @@ export default function ExploreScreen() {
 
       {/* ── Results count + filter ───────────────────────────── */}
       <View className="flex-row items-center justify-between px-5 mb-3">
-        <Text className="text-sm text-gray-500">
+        <Text className="text-sm text-zinc-500">
           {filtered.length} chủ đề
         </Text>
-        <TouchableOpacity className="flex-row items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5">
-          <Filter size={13} color="#6B7280" />
-          <Text className="text-xs text-gray-600 font-medium">Lọc</Text>
+        <TouchableOpacity className="flex-row items-center gap-1.5 bg-zinc-900 rounded-full px-3 py-1.5">
+          <Filter size={13} color="#a1a1aa" />
+          <Text className="text-xs text-zinc-300 font-medium">Lọc</Text>
         </TouchableOpacity>
       </View>
 
@@ -198,8 +198,8 @@ export default function ExploreScreen() {
       >
         {filtered.length === 0 ? (
           <View className="items-center py-16 gap-3">
-            <Search size={40} color="#D1D5DB" />
-            <Text className="text-gray-400 text-sm text-center">
+            <Search size={40} color="#4b5563" />
+            <Text className="text-zinc-500 text-sm text-center">
               Không tìm thấy kết quả phù hợp.{'\n'}Thử từ khóa khác nhé!
             </Text>
           </View>
@@ -207,7 +207,7 @@ export default function ExploreScreen() {
           filtered.map(({ id, title, desc, icon: Icon, color, iconColor, hot }) => (
             <TouchableOpacity
               key={id}
-              className="flex-row items-center bg-white border border-gray-100 rounded-2xl p-4 gap-4"
+              className="flex-row items-center bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 gap-4"
               style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
               activeOpacity={0.8}
             >
@@ -222,21 +222,21 @@ export default function ExploreScreen() {
               {/* Text */}
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-sm font-semibold text-gray-900" numberOfLines={1}>
+                  <Text className="text-sm font-semibold text-zinc-100" numberOfLines={1}>
                     {title}
                   </Text>
                   {hot && (
-                    <View className="bg-red-100 rounded-full px-2 py-0.5">
-                      <Text className="text-red-500 text-xs font-medium">HOT</Text>
+                    <View className="bg-red-950/50 rounded-full px-2 py-0.5">
+                      <Text className="text-red-400 text-xs font-medium">HOT</Text>
                     </View>
                   )}
                 </View>
-                <Text className="text-xs text-gray-500 leading-4" numberOfLines={2}>
+                <Text className="text-xs text-zinc-400 leading-4" numberOfLines={2}>
                   {desc}
                 </Text>
               </View>
 
-              <ChevronRight size={16} color="#D1D5DB" />
+              <ChevronRight size={16} color="#4b5563" />
             </TouchableOpacity>
           ))
         )}

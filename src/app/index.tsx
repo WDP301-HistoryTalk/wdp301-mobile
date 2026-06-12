@@ -25,10 +25,10 @@ import { useAuthStore } from '@/features/auth/store';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { id: '1', label: 'Chat\nvới nhân vật', icon: MessageCircle, color: '#EFF6FF', iconColor: '#3B82F6' },
-  { id: '2', label: 'Khám\nphá sự kiện', icon: Compass, color: '#F0FDF4', iconColor: '#22C55E' },
-  { id: '3', label: 'Tìm\nkiếm chủ đề', icon: Search, color: '#FFF7ED', iconColor: '#F97316' },
-  { id: '4', label: 'Đọc\ntài liệu', icon: BookOpen, color: '#FDF4FF', iconColor: '#A855F7' },
+  { id: '1', label: 'Chat\nvới nhân vật', icon: MessageCircle, color: 'rgba(59, 130, 246, 0.15)', iconColor: '#3B82F6' },
+  { id: '2', label: 'Khám\nphá sự kiện', icon: Compass, color: 'rgba(34, 197, 94, 0.15)', iconColor: '#22C55E' },
+  { id: '3', label: 'Tìm\nkiếm chủ đề', icon: Search, color: 'rgba(249, 115, 22, 0.15)', iconColor: '#F97316' },
+  { id: '4', label: 'Đọc\ntài liệu', icon: BookOpen, color: 'rgba(168, 85, 247, 0.15)', iconColor: '#A855F7' },
 ] as const;
 
 const FEATURED_TOPICS = [
@@ -39,11 +39,11 @@ const FEATURED_TOPICS = [
 ] as const;
 
 const CHARACTERS = [
-  { id: '1', name: 'Hồ Chí Minh', era: 'TK. XX', emoji: '⭐', bg: '#FEF3C7' },
-  { id: '2', name: 'Nguyễn Huệ', era: 'TK. XVIII', emoji: '🔥', bg: '#FEE2E2' },
-  { id: '3', name: 'Hai Bà Trưng', era: 'TK. I SCN', emoji: '⚔️', bg: '#E0E7FF' },
-  { id: '4', name: 'Trần Hưng Đạo', era: 'TK. XIII', emoji: '🛡️', bg: '#D1FAE5' },
-  { id: '5', name: 'Napoleon', era: 'TK. XIX', emoji: '👑', bg: '#FCE7F3' },
+  { id: '1', name: 'Hồ Chí Minh', era: 'TK. XX', emoji: '⭐', bg: 'rgba(251, 191, 36, 0.15)' },
+  { id: '2', name: 'Nguyễn Huệ', era: 'TK. XVIII', emoji: '🔥', bg: 'rgba(239, 68, 68, 0.15)' },
+  { id: '3', name: 'Hai Bà Trưng', era: 'TK. I SCN', emoji: '⚔️', bg: 'rgba(99, 102, 241, 0.15)' },
+  { id: '4', name: 'Trần Hưng Đạo', era: 'TK. XIII', emoji: '🛡️', bg: 'rgba(16, 185, 129, 0.15)' },
+  { id: '5', name: 'Napoleon', era: 'TK. XIX', emoji: '👑', bg: 'rgba(236, 72, 153, 0.15)' },
 ] as const;
 
 const FILTER_TABS = ['Dành cho bạn', 'Phổ biến', 'Gần đây'] as const;
@@ -57,7 +57,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<FilterTab>('Dành cho bạn');
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-zinc-950" edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerClassName="pb-28"
@@ -70,25 +70,25 @@ export default function HomeScreen() {
               style={{ width: 32, height: 32 }}
               resizeMode="contain"
             />
-            <Text className="text-xl font-bold text-gray-900">Home</Text>
+            <Text className="text-xl font-bold text-zinc-100">Home</Text>
           </View>
           <View className="flex-row items-center gap-2">
-            <TouchableOpacity className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center">
-              <Bell size={18} color="#374151" />
+            <TouchableOpacity className="w-10 h-10 rounded-full bg-zinc-900 items-center justify-center">
+              <Bell size={18} color="#e4e4e7" />
             </TouchableOpacity>
             <TouchableOpacity
-              className="w-10 h-10 rounded-full bg-primary-50 items-center justify-center"
+              className="w-10 h-10 rounded-full bg-primary-950/40 items-center justify-center"
               onPress={() => {}}
             >
-              <User size={18} color="#208AEF" />
+              <User size={18} color="#FB923C" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* ── Greeting ──────────────────────────────────────── */}
         <View className="px-5 mb-4">
-          <Text className="text-sm text-gray-500">Chào mừng trở lại,</Text>
-          <Text className="text-base font-semibold text-gray-900">
+          <Text className="text-sm text-zinc-400">Chào mừng trở lại,</Text>
+          <Text className="text-base font-semibold text-zinc-100">
             {user?.userName ?? 'Học giả'} 👋
           </Text>
         </View>
@@ -104,12 +104,12 @@ export default function HomeScreen() {
               key={tab}
               onPress={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-full ${
-                activeTab === tab ? 'bg-gray-900' : 'bg-gray-100'
+                activeTab === tab ? 'bg-primary-500' : 'bg-zinc-900'
               }`}
             >
               <Text
                 className={`text-sm font-medium ${
-                  activeTab === tab ? 'text-white' : 'text-gray-600'
+                  activeTab === tab ? 'text-white' : 'text-zinc-400'
                 }`}
               >
                 {tab}
@@ -120,7 +120,7 @@ export default function HomeScreen() {
 
         {/* ── Quick actions ─────────────────────────────────── */}
         <View className="px-5 mb-7">
-          <Text className="text-base font-semibold text-gray-900 mb-4">
+          <Text className="text-base font-semibold text-zinc-100 mb-4">
             Khám phá &amp; học hỏi
           </Text>
           <View className="flex-row gap-3">
@@ -132,7 +132,7 @@ export default function HomeScreen() {
                 activeOpacity={0.8}
               >
                 <Icon size={22} color={iconColor} />
-                <Text className="text-xs text-gray-700 text-center leading-4">{label}</Text>
+                <Text className="text-xs text-zinc-300 text-center leading-4">{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -141,10 +141,10 @@ export default function HomeScreen() {
         {/* ── Featured topics (horizontal scroll) ───────────── */}
         <View className="mb-7">
           <View className="flex-row justify-between items-center px-5 mb-4">
-            <Text className="text-base font-semibold text-gray-900">Chủ đề nổi bật</Text>
+            <Text className="text-base font-semibold text-zinc-100">Chủ đề nổi bật</Text>
             <TouchableOpacity className="flex-row items-center gap-1">
               <Text className="text-primary-500 text-sm">Xem tất cả</Text>
-              <ChevronRight size={14} color="#208AEF" />
+              <ChevronRight size={14} color="#FB923C" />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -173,12 +173,12 @@ export default function HomeScreen() {
         <View className="mb-7">
           <View className="flex-row justify-between items-center px-5 mb-4">
             <View className="flex-row items-center gap-2">
-              <Sparkles size={16} color="#208AEF" />
-              <Text className="text-base font-semibold text-gray-900">Nhân vật lịch sử</Text>
+              <Sparkles size={16} color="#FB923C" />
+              <Text className="text-base font-semibold text-zinc-100">Nhân vật lịch sử</Text>
             </View>
             <TouchableOpacity className="flex-row items-center gap-1">
               <Text className="text-primary-500 text-sm">Tất cả</Text>
-              <ChevronRight size={14} color="#208AEF" />
+              <ChevronRight size={14} color="#FB923C" />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -198,10 +198,10 @@ export default function HomeScreen() {
                 >
                   <Text style={{ fontSize: 28 }}>{emoji}</Text>
                 </View>
-                <Text className="text-xs font-semibold text-gray-800 text-center leading-4">
+                <Text className="text-xs font-semibold text-zinc-200 text-center leading-4">
                   {name}
                 </Text>
-                <Text className="text-xs text-gray-400 mt-0.5">{era}</Text>
+                <Text className="text-xs text-zinc-500 mt-0.5">{era}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -211,15 +211,15 @@ export default function HomeScreen() {
         <View className="px-5">
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center gap-2">
-              <Clock size={16} color="#6B7280" />
-              <Text className="text-base font-semibold text-gray-900">Gần đây</Text>
+              <Clock size={16} color="#a1a1aa" />
+              <Text className="text-base font-semibold text-zinc-100">Gần đây</Text>
             </View>
           </View>
 
           {/* Empty state */}
-          <View className="bg-gray-50 rounded-2xl px-5 py-8 items-center gap-3">
-            <MessageCircle size={36} color="#D1D5DB" />
-            <Text className="text-gray-500 text-sm text-center">
+          <View className="bg-zinc-900/40 rounded-2xl px-5 py-8 items-center gap-3">
+            <MessageCircle size={36} color="#4b5563" />
+            <Text className="text-zinc-400 text-sm text-center">
               Bạn chưa có cuộc trò chuyện nào.{'\n'}Hãy bắt đầu chat với một nhân vật lịch sử!
             </Text>
             <TouchableOpacity className="mt-1 bg-primary-500 rounded-full px-5 py-2.5">
@@ -231,7 +231,7 @@ export default function HomeScreen() {
         {/* ── Dev: Logout button ────────────────────────────── */}
         {__DEV__ && (
           <TouchableOpacity
-            className="mx-5 mt-8 border border-red-200 rounded-xl py-3 items-center"
+            className="mx-5 mt-8 border border-red-900/50 rounded-xl py-3 items-center"
             onPress={() => void logout()}
           >
             <Text className="text-red-500 text-sm font-medium">DEV: Đăng xuất</Text>

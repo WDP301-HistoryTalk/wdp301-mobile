@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GoogleIcon } from '@/components/google-icon';
 import { useGoogleAuth } from '@/features/auth/hooks/use-google-auth';
 import { useLogin } from '@/features/auth/hooks/use-login';
 import { type LoginInput, loginSchema } from '@/features/auth/schemas';
@@ -40,7 +41,7 @@ export default function LoginScreen() {
   const errorMessage = login.error?.message ?? googleAuth.error?.message;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-zinc-950">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -60,34 +61,34 @@ export default function LoginScreen() {
           </View>
 
           {/* Heading */}
-          <Text className="text-2xl font-bold text-gray-900 mb-1">Đăng nhập</Text>
-          <Text className="text-gray-500 mb-8">Chào mừng bạn trở lại HistoryTalk!</Text>
+          <Text className="text-2xl font-bold text-zinc-100 mb-1">Đăng nhập</Text>
+          <Text className="text-zinc-400 mb-8">Chào mừng bạn trở lại HistoryTalk!</Text>
 
           {/* Error banner */}
           {errorMessage ? (
-            <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+            <View className="flex-row items-center gap-2 bg-red-950/40 border border-red-900 rounded-xl px-4 py-3 mb-5">
               <AlertCircle size={16} color="#EF4444" />
-              <Text className="text-red-600 text-sm flex-1">{errorMessage}</Text>
+              <Text className="text-red-400 text-sm flex-1">{errorMessage}</Text>
             </View>
           ) : null}
 
           {/* Email */}
           <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
+            <Text className="text-sm font-medium text-zinc-300 mb-2">Email</Text>
             <Controller
               control={control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <View
-                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-gray-50 ${
-                    errors.email ? 'border-red-400' : 'border-gray-200'
+                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-zinc-900/60 ${
+                    errors.email ? 'border-red-400' : 'border-zinc-800'
                   }`}
                 >
-                  <Mail size={18} color={errors.email ? '#EF4444' : '#9CA3AF'} />
+                  <Mail size={18} color={errors.email ? '#EF4444' : '#71717a'} />
                   <TextInput
-                    className="flex-1 ml-3 text-gray-900 text-base"
+                    className="flex-1 ml-3 text-zinc-100 text-base"
                     placeholder="your@email.com"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#71717a"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
@@ -105,21 +106,21 @@ export default function LoginScreen() {
 
           {/* Password */}
           <View className="mb-2">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Mật khẩu</Text>
+            <Text className="text-sm font-medium text-zinc-300 mb-2">Mật khẩu</Text>
             <Controller
               control={control}
               name="password"
               render={({ field: { onChange, onBlur, value } }) => (
                 <View
-                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-gray-50 ${
-                    errors.password ? 'border-red-400' : 'border-gray-200'
+                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-zinc-900/60 ${
+                    errors.password ? 'border-red-400' : 'border-zinc-800'
                   }`}
                 >
-                  <Lock size={18} color={errors.password ? '#EF4444' : '#9CA3AF'} />
+                  <Lock size={18} color={errors.password ? '#EF4444' : '#71717a'} />
                   <TextInput
-                    className="flex-1 ml-3 text-gray-900 text-base"
+                    className="flex-1 ml-3 text-zinc-100 text-base"
                     placeholder="••••••••"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#71717a"
                     secureTextEntry={!showPassword}
                     autoComplete="password"
                     onBlur={onBlur}
@@ -128,9 +129,9 @@ export default function LoginScreen() {
                   />
                   <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
                     {showPassword ? (
-                      <EyeOff size={18} color="#9CA3AF" />
+                      <EyeOff size={18} color="#71717a" />
                     ) : (
-                      <Eye size={18} color="#9CA3AF" />
+                      <Eye size={18} color="#71717a" />
                     )}
                   </Pressable>
                 </View>
@@ -164,14 +165,14 @@ export default function LoginScreen() {
 
           {/* Divider */}
           <View className="flex-row items-center mb-5">
-            <View className="flex-1 h-px bg-gray-200" />
-            <Text className="mx-4 text-gray-400 text-sm">hoặc tiếp tục với</Text>
-            <View className="flex-1 h-px bg-gray-200" />
+            <View className="flex-1 h-px bg-zinc-800" />
+            <Text className="mx-4 text-zinc-500 text-sm">hoặc tiếp tục với</Text>
+            <View className="flex-1 h-px bg-zinc-800" />
           </View>
 
           {/* Google */}
           <TouchableOpacity
-            className="flex-row items-center justify-center border border-gray-200 rounded-xl h-14 mb-8 bg-white"
+            className="flex-row items-center justify-center border border-zinc-800 rounded-xl h-14 mb-8 bg-zinc-900/60"
             onPress={() => googleAuth.signInWithGoogle()}
             disabled={!googleAuth.isReady || googleAuth.isPending}
             activeOpacity={0.85}
@@ -180,18 +181,18 @@ export default function LoginScreen() {
               <ActivityIndicator color="#208AEF" />
             ) : (
               <>
-                {/* Google "G" logo */}
-                <View className="w-6 h-6 rounded-full items-center justify-center mr-3">
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#4285F4' }}>G</Text>
+                {/* Google SVG logo */}
+                <View className="mr-3">
+                  <GoogleIcon size={20} />
                 </View>
-                <Text className="text-gray-700 font-medium text-base">Đăng nhập bằng Google</Text>
+                <Text className="text-zinc-100 font-medium text-base">Đăng nhập bằng Google</Text>
               </>
             )}
           </TouchableOpacity>
 
           {/* Register link */}
           <View className="flex-row justify-center">
-            <Text className="text-gray-500">Chưa có tài khoản? </Text>
+            <Text className="text-zinc-400">Chưa có tài khoản? </Text>
             <Link href="/(auth)/register" asChild>
               <TouchableOpacity>
                 <Text className="text-primary-500 font-semibold">Đăng ký ngay</Text>

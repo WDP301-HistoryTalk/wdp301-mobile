@@ -23,8 +23,8 @@ export default function RootLayout() {
   // Chờ load session từ SecureStore
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#208AEF" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#121212' }}>
+        <ActivityIndicator size="large" color="#EA580C" />
       </View>
     );
   }
