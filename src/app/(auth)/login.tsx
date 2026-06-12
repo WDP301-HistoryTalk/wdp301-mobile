@@ -178,7 +178,7 @@ export default function LoginScreen() {
             activeOpacity={0.85}
           >
             {googleAuth.isPending ? (
-              <ActivityIndicator color="#208AEF" />
+              <ActivityIndicator color="#EA580C" />
             ) : (
               <>
                 {/* Google SVG logo */}

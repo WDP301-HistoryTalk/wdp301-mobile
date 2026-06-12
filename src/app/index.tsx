@@ -1,18 +1,16 @@
-import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import {
-  Bell,
   BookOpen,
   ChevronRight,
   Clock,
   Compass,
   MessageCircle,
   Search,
-  Sparkles,
-  User,
+  Star,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  Image,
+  Dimensions,
   Pressable,
   ScrollView,
   Text,
@@ -23,215 +21,210 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/features/auth/store';
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const QUICK_ACTIONS = [
-  { id: '1', label: 'Chat\nvới nhân vật', icon: MessageCircle, color: 'rgba(59, 130, 246, 0.15)', iconColor: '#3B82F6' },
-  { id: '2', label: 'Khám\nphá sự kiện', icon: Compass, color: 'rgba(34, 197, 94, 0.15)', iconColor: '#22C55E' },
-  { id: '3', label: 'Tìm\nkiếm chủ đề', icon: Search, color: 'rgba(249, 115, 22, 0.15)', iconColor: '#F97316' },
-  { id: '4', label: 'Đọc\ntài liệu', icon: BookOpen, color: 'rgba(168, 85, 247, 0.15)', iconColor: '#A855F7' },
+const { width: SW } = Dimensions.get('window');
+const CARD_W = SW - 60;
+
+const TABS = [
+  { key: 'foryou', label: 'Dành cho bạn', icon: BookOpen },
+  { key: 'following', label: 'Theo dõi', icon: Star },
+  { key: 'recent', label: 'Gần đây', icon: Clock },
+] as const;
+type TabKey = (typeof TABS)[number]['key'];
+
+const ACTIONS = [
+  { label: 'Chat\nAI', icon: MessageCircle },
+  { label: 'Khám\nphá', icon: Compass },
+  { label: 'Tìm\nkiếm', icon: Search },
+  { label: 'Tài\nliệu', icon: BookOpen },
 ] as const;
 
-const FEATURED_TOPICS = [
-  { id: '1', title: 'Lịch sử Việt Nam', subtitle: 'Hành trình dựng nước', bg: '#1D4ED8', emoji: '🇻🇳' },
-  { id: '2', title: 'Thế chiến II', subtitle: 'Xung đột toàn cầu', bg: '#7C3AED', emoji: '⚔️' },
-  { id: '3', title: 'Cách mạng Pháp', subtitle: 'Tự do · Bình đẳng', bg: '#0F766E', emoji: '🗼' },
-  { id: '4', title: 'Đế quốc La Mã', subtitle: 'Nền tảng văn minh', bg: '#B45309', emoji: '🏛️' },
+const FEATURED = [
+  {
+    id: '1',
+    title: 'Lịch sử Việt Nam',
+    desc: 'Hành trình nghìn năm dựng nước và bảo vệ Tổ quốc của dân tộc Việt Nam',
+    bg: '#1E3A5F',
+    emoji: '🇻🇳',
+  },
+  {
+    id: '2',
+    title: 'Thế chiến II',
+    desc: 'Cuộc xung đột toàn cầu định hình lại trật tự thế giới hiện đại',
+    bg: '#3B1D6E',
+    emoji: '⚔️',
+  },
+  {
+    id: '3',
+    title: 'Cách mạng Pháp',
+    desc: 'Phong trào lịch sử mang tư tưởng Tự do · Bình đẳng · Bác ái',
+    bg: '#064E3B',
+    emoji: '🗼',
+  },
+  {
+    id: '4',
+    title: 'Đế quốc La Mã',
+    desc: 'Nền văn minh đặt nền móng cho luật pháp và kiến trúc châu Âu',
+    bg: '#78350F',
+    emoji: '🏛️',
+  },
 ] as const;
 
 const CHARACTERS = [
-  { id: '1', name: 'Hồ Chí Minh', era: 'TK. XX', emoji: '⭐', bg: 'rgba(251, 191, 36, 0.15)' },
-  { id: '2', name: 'Nguyễn Huệ', era: 'TK. XVIII', emoji: '🔥', bg: 'rgba(239, 68, 68, 0.15)' },
-  { id: '3', name: 'Hai Bà Trưng', era: 'TK. I SCN', emoji: '⚔️', bg: 'rgba(99, 102, 241, 0.15)' },
-  { id: '4', name: 'Trần Hưng Đạo', era: 'TK. XIII', emoji: '🛡️', bg: 'rgba(16, 185, 129, 0.15)' },
-  { id: '5', name: 'Napoleon', era: 'TK. XIX', emoji: '👑', bg: 'rgba(236, 72, 153, 0.15)' },
+  { id: '1', name: 'Hồ Chí Minh', sub: 'Chủ tịch đầu tiên · TK. XX', emoji: '⭐', bg: 'rgba(251,191,36,0.18)' },
+  { id: '2', name: 'Nguyễn Huệ', sub: 'Hoàng đế Quang Trung · TK. XVIII', emoji: '🔥', bg: 'rgba(239,68,68,0.18)' },
+  { id: '3', name: 'Hai Bà Trưng', sub: 'Anh hùng dân tộc · TK. I SCN', emoji: '⚔️', bg: 'rgba(99,102,241,0.18)' },
+  { id: '4', name: 'Trần Hưng Đạo', sub: 'Quốc công tiết chế · TK. XIII', emoji: '🛡️', bg: 'rgba(16,185,129,0.18)' },
 ] as const;
 
-const FILTER_TABS = ['Dành cho bạn', 'Phổ biến', 'Gần đây'] as const;
-type FilterTab = (typeof FILTER_TABS)[number];
-
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const [activeTab, setActiveTab] = useState<FilterTab>('Dành cho bạn');
+  const [tab, setTab] = useState<TabKey>('foryou');
+  const initial = user?.userName?.charAt(0).toUpperCase() ?? 'U';
 
   return (
     <SafeAreaView className="flex-1 bg-zinc-950" edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-28"
-      >
-        {/* ── Header ────────────────────────────────────────── */}
-        <View className="flex-row items-center justify-between px-5 pt-4 pb-3">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
+
+        {/* ── Header ─────────────────────────────────────────── */}
+        <View className="flex-row items-center justify-between px-5 pt-4 pb-5">
           <View className="flex-row items-center gap-3">
             <Image
               source={require('@/assets/logo.png')}
-              style={{ width: 32, height: 32 }}
-              resizeMode="contain"
+              style={{ width: 28, height: 28 }}
+              contentFit="contain"
             />
-            <Text className="text-xl font-bold text-zinc-100">Home</Text>
+            <Text className="text-2xl font-bold text-zinc-100">Trang chủ</Text>
           </View>
           <View className="flex-row items-center gap-2">
-            <TouchableOpacity className="w-10 h-10 rounded-full bg-zinc-900 items-center justify-center">
-              <Bell size={18} color="#e4e4e7" />
+            <TouchableOpacity className="w-10 h-10 rounded-full bg-zinc-800 items-center justify-center">
+              <Search size={17} color="#a1a1aa" strokeWidth={2} />
             </TouchableOpacity>
-            <TouchableOpacity
-              className="w-10 h-10 rounded-full bg-primary-950/40 items-center justify-center"
-              onPress={() => {}}
-            >
-              <User size={18} color="#FB923C" />
+            <TouchableOpacity className="w-10 h-10 rounded-full bg-zinc-800 items-center justify-center">
+              <Text className="text-zinc-100 font-bold text-sm">{initial}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* ── Greeting ──────────────────────────────────────── */}
-        <View className="px-5 mb-4">
-          <Text className="text-sm text-zinc-400">Chào mừng trở lại,</Text>
-          <Text className="text-base font-semibold text-zinc-100">
-            {user?.userName ?? 'Học giả'} 👋
-          </Text>
-        </View>
-
-        {/* ── Filter tabs ───────────────────────────────────── */}
+        {/* ── Filter tabs ────────────────────────────────────── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerClassName="px-5 gap-2 mb-6"
+          contentContainerClassName="px-5 gap-2 mb-8"
         >
-          {FILTER_TABS.map((tab) => (
+          {TABS.map(({ key, label, icon: Icon }) => (
             <Pressable
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full ${
-                activeTab === tab ? 'bg-primary-500' : 'bg-zinc-900'
+              key={key}
+              onPress={() => setTab(key)}
+              className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-full ${
+                tab === key ? 'bg-zinc-100' : 'bg-zinc-800'
               }`}
             >
+              <Icon size={13} color={tab === key ? '#18181b' : '#71717a'} strokeWidth={2} />
               <Text
-                className={`text-sm font-medium ${
-                  activeTab === tab ? 'text-white' : 'text-zinc-400'
+                className={`text-sm font-semibold ${
+                  tab === key ? 'text-zinc-900' : 'text-zinc-400'
                 }`}
               >
-                {tab}
+                {label}
               </Text>
             </Pressable>
           ))}
         </ScrollView>
 
-        {/* ── Quick actions ─────────────────────────────────── */}
-        <View className="px-5 mb-7">
-          <Text className="text-base font-semibold text-zinc-100 mb-4">
-            Khám phá &amp; học hỏi
-          </Text>
+        {/* ── Quick actions ──────────────────────────────────── */}
+        <View className="px-5 mb-9">
+          <Text className="text-xl font-bold text-zinc-100 mb-5">Khám phá &amp; học hỏi</Text>
           <View className="flex-row gap-3">
-            {QUICK_ACTIONS.map(({ id, label, icon: Icon, color, iconColor }) => (
+            {ACTIONS.map(({ label, icon: Icon }) => (
               <TouchableOpacity
-                key={id}
-                className="flex-1 rounded-2xl py-4 px-2 items-center gap-2"
-                style={{ backgroundColor: color }}
-                activeOpacity={0.8}
+                key={label}
+                className="flex-1 bg-zinc-900 rounded-2xl items-center justify-center py-5 gap-2.5"
+                activeOpacity={0.65}
               >
-                <Icon size={22} color={iconColor} />
-                <Text className="text-xs text-zinc-300 text-center leading-4">{label}</Text>
+                <Icon size={24} color="#e4e4e7" strokeWidth={1.5} />
+                <Text className="text-xs text-zinc-400 text-center font-medium leading-[18px]">
+                  {label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* ── Featured topics (horizontal scroll) ───────────── */}
-        <View className="mb-7">
-          <View className="flex-row justify-between items-center px-5 mb-4">
-            <Text className="text-base font-semibold text-zinc-100">Chủ đề nổi bật</Text>
-            <TouchableOpacity className="flex-row items-center gap-1">
-              <Text className="text-primary-500 text-sm">Xem tất cả</Text>
-              <ChevronRight size={14} color="#FB923C" />
-            </TouchableOpacity>
-          </View>
+        {/* ── Featured topics ────────────────────────────────── */}
+        <View className="mb-2">
+          <Text className="text-xl font-bold text-zinc-100 px-5 mb-5">Chủ đề nổi bật</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerClassName="px-5 gap-4"
+            snapToInterval={CARD_W + 16}
+            decelerationRate="fast"
           >
-            {FEATURED_TOPICS.map(({ id, title, subtitle, bg, emoji }) => (
-              <TouchableOpacity
-                key={id}
-                className="w-44 h-28 rounded-2xl overflow-hidden justify-end p-4"
-                style={{ backgroundColor: bg }}
-                activeOpacity={0.85}
-              >
-                <Text style={{ fontSize: 32, position: 'absolute', top: 12, right: 12 }}>
-                  {emoji}
-                </Text>
-                <Text className="text-white font-bold text-base leading-5">{title}</Text>
-                <Text className="text-white/70 text-xs mt-0.5">{subtitle}</Text>
+            {FEATURED.map(({ id, title, desc, bg, emoji }) => (
+              <TouchableOpacity key={id} style={{ width: CARD_W }} activeOpacity={0.9}>
+                <View
+                  style={{ backgroundColor: bg, height: 260 }}
+                  className="rounded-3xl overflow-hidden mb-4"
+                >
+                  <Text
+                    style={{ fontSize: 90, position: 'absolute', right: 12, top: 12, opacity: 0.7 }}
+                  >
+                    {emoji}
+                  </Text>
+                  <View className="absolute top-4 left-4 bg-primary-500 rounded-full px-3 py-1">
+                    <Text className="text-white text-xs font-semibold">Nổi bật</Text>
+                  </View>
+                  <View className="absolute bottom-0 left-0 right-0 p-5">
+                    <Text className="text-white/50 text-xs font-semibold mb-1 uppercase tracking-widest">
+                      HistoryTalk
+                    </Text>
+                    <Text className="text-white text-2xl font-bold leading-7">{title}</Text>
+                  </View>
+                </View>
+                <Text className="text-[17px] font-bold text-zinc-100">{title}</Text>
+                <Text className="text-sm text-zinc-500 mt-1.5 leading-5">{desc}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
-        {/* ── Historical characters ─────────────────────────── */}
-        <View className="mb-7">
-          <View className="flex-row justify-between items-center px-5 mb-4">
-            <View className="flex-row items-center gap-2">
-              <Sparkles size={16} color="#FB923C" />
-              <Text className="text-base font-semibold text-zinc-100">Nhân vật lịch sử</Text>
-            </View>
-            <TouchableOpacity className="flex-row items-center gap-1">
-              <Text className="text-primary-500 text-sm">Tất cả</Text>
-              <ChevronRight size={14} color="#FB923C" />
+        {/* ── Characters ─────────────────────────────────────── */}
+        <View className="px-5 mt-9">
+          <View className="flex-row justify-between items-center mb-5">
+            <Text className="text-xl font-bold text-zinc-100">Nhân vật lịch sử</Text>
+            <TouchableOpacity className="flex-row items-center gap-0.5">
+              <Text className="text-primary-500 text-sm font-semibold">Tất cả</Text>
+              <ChevronRight size={14} color="#EA580C" />
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="px-5 gap-3"
-          >
-            {CHARACTERS.map(({ id, name, era, emoji, bg }) => (
+          <View className="gap-2.5">
+            {CHARACTERS.map(({ id, name, sub, emoji, bg }) => (
               <TouchableOpacity
                 key={id}
-                className="items-center w-24"
-                activeOpacity={0.8}
+                className="flex-row items-center bg-zinc-900 rounded-2xl p-3"
+                activeOpacity={0.7}
               >
                 <View
-                  className="w-16 h-16 rounded-2xl items-center justify-center mb-2"
+                  className="w-14 h-14 rounded-xl items-center justify-center mr-3"
                   style={{ backgroundColor: bg }}
                 >
-                  <Text style={{ fontSize: 28 }}>{emoji}</Text>
+                  <Text style={{ fontSize: 26 }}>{emoji}</Text>
                 </View>
-                <Text className="text-xs font-semibold text-zinc-200 text-center leading-4">
-                  {name}
-                </Text>
-                <Text className="text-xs text-zinc-500 mt-0.5">{era}</Text>
+                <View className="flex-1">
+                  <Text className="font-semibold text-zinc-100">{name}</Text>
+                  <Text className="text-xs text-zinc-500 mt-0.5">{sub}</Text>
+                </View>
+                <ChevronRight size={16} color="#3f3f46" />
               </TouchableOpacity>
             ))}
-          </ScrollView>
-        </View>
-
-        {/* ── Recent activity ───────────────────────────────── */}
-        <View className="px-5">
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="flex-row items-center gap-2">
-              <Clock size={16} color="#a1a1aa" />
-              <Text className="text-base font-semibold text-zinc-100">Gần đây</Text>
-            </View>
-          </View>
-
-          {/* Empty state */}
-          <View className="bg-zinc-900/40 rounded-2xl px-5 py-8 items-center gap-3">
-            <MessageCircle size={36} color="#4b5563" />
-            <Text className="text-zinc-400 text-sm text-center">
-              Bạn chưa có cuộc trò chuyện nào.{'\n'}Hãy bắt đầu chat với một nhân vật lịch sử!
-            </Text>
-            <TouchableOpacity className="mt-1 bg-primary-500 rounded-full px-5 py-2.5">
-              <Text className="text-white text-sm font-semibold">Bắt đầu ngay</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
-        {/* ── Dev: Logout button ────────────────────────────── */}
+        {/* ── DEV logout ─────────────────────────────────────── */}
         {__DEV__ && (
           <TouchableOpacity
-            className="mx-5 mt-8 border border-red-900/50 rounded-xl py-3 items-center"
+            className="mx-5 mt-8 border border-zinc-800 rounded-xl py-3 items-center"
             onPress={() => void logout()}
           >
             <Text className="text-red-500 text-sm font-medium">DEV: Đăng xuất</Text>
