@@ -32,7 +32,7 @@ export default function AppTabs() {
               : pathname === href || pathname.startsWith(href + '/');
 
             return (
-              <Link key={href} href={href} asChild>
+              <Link key={href} href={href as any} asChild>
                 <Pressable
                   style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.6 }]}
                 >
@@ -79,22 +79,24 @@ const styles = StyleSheet.create({
   inner: {
     flexDirection: 'row',
     justifyContent: 'center',
+    width: '100%',
   },
 
   tabItem: {
-    width: 88,
+    flex: 1,
     paddingHorizontal: 6,
     paddingTop: 0,
     paddingBottom: 4,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
   },
 
-  /* Fixed-height slot so ALL tabs take identical vertical space */
+  /* Full-width pill — spans the entire tab item width */
   pill: {
-    width: 28,
+    alignSelf: 'stretch',
     height: 3,
-    borderRadius: 2,
+    borderRadius: 0,
     marginBottom: 6,
   },
 

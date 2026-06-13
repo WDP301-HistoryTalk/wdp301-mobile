@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, MessageCircle, Skull } from 'lucide-react-native';
-import React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useCreateSession } from '@/features/chat/hooks/use-create-session';
 
 import { Badge, BadgeText } from '@/components/ui/badge';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -50,6 +52,28 @@ export default function CharacterDetailScreen() {
   const resolvedId = Array.isArray(id) ? id[0] : id;
   const router     = useRouter();
   const { data: char, isLoading, isError } = useCharacter(resolvedId ?? '');
+  const { mutateAsync: createSession }     = useCreateSession();
+  const [creatingFor, setCreatingFor]      = useState<string | null>(null);
+
+  async function startChat(contextId: string, contextName: string) {
+    if (creatingFor) return;
+    setCreatingFor(contextId);
+    try {
+      const result = await createSession({ characterId: resolvedId!, contextId });
+      router.push({
+        pathname: '/chat/[sessionId]',
+        params: {
+          sessionId:     result.session._id,
+          characterName: char?.name ?? '',
+          contextName,
+        },
+      });
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message ?? 'Không thể bắt đầu cuộc trò chuyện');
+    } finally {
+      setCreatingFor(null);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -212,29 +236,36 @@ export default function CharacterDetailScreen() {
           {char.contexts && char.contexts.length > 0 ? (
             <Section title="Bối cảnh lịch sử">
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {char.contexts.map((ctx) => (
-                  <TouchableOpacity
-                    key={ctx.contextId}
-                    onPress={() => router.push({ pathname: '/context/[id]', params: { id: ctx.contextId } })}
-                    activeOpacity={0.7}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 5,
-                      backgroundColor: '#27272a',
-                      borderRadius: 10,
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
-                      borderWidth: 1,
-                      borderColor: 'rgba(234,88,12,0.2)',
-                    }}
-                  >
-                    <MapPin size={11} color="#EA580C" />
-                    <Text size="xs" className="text-zinc-200 font-medium">
-                      {ctx.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {char.contexts.map((ctx) => {
+                  const loading = creatingFor === ctx.contextId;
+                  return (
+                    <TouchableOpacity
+                      key={ctx.contextId}
+                      onPress={() => void startChat(ctx.contextId, ctx.name)}
+                      activeOpacity={0.7}
+                      disabled={!!creatingFor}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: '#27272a',
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderWidth: 1,
+                        borderColor: loading ? 'rgba(234,88,12,0.6)' : 'rgba(234,88,12,0.2)',
+                        opacity: creatingFor && !loading ? 0.5 : 1,
+                      }}
+                    >
+                      {loading
+                        ? <ActivityIndicator size="small" color="#EA580C" style={{ width: 11, height: 11 }} />
+                        : <MapPin size={11} color="#EA580C" />}
+                      <Text size="xs" className="text-zinc-200 font-medium">
+                        {ctx.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </Section>
           ) : null}
@@ -248,8 +279,18 @@ export default function CharacterDetailScreen() {
         backgroundColor: '#09090b',
         borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
       }}>
-        <Button size="lg" className="rounded-[18px] h-[54px]">
-          <ButtonIcon as={MessageCircle} size={20} />
+        <Button
+          size="lg"
+          className="rounded-[18px] h-[54px]"
+          disabled={!!creatingFor || !char.contexts?.length}
+          onPress={() => {
+            const first = char.contexts?.[0];
+            if (first) void startChat(first.contextId, first.name);
+          }}
+        >
+          {creatingFor
+            ? <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+            : <ButtonIcon as={MessageCircle} size={20} />}
           <ButtonText size="md">Chat với {char.name}</ButtonText>
         </Button>
       </View>
