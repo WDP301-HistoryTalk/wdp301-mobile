@@ -9,6 +9,7 @@ import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
 import { ERA_COLORS, ERA_LABELS, type Character, type CharacterEra } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
@@ -32,7 +33,7 @@ function greeting(): string {
 // ─── Character portrait card (horizontal scroll) ──────────────────────────────
 function CharPortrait({ char, onPress }: { char: Character; onPress: () => void }) {
   const ec     = char.era ? ERA_COLORS[char.era] : null;
-  const cardBg = char.era ? ERA_CARD_BG[char.era] : '#18181b';
+  const cardBg = char.era ? ERA_CARD_BG[char.era] : CARD;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.82} style={{ width: 120 }}>
@@ -45,7 +46,7 @@ function CharPortrait({ char, onPress }: { char: Character; onPress: () => void 
           <Image source={{ uri: char.image }} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 52, fontWeight: '900', color: ec?.text ?? '#fff', opacity: 0.18 }}>
+            <Text style={{ fontSize: 52, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: char.era ? 0.18 : 0.3 }}>
               {char.name.charAt(0)}
             </Text>
           </View>
@@ -53,8 +54,8 @@ function CharPortrait({ char, onPress }: { char: Character; onPress: () => void 
         {/* gradient */}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }}>
           <View style={{ flex: 1 }} />
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' }} />
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' }} />
+          <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.55)' }} />
+          <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.85)' }} />
         </View>
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 }}>
           {char.era && ec ? (
@@ -84,13 +85,13 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
       activeOpacity={0.8}
       style={{
         flexDirection: 'row',
-        backgroundColor: '#18181b',
+        backgroundColor: CARD,
         borderRadius: 18,
         padding: 12,
         gap: 12,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderColor: BORDER,
       }}
     >
       <View style={{
@@ -101,7 +102,7 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
         {imgUri ? (
           <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
-          <Text style={{ fontSize: 26, fontWeight: '900', color: ec.text, opacity: 0.65 }}>
+          <Text style={{ fontSize: 26, fontWeight: '900', color: ec.glow, opacity: 0.65 }}>
             {ctx.name.charAt(0)}
           </Text>
         )}
@@ -111,13 +112,13 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
         <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}30`, alignSelf: 'flex-start' }}>
           <BadgeText style={{ color: ec.text, fontSize: 9 }}>{ERA_LABELS[ctx.era]}</BadgeText>
         </Badge>
-        <Text style={{ color: '#f4f4f5', fontSize: 14, fontWeight: '700', lineHeight: 19 }} numberOfLines={2}>
+        <Text style={{ color: TEXT, fontSize: 14, fontWeight: '700', lineHeight: 19 }} numberOfLines={2}>
           {ctx.name}
         </Text>
         {(yearTxt ?? ctx.location) ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {ctx.location ? <MapPin size={10} color="#52525b" /> : null}
-            <Text style={{ color: '#52525b', fontSize: 11 }} numberOfLines={1}>
+            {ctx.location ? <MapPin size={10} color={TEXT2} /> : null}
+            <Text style={{ color: TEXT2, fontSize: 11 }} numberOfLines={1}>
               {[yearTxt, ctx.location].filter(Boolean).join(' · ')}
             </Text>
           </View>
@@ -125,7 +126,7 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
       </View>
 
       <View style={{ justifyContent: 'center' }}>
-        <ChevronRight size={16} color="#3f3f46" />
+        <ChevronRight size={16} color={MUTED} />
       </View>
     </TouchableOpacity>
   );
@@ -144,7 +145,7 @@ function CtxSkeletons() {
   return (
     <View>
       {[0, 1, 2].map((i) => (
-        <View key={i} style={{ flexDirection: 'row', gap: 12, marginBottom: 10, backgroundColor: '#18181b', borderRadius: 18, padding: 12 }}>
+        <View key={i} style={{ flexDirection: 'row', gap: 12, marginBottom: 10, backgroundColor: CARD, borderRadius: 18, padding: 12 }}>
           <Skeleton style={{ width: 60, height: 70 }} radius={14} />
           <View style={{ flex: 1, gap: 8 }}>
             <Skeleton style={{ height: 12, width: '45%' }} radius={6} />
@@ -172,7 +173,7 @@ export default function HomeScreen() {
   const contexts   = ctxData?.pages[0]?.content?.slice(0, 4) ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
 
         {/* ── Header ──────────────────────────────────────────────── */}
@@ -180,8 +181,8 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Image source={require('@/assets/logo.png')} style={{ width: 32, height: 32 }} contentFit="contain" />
             <View>
-              <Text style={{ fontSize: 12, color: '#52525b' }}>{greeting()}</Text>
-              <Heading size="lg" className="text-zinc-100">{user?.userName ?? 'Bạn'}</Heading>
+              <Text style={{ fontSize: 12, color: TEXT2 }}>{greeting()}</Text>
+              <Heading size="lg" className="text-[#2B2118]">{user?.userName ?? 'Bạn'}</Heading>
             </View>
           </View>
           <TouchableOpacity
@@ -197,8 +198,8 @@ export default function HomeScreen() {
         <View style={{
           marginHorizontal: 20, marginBottom: 28,
           borderRadius: 24, overflow: 'hidden',
-          backgroundColor: '#18181b',
-          borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+          backgroundColor: CARD,
+          borderWidth: 1, borderColor: BORDER,
         }}>
           {/* accent bar */}
           <View style={{ height: 3, backgroundColor: '#EA580C' }} />
@@ -206,7 +207,7 @@ export default function HomeScreen() {
             <Badge style={{ backgroundColor: 'rgba(234,88,12,0.18)', borderColor: 'rgba(234,88,12,0.4)', alignSelf: 'flex-start', marginBottom: 12 }}>
               <BadgeText style={{ color: '#EA580C', fontSize: 10 }}>HistoryTalk</BadgeText>
             </Badge>
-            <Heading size="2xl" className="text-zinc-100 leading-8" style={{ marginBottom: 8 }}>
+            <Heading size="2xl" className="text-[#2B2118] leading-8" style={{ marginBottom: 8 }}>
               Khám phá lịch sử{'\n'}qua từng nhân vật
             </Heading>
             <Text size="sm" muted style={{ lineHeight: 20, marginBottom: 18 }}>
@@ -234,16 +235,16 @@ export default function HomeScreen() {
             onPress={() => router.push('/characters')}
             activeOpacity={0.8}
             style={{
-              flex: 1, backgroundColor: '#18181b', borderRadius: 20,
+              flex: 1, backgroundColor: CARD, borderRadius: 20,
               padding: 18, alignItems: 'center', gap: 10,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+              borderWidth: 1, borderColor: BORDER,
             }}
           >
             <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(234,88,12,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-              <Users size={22} color="#EA580C" strokeWidth={1.75} />
+              <Users size={22} color={ORANGE} strokeWidth={1.75} />
             </View>
-            <Text style={{ color: '#f4f4f5', fontSize: 13, fontWeight: '700' }}>Nhân vật</Text>
-            <Text style={{ color: '#52525b', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
+            <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Nhân vật</Text>
+            <Text style={{ color: TEXT2, fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
               Danh sách nhân vật lịch sử
             </Text>
           </TouchableOpacity>
@@ -252,16 +253,16 @@ export default function HomeScreen() {
             onPress={() => router.push('/context')}
             activeOpacity={0.8}
             style={{
-              flex: 1, backgroundColor: '#18181b', borderRadius: 20,
+              flex: 1, backgroundColor: CARD, borderRadius: 20,
               padding: 18, alignItems: 'center', gap: 10,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+              borderWidth: 1, borderColor: BORDER,
             }}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(99,102,241,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-              <BookOpen size={22} color="#818cf8" strokeWidth={1.75} />
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(79,70,229,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen size={22} color="#4F46E5" strokeWidth={1.75} />
             </View>
-            <Text style={{ color: '#f4f4f5', fontSize: 13, fontWeight: '700' }}>Bối cảnh</Text>
-            <Text style={{ color: '#52525b', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
+            <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Bối cảnh</Text>
+            <Text style={{ color: TEXT2, fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
               Sự kiện và giai đoạn lịch sử
             </Text>
           </TouchableOpacity>
@@ -270,7 +271,7 @@ export default function HomeScreen() {
         {/* ── Characters ──────────────────────────────────────────── */}
         <View style={{ marginBottom: 32 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-            <Heading size="lg" className="text-zinc-100">Nhân vật nổi bật</Heading>
+            <Heading size="lg" className="text-[#2B2118]">Nhân vật nổi bật</Heading>
             <TouchableOpacity
               onPress={() => router.push('/characters')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
@@ -302,7 +303,7 @@ export default function HomeScreen() {
         {/* ── Contexts ────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Heading size="lg" className="text-zinc-100">Bối cảnh lịch sử</Heading>
+            <Heading size="lg" className="text-[#2B2118]">Bối cảnh lịch sử</Heading>
             <TouchableOpacity
               onPress={() => router.push('/context')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
@@ -336,23 +337,23 @@ export default function HomeScreen() {
           {/* Menu card */}
           <View style={styles.menu}>
             {/* User info */}
-            <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#27272a' }}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BORDER }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>{initial}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#f4f4f5', fontWeight: '700', fontSize: 15 }} numberOfLines={1}>
+                  <Text style={{ color: TEXT, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>
                     {user?.userName ?? 'Người dùng'}
                   </Text>
-                  <Text style={{ color: '#52525b', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                  <Text style={{ color: TEXT2, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
                     {user?.email ?? ''}
                   </Text>
                 </View>
               </View>
               {/* Role badge */}
               <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(234,88,12,0.15)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)', paddingHorizontal: 10, paddingVertical: 3 }}>
-                <Text style={{ color: '#EA580C', fontSize: 11, fontWeight: '600' }}>
+                <Text style={{ color: ORANGE, fontSize: 11, fontWeight: '600' }}>
                   {user?.role === 'CUSTOMER' ? 'Người dùng' : user?.role ?? 'Người dùng'}
                 </Text>
               </View>
@@ -365,8 +366,8 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
-                <User size={16} color="#71717a" strokeWidth={1.75} />
-                <Text style={{ color: '#d4d4d8', fontSize: 14, fontWeight: '500' }}>Hồ sơ cá nhân</Text>
+                <User size={16} color={MUTED} strokeWidth={1.75} />
+                <Text style={{ color: TEXT, fontSize: 14, fontWeight: '500' }}>Hồ sơ cá nhân</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -374,12 +375,12 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
-                <Mail size={16} color="#71717a" strokeWidth={1.75} />
-                <Text style={{ color: '#d4d4d8', fontSize: 14, fontWeight: '500' }}>Liên hệ hỗ trợ</Text>
+                <Mail size={16} color={MUTED} strokeWidth={1.75} />
+                <Text style={{ color: TEXT, fontSize: 14, fontWeight: '500' }}>Liên hệ hỗ trợ</Text>
               </TouchableOpacity>
 
               {/* Divider */}
-              <View style={{ height: 1, backgroundColor: '#27272a', marginHorizontal: 16, marginVertical: 4 }} />
+              <View style={{ height: 1, backgroundColor: BORDER, marginHorizontal: 16, marginVertical: 4 }} />
 
               {/* Logout */}
               <TouchableOpacity
@@ -387,8 +388,8 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
               >
-                <LogOut size={16} color="#ef4444" strokeWidth={1.75} />
-                <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Đăng xuất</Text>
+                <LogOut size={16} color={RED} strokeWidth={1.75} />
+                <Text style={{ color: RED, fontSize: 14, fontWeight: '600' }}>Đăng xuất</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -404,10 +405,10 @@ const styles = StyleSheet.create({
     top: 72,
     right: 16,
     width: 260,
-    backgroundColor: '#18181b',
+    backgroundColor: CARD,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
+    borderColor: BORDER,
     zIndex: 200,
     // web shadow
     // @ts-ignore

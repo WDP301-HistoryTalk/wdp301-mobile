@@ -7,17 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, MUTED, ORANGE, TEXT, TEXT2 } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useStartQuiz } from '@/features/quiz/hooks/use-start-quiz';
 import { useQuiz } from '@/features/quiz/hooks/use-quiz';
-
-const BG     = '#09090b';
-const CARD   = '#18181b';
-const BORDER = 'rgba(255,255,255,0.07)';
-const ORANGE = '#EA580C';
-const MUTED  = '#52525b';
-const TEXT   = '#f4f4f5';
-const TEXT2  = '#a1a1aa';
 
 function formatDuration(secs: number) {
   if (!secs) return '—';

@@ -2,6 +2,8 @@ import { Link, Slot, usePathname } from 'expo-router';
 import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
+
 const TABS = [
   { href: '/',           label: 'Trang chủ', icon: House    },
   { href: '/characters', label: 'Nhân vật',  icon: Users    },
@@ -9,9 +11,8 @@ const TABS = [
   { href: '/quiz',       label: 'Quiz',       icon: Trophy   },
 ] as const;
 
-const ORANGE   = '#EA580C';
-const INACTIVE = '#52525b';
-const TAB_BG   = '#0f0f11';
+const INACTIVE = MUTED;
+const TAB_BG   = CARD;
 
 export default function AppTabs() {
   const pathname = usePathname();
@@ -63,7 +64,7 @@ export default function AppTabs() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: BG,
   },
   content: {
     flex: 1,
@@ -73,13 +74,15 @@ const styles = StyleSheet.create({
   bar: {
     backgroundColor: TAB_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: BORDER,
     paddingBottom: 20,
   },
   inner: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
+    gap: 18,
+    paddingHorizontal: 12,
   },
 
   tabItem: {
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrapActive: {
-    backgroundColor: 'rgba(234,88,12,0.12)',
+    backgroundColor: ORANGE_TINT,
   },
 
   tabLabel: {

@@ -17,6 +17,7 @@ import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
 import { ERA_COLORS, ERA_LABELS, type Character, type CharacterEra } from '@/features/characters/types';
 
@@ -40,7 +41,7 @@ const ERA_CARD_BG: Record<CharacterEra, string> = {
 // ─── Character card ────────────────────────────────────────────────────────────
 function CharacterCard({ item, onPress }: { item: Character; onPress: () => void }) {
   const ec     = item.era ? ERA_COLORS[item.era] : null;
-  const cardBg = item.era ? ERA_CARD_BG[item.era] : '#18181b';
+  const cardBg = item.era ? ERA_CARD_BG[item.era] : CARD;
 
   return (
     <TouchableOpacity
@@ -66,7 +67,7 @@ function CharacterCard({ item, onPress }: { item: Character; onPress: () => void
       ) : (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
           <Text
-            style={{ fontSize: 72, fontWeight: '900', color: ec?.text ?? '#ffffff', opacity: 0.18 }}
+            style={{ fontSize: 72, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: item.era ? 0.18 : 0.3 }}
           >
             {item.name.charAt(0).toUpperCase()}
           </Text>
@@ -76,8 +77,8 @@ function CharacterCard({ item, onPress }: { item: Character; onPress: () => void
       {/* 3-layer pseudo-gradient overlay */}
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}>
         <View style={{ flex: 1 }} />
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} />
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)' }} />
+        <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.45)' }} />
+        <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.82)' }} />
       </View>
 
       {/* Era badge + name */}
@@ -133,19 +134,19 @@ function ListHeader({
           marginBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: '#27272a',
+          backgroundColor: SURFACE,
           borderRadius: 16,
           paddingHorizontal: 14,
           height: 46,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.07)',
+          borderColor: BORDER,
         }}
       >
-        <Search size={15} color="#71717a" strokeWidth={2} />
+        <Search size={15} color={MUTED} strokeWidth={2} />
         <TextInput
-          style={{ flex: 1, marginLeft: 10, color: '#f4f4f5', fontSize: 14 }}
+          style={{ flex: 1, marginLeft: 10, color: TEXT, fontSize: 14 }}
           placeholder="Tìm kiếm nhân vật..."
-          placeholderTextColor="#52525b"
+          placeholderTextColor={MUTED}
           value={search}
           onChangeText={onSearchChange}
           autoCapitalize="none"
@@ -167,15 +168,15 @@ function ListHeader({
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 99,
-              backgroundColor: era === key ? '#EA580C' : '#27272a',
+              backgroundColor: era === key ? ORANGE : SURFACE,
               borderWidth: 1,
-              borderColor: era === key ? 'transparent' : 'rgba(255,255,255,0.07)',
+              borderColor: era === key ? 'transparent' : BORDER,
             }}
           >
             <Text
               size="xs"
               bold
-              style={{ color: era === key ? '#fff' : '#71717a' }}
+              style={{ color: era === key ? '#fff' : MUTED }}
             >
               {label}
             </Text>
@@ -228,7 +229,7 @@ export default function CharactersScreen() {
   const characters = data?.pages.flatMap((p) => p.content) ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
       <FlatList
         data={isLoading ? [] : characters}
         numColumns={2}

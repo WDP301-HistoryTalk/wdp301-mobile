@@ -22,7 +22,7 @@ const Skeleton = ({ radius = 12, style }: SkeletonProps) => {
 
   return (
     <Animated.View
-      style={[{ backgroundColor: '#27272a', borderRadius: radius, opacity }, style]}
+      style={[{ backgroundColor: '#DCC9A0', borderRadius: radius, opacity }, style]}
     />
   );
 };

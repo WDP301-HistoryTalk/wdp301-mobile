@@ -12,6 +12,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { BG, CARD, MUTED, SURFACE, TEXT } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useHistoricalContext } from '@/features/historical-contexts/hooks/use-historical-context';
 import {
@@ -33,7 +34,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <VStack space="sm" style={{ marginBottom: 28 }}>
       <HStack space="sm" style={{ alignItems: 'center' }}>
         <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#EA580C' }} />
-        <Heading size="sm" className="text-zinc-100">{title}</Heading>
+        <Heading size="sm" className="text-[#2B2118]">{title}</Heading>
       </HStack>
       {children}
     </VStack>
@@ -48,7 +49,7 @@ function CharacterChip({ char, onPress }: { char: ContextCharacter; onPress: () 
       <View
         style={{
           width: 64, height: 64, borderRadius: 32,
-          backgroundColor: '#27272a',
+          backgroundColor: SURFACE,
           borderWidth: 2, borderColor: 'rgba(234,88,12,0.35)',
           overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
         }}
@@ -61,7 +62,7 @@ function CharacterChip({ char, onPress }: { char: ContextCharacter; onPress: () 
           </Text>
         )}
       </View>
-      <Text size="2xs" className="text-zinc-300 text-center mt-1.5" numberOfLines={2} style={{ maxWidth: 68 }}>
+      <Text size="2xs" className="text-[#6B5B3E] text-center mt-1.5" numberOfLines={2} style={{ maxWidth: 68 }}>
         {char.name}
       </Text>
     </TouchableOpacity>
@@ -76,7 +77,7 @@ export default function ContextDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#09090b', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
         <Spinner size="large" />
       </View>
     );
@@ -84,7 +85,7 @@ export default function ContextDetailScreen() {
 
   if (isError || !ctx) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#09090b', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
         <Heading size="md" className="mb-3 text-center">Không tìm thấy bối cảnh</Heading>
         <TouchableOpacity onPress={() => router.back()}>
           <Text size="sm" className="text-primary-500 font-semibold">← Quay lại</Text>
@@ -94,12 +95,12 @@ export default function ContextDetailScreen() {
   }
 
   const ec       = ERA_COLORS[ctx.era];
-  const heroBg   = ERA_HERO_BG[ctx.era] ?? '#18181b';
+  const heroBg   = ERA_HERO_BG[ctx.era] ?? CARD;
   const yearText = formatContextYear(ctx);
   const imageUri = (ctx as any).imageUrl ?? ctx.image;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#09090b' }}>
+    <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ── Hero ─────────────────────────────────────────────── */}
@@ -112,18 +113,18 @@ export default function ContextDetailScreen() {
             />
           ) : (
             <View style={{ position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 110, fontWeight: '900', color: ec?.text ?? '#ffffff', opacity: 0.1 }}>
+              <Text style={{ fontSize: 110, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: 0.12 }}>
                 {ctx.name.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
 
-          {/* Gradient overlay */}
+          {/* Gradient overlay — stays dark all the way down so the name/badges text
+              (anchored near the bottom) never lands on a light strip */}
           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 180 }}>
             <View style={{ flex: 2 }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(9,9,11,0.55)' }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(9,9,11,0.82)' }} />
-            <View style={{ height: 50, backgroundColor: '#09090b' }} />
+            <View style={{ flex: 2, backgroundColor: 'rgba(43,33,24,0.55)' }} />
+            <View style={{ flex: 3, backgroundColor: 'rgba(43,33,24,0.94)' }} />
           </View>
 
           {/* Back button */}
@@ -279,6 +280,6 @@ const quizStyles = StyleSheet.create({
     backgroundColor: 'rgba(234,88,12,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  bannerTitle: { color: '#f4f4f5', fontSize: 15, fontWeight: '700', marginBottom: 3 },
-  bannerSub:   { color: '#71717a', fontSize: 12, lineHeight: 17 },
+  bannerTitle: { color: TEXT, fontSize: 15, fontWeight: '700', marginBottom: 3 },
+  bannerSub:   { color: MUTED, fontSize: 12, lineHeight: 17 },
 });

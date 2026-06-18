@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import {
-  AlertCircle, ArrowLeft, Calendar, CheckCircle2, ChevronDown, ChevronUp,
-  Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Save, User, UserCircle, X,
+  AlertCircle, ArrowLeft, Calendar, CheckCircle2, ChevronDown, ChevronUp, Crown,
+  Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, User, UserCircle, X,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -12,22 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
 import { useChangePassword } from '@/features/auth/hooks/use-change-password';
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
 import { useAuthStore } from '@/features/auth/store';
 import type { UpdateProfileInput } from '@/features/auth/types';
-
-// ─── constants ────────────────────────────────────────────────────────────────
-const BG      = '#09090b';
-const CARD    = '#18181b';
-const BORDER  = 'rgba(255,255,255,0.08)';
-const ORANGE  = '#EA580C';
-const MUTED   = '#52525b';
-const TEXT    = '#f4f4f5';
-const TEXT2   = '#a1a1aa';
-const RED     = '#ef4444';
-const GREEN   = '#22c55e';
 
 const ROLE_LABEL: Record<string, string> = {
   CUSTOMER:      'Người dùng',
@@ -278,6 +268,34 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
+              {/* ── Subscription / payment ───────────────────────── */}
+              <View style={s.section}>
+                <View style={s.sectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Crown size={17} color={ORANGE} strokeWidth={1.75} />
+                    <Text style={s.sectionTitle}>Gói dịch vụ</Text>
+                  </View>
+                </View>
+                <View style={{ gap: 10, marginTop: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => router.push('/payment')}
+                    activeOpacity={0.8}
+                    style={s.upgradeBtn}
+                  >
+                    <Crown size={16} color="#fff" strokeWidth={2} />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Nâng cấp gói Pro</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push('/payment/history')}
+                    activeOpacity={0.8}
+                    style={s.historyBtn}
+                  >
+                    <Receipt size={16} color={TEXT2} strokeWidth={1.75} />
+                    <Text style={{ color: TEXT2, fontWeight: '600', fontSize: 14 }}>Lịch sử thanh toán</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* ── Personal info ────────────────────────────────── */}
               <View style={s.section}>
                 <View style={s.sectionHeader}>
@@ -520,13 +538,23 @@ const s = StyleSheet.create({
   },
   editBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 
+  upgradeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 13,
+  },
+  historyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER,
+    borderRadius: 14, paddingVertical: 13,
+  },
+
   fieldRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   fieldIcon: {
     width: 28, height: 28, borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(43,33,24,0.05)',
     alignItems: 'center', justifyContent: 'center',
     marginTop: 2,
   },
@@ -536,7 +564,7 @@ const s = StyleSheet.create({
   inputLabel: { color: TEXT2, fontSize: 12, fontWeight: '600', marginBottom: 6 },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#0f0f11', borderRadius: 12,
+    backgroundColor: SURFACE, borderRadius: 12,
     borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 14, paddingVertical: 12,
   },
@@ -545,7 +573,7 @@ const s = StyleSheet.create({
   genderBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10,
     borderRadius: 10, borderWidth: 1, borderColor: BORDER,
-    backgroundColor: '#0f0f11',
+    backgroundColor: SURFACE,
   },
   genderBtnActive: {
     borderColor: 'rgba(234,88,12,0.5)',

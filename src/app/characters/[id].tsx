@@ -16,6 +16,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { BG, CARD, BORDER, MUTED, SURFACE, TEXT } from '@/constants/palette';
 import { useCharacter } from '@/features/characters/hooks/use-character';
 import { ERA_COLORS, ERA_LABELS, type CharacterEra } from '@/features/characters/types';
 
@@ -40,7 +41,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <VStack space="sm" style={{ marginBottom: 28 }}>
       <HStack space="sm">
         <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#EA580C' }} />
-        <Heading size="sm" className="text-zinc-100">{title}</Heading>
+        <Heading size="sm" className="text-[#2B2118]">{title}</Heading>
       </HStack>
       {children}
     </VStack>
@@ -63,7 +64,7 @@ export default function CharacterDetailScreen() {
       router.push({
         pathname: '/chat/[sessionId]',
         params: {
-          sessionId:     result.session._id,
+          sessionId:     result.session.id,
           characterName: char?.name ?? '',
           contextName,
         },
@@ -77,7 +78,7 @@ export default function CharacterDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#09090b', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
         <Spinner size="large" />
       </View>
     );
@@ -85,7 +86,7 @@ export default function CharacterDetailScreen() {
 
   if (isError || !char) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#09090b', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
         <Heading size="md" className="mb-3 text-center">Không tìm thấy nhân vật</Heading>
         <TouchableOpacity onPress={() => router.back()}>
           <Text size="sm" className="text-primary-500 font-semibold">← Quay lại</Text>
@@ -95,12 +96,12 @@ export default function CharacterDetailScreen() {
   }
 
   const ec        = char.era ? ERA_COLORS[char.era] : null;
-  const heroBg    = char.era ? ERA_HERO_BG[char.era] : '#18181b';
+  const heroBg    = char.era ? ERA_HERO_BG[char.era] : CARD;
   const bornDate  = formatDate(char.bornYear,  char.bornMonth,  char.bornDay,  char.isBornBc);
   const deathDate = formatDate(char.deathYear, char.deathMonth, char.deathDay, char.isDeathBc);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#09090b' }}>
+    <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         bounces={false}
@@ -116,18 +117,18 @@ export default function CharacterDetailScreen() {
             />
           ) : (
             <View style={{ position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 130, fontWeight: '900', color: ec?.text ?? '#ffffff', opacity: 0.12 }}>
+              <Text style={{ fontSize: 130, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: 0.14 }}>
                 {char.name.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
 
-          {/* 3-layer bottom gradient */}
+          {/* 3-layer bottom gradient — stays dark all the way down so the name/title text
+              (anchored near the bottom) never lands on a light strip */}
           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 220 }}>
             <View style={{ flex: 2 }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(9,9,11,0.55)' }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(9,9,11,0.82)' }} />
-            <View style={{ height: 60, backgroundColor: '#09090b' }} />
+            <View style={{ flex: 2, backgroundColor: 'rgba(43,33,24,0.55)' }} />
+            <View style={{ flex: 3, backgroundColor: 'rgba(43,33,24,0.94)' }} />
           </View>
 
           {/* Floating back button */}
@@ -205,7 +206,7 @@ export default function CharacterDetailScreen() {
                     backgroundColor: 'rgba(113,113,122,0.15)',
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Skull size={15} color="#71717a" />
+                    <Skull size={15} color={MUTED} />
                   </View>
                   <VStack space="xs">
                     <Text size="2xs" muted bold className="uppercase tracking-widest">
@@ -237,18 +238,18 @@ export default function CharacterDetailScreen() {
             <Section title="Bối cảnh lịch sử">
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {char.contexts.map((ctx) => {
-                  const loading = creatingFor === ctx.contextId;
+                  const loading = creatingFor === ctx.contextId.id;
                   return (
                     <TouchableOpacity
-                      key={ctx.contextId}
-                      onPress={() => void startChat(ctx.contextId, ctx.name)}
+                      key={ctx.contextId.id}
+                      onPress={() => void startChat(ctx.contextId.id, ctx.name)}
                       activeOpacity={0.7}
                       disabled={!!creatingFor}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 5,
-                        backgroundColor: '#27272a',
+                        backgroundColor: SURFACE,
                         borderRadius: 10,
                         paddingHorizontal: 12,
                         paddingVertical: 7,
@@ -260,7 +261,7 @@ export default function CharacterDetailScreen() {
                       {loading
                         ? <ActivityIndicator size="small" color="#EA580C" style={{ width: 11, height: 11 }} />
                         : <MapPin size={11} color="#EA580C" />}
-                      <Text size="xs" className="text-zinc-200 font-medium">
+                      <Text size="xs" className="text-[#2B2118] font-medium">
                         {ctx.name}
                       </Text>
                     </TouchableOpacity>
@@ -276,8 +277,8 @@ export default function CharacterDetailScreen() {
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28,
-        backgroundColor: '#09090b',
-        borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: BG,
+        borderTopWidth: 1, borderTopColor: BORDER,
       }}>
         <Button
           size="lg"
@@ -285,7 +286,7 @@ export default function CharacterDetailScreen() {
           disabled={!!creatingFor || !char.contexts?.length}
           onPress={() => {
             const first = char.contexts?.[0];
-            if (first) void startChat(first.contextId, first.name);
+            if (first) void startChat(first.contextId.id, first.name);
           }}
         >
           {creatingFor

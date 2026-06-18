@@ -26,7 +26,7 @@ export const chatApi = {
   getSessions: (params?: { characterId?: string; contextId?: string }) => {
     const qs = new URLSearchParams();
     if (params?.characterId) qs.set('characterId', params.characterId);
-    if (params?.contextId)   qs.set('contextId',   params.contextId);
+    if (params?.contextId) qs.set('contextId', params.contextId);
     return apiClient<ChatSession[]>(`/chat/sessions?${qs.toString()}`);
   },
 

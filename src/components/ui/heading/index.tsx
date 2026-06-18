@@ -3,7 +3,7 @@ import React from 'react';
 import { Text, type TextProps } from 'react-native';
 
 const headingStyle = tva({
-  base: 'text-zinc-50 font-bold tracking-tight',
+  base: 'text-[#2B2118] font-bold tracking-tight',
   variants: {
     size: {
       xs:   'text-xs leading-4',

@@ -8,17 +8,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
 import { useSubmitQuiz } from '@/features/quiz/hooks/use-submit-quiz';
 import { useQuizStore } from '@/features/quiz/store';
-
-const BG     = '#09090b';
-const CARD   = '#18181b';
-const BORDER = 'rgba(255,255,255,0.07)';
-const ORANGE = '#EA580C';
-const MUTED  = '#52525b';
-const TEXT   = '#f4f4f5';
-const TEXT2  = '#a1a1aa';
-const GREEN  = '#22c55e';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -157,7 +149,7 @@ export default function QuizPlayScreen() {
         </TouchableOpacity>
 
         <View style={[s.timer, timerWarning && s.timerWarn]}>
-          <Text style={[s.timerText, timerWarning && { color: '#ef4444' }]}>
+          <Text style={[s.timerText, timerWarning && { color: RED }]}>
             {formatTime(timeLeft)}
           </Text>
         </View>
@@ -295,7 +287,7 @@ const s = StyleSheet.create({
   optionBtnSelected: { borderColor: ORANGE, backgroundColor: 'rgba(234,88,12,0.08)' },
   optionLetter: {
     width: 32, height: 32, borderRadius: 10,
-    backgroundColor: '#27272a', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: SURFACE, alignItems: 'center', justifyContent: 'center',
   },
   optionLetterSelected: { backgroundColor: ORANGE },
   optionText: { flex: 1, color: TEXT2, fontSize: 14, fontWeight: '500', lineHeight: 20 },

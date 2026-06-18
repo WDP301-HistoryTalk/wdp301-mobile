@@ -4,17 +4,8 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
 import { useQuizStore } from '@/features/quiz/store';
-
-const BG     = '#09090b';
-const CARD   = '#18181b';
-const BORDER = 'rgba(255,255,255,0.07)';
-const ORANGE = '#EA580C';
-const MUTED  = '#52525b';
-const TEXT   = '#f4f4f5';
-const TEXT2  = '#a1a1aa';
-const GREEN  = '#22c55e';
-const RED    = '#ef4444';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -193,7 +184,7 @@ const ss = StyleSheet.create({
 
   explanation: {
     marginTop: 12, padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(43,33,24,0.04)',
     borderRadius: 10, borderLeftWidth: 3, borderLeftColor: ORANGE,
   },
 
