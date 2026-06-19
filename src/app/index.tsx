@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
-import { ERA_COLORS, ERA_LABELS, type Character, type CharacterEra } from '@/features/characters/types';
+import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type Character, type CharacterEra } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import { formatContextYear, type HistoricalContext } from '@/features/historical-contexts/types';
 import { useAuthStore } from '@/features/auth/store';
@@ -34,6 +34,7 @@ function greeting(): string {
 function CharPortrait({ char, onPress }: { char: Character; onPress: () => void }) {
   const ec     = char.era ? ERA_COLORS[char.era] : null;
   const cardBg = char.era ? ERA_CARD_BG[char.era] : CARD;
+  const imageUri = getCharacterImageUri(char);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.82} style={{ width: 120 }}>
@@ -42,8 +43,8 @@ function CharPortrait({ char, onPress }: { char: Character; onPress: () => void 
         backgroundColor: cardBg, overflow: 'hidden',
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
       }}>
-        {char.image ? (
-          <Image source={{ uri: char.image }} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 52, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: char.era ? 0.18 : 0.3 }}>

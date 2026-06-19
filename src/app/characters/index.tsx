@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
-import { ERA_COLORS, ERA_LABELS, type Character, type CharacterEra } from '@/features/characters/types';
+import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type Character, type CharacterEra } from '@/features/characters/types';
 
 type EraFilter = CharacterEra | 'ALL';
 
@@ -42,6 +42,7 @@ const ERA_CARD_BG: Record<CharacterEra, string> = {
 function CharacterCard({ item, onPress }: { item: Character; onPress: () => void }) {
   const ec     = item.era ? ERA_COLORS[item.era] : null;
   const cardBg = item.era ? ERA_CARD_BG[item.era] : CARD;
+  const imageUri = getCharacterImageUri(item);
 
   return (
     <TouchableOpacity
@@ -58,9 +59,9 @@ function CharacterCard({ item, onPress }: { item: Character; onPress: () => void
       }}
     >
       {/* Image or large initial */}
-      {item.image ? (
+      {imageUri ? (
         <Image
-          source={{ uri: item.image }}
+          source={{ uri: imageUri }}
           style={{ position: 'absolute', width: '100%', height: '100%' }}
           contentFit="cover"
         />

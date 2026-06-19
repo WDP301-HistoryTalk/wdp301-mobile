@@ -1,7 +1,10 @@
 export type CharacterEra = 'ANCIENT' | 'MEDIEVAL' | 'MODERN' | 'CONTEMPORARY';
 
 export interface CharacterContext {
-  contextId: string;
+  contextId: {
+    id: string;
+    name: string;
+  };
   name: string;
 }
 
@@ -10,6 +13,7 @@ export interface Character {
   name: string;
   title?: string;
   background?: string;
+  imageUrl?: string;
   image?: string;
   modelUrl?: string;
   bornYear?: number;
@@ -37,6 +41,10 @@ export interface CharacterPage {
   pageSize: number;
   hasNext: boolean;
   hasPrevious: boolean;
+}
+
+export function getCharacterImageUri(character: Character): string | undefined {
+  return character.imageUrl ?? character.image;
 }
 
 export const ERA_LABELS: Record<CharacterEra, string> = {

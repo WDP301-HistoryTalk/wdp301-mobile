@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { ArrowLeft, Send, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -49,10 +50,11 @@ function TypingDots() {
 
 // ─── message bubble ───────────────────────────────────────────────────────────
 function MessageBubble({
-  message, initial,
+  message, initial, characterImageUrl,
 }: {
   message: ChatMessage;
   initial: string;
+  characterImageUrl?: string;
 }) {
   const isUser = message.role === 'USER';
 
@@ -70,7 +72,11 @@ function MessageBubble({
     <View style={s.aiRow}>
       {/* Character avatar */}
       <View style={s.aiAvatar}>
-        <Text style={s.aiAvatarText}>{initial}</Text>
+        {characterImageUrl ? (
+          <Image source={{ uri: characterImageUrl }} style={s.avatarImage} contentFit="cover" />
+        ) : (
+          <Text style={s.aiAvatarText}>{initial}</Text>
+        )}
       </View>
       <View style={[s.aiBubble, { maxWidth: '80%' }]}>
         <Text style={s.aiText}>{message.content}</Text>
@@ -85,11 +91,15 @@ export default function ChatScreen() {
   const params     = useLocalSearchParams<{
     sessionId: string;
     characterName?: string;
+    characterImageUrl?: string;
     contextName?: string;
   }>();
 
   const sessionId     = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
   const characterName = Array.isArray(params.characterName) ? params.characterName[0] : (params.characterName ?? 'Nhân vật');
+  const characterImageUrl = Array.isArray(params.characterImageUrl)
+    ? params.characterImageUrl[0]
+    : (params.characterImageUrl ?? '');
   const contextName   = Array.isArray(params.contextName)   ? params.contextName[0]   : (params.contextName ?? '');
   const initial       = characterName.charAt(0).toUpperCase();
 
@@ -199,7 +209,11 @@ export default function ChatScreen() {
 
           {/* Character avatar in header */}
           <View style={s.headerAvatar}>
-            <Text style={s.headerAvatarText}>{initial}</Text>
+            {characterImageUrl ? (
+              <Image source={{ uri: characterImageUrl }} style={s.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={s.headerAvatarText}>{initial}</Text>
+            )}
           </View>
 
           <TouchableOpacity onPress={handleDeleteSession} activeOpacity={0.7} style={[s.headerBtn, { marginLeft: 8 }]}>
@@ -228,7 +242,7 @@ export default function ChatScreen() {
               </View>
             }
             renderItem={({ item }) => (
-              <MessageBubble message={item} initial={initial} />
+              <MessageBubble message={item} initial={initial} characterImageUrl={characterImageUrl} />
             )}
             ListFooterComponent={isTyping ? <TypingDots /> : null}
           />
@@ -311,8 +325,13 @@ const s = StyleSheet.create({
   headerAvatar: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
   headerAvatarText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
   divider: { height: 1, backgroundColor: BORDER },
 
   messageList: {
@@ -354,6 +373,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)',
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
   },
   aiAvatarText: { color: ORANGE, fontSize: 13, fontWeight: '800' },
   aiBubble: {

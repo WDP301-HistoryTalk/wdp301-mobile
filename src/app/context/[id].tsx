@@ -46,6 +46,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function CharacterChip({ char, onPress }: { char: ContextCharacter; onPress: () => void }) {
   const initial = char.name.charAt(0).toUpperCase();
+  const imageUri = char.imageUrl ?? char.image;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={{ alignItems: 'center', width: 72 }}>
@@ -57,8 +58,8 @@ function CharacterChip({ char, onPress }: { char: ContextCharacter; onPress: () 
           overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {char.image ? (
-          <Image source={{ uri: char.image }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <Text style={{ fontSize: 24, fontWeight: '900', color: ORANGE, opacity: 0.8 }}>
             {initial}

@@ -18,7 +18,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { BG, CARD, BORDER, MUTED, SURFACE, TEXT } from '@/constants/palette';
 import { useCharacter } from '@/features/characters/hooks/use-character';
-import { ERA_COLORS, ERA_LABELS, type CharacterEra } from '@/features/characters/types';
+import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
 
 function formatDate(y?: number, m?: number, d?: number, bc?: boolean): string | null {
   if (!y) return null;
@@ -66,6 +66,7 @@ export default function CharacterDetailScreen() {
         params: {
           sessionId:     result.session.id,
           characterName: char?.name ?? '',
+          characterImageUrl: char ? getCharacterImageUri(char) ?? '' : '',
           contextName,
         },
       });
@@ -99,6 +100,7 @@ export default function CharacterDetailScreen() {
   const heroBg    = char.era ? ERA_HERO_BG[char.era] : CARD;
   const bornDate  = formatDate(char.bornYear,  char.bornMonth,  char.bornDay,  char.isBornBc);
   const deathDate = formatDate(char.deathYear, char.deathMonth, char.deathDay, char.isDeathBc);
+  const imageUri  = getCharacterImageUri(char);
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
@@ -109,9 +111,9 @@ export default function CharacterDetailScreen() {
       >
         {/* ── Full-bleed hero ─────────────────────────────────────── */}
         <View style={{ height: 380, width: '100%', backgroundColor: heroBg }}>
-          {char.image ? (
+          {imageUri ? (
             <Image
-              source={{ uri: char.image }}
+              source={{ uri: imageUri }}
               style={{ position: 'absolute', width: '100%', height: '100%' }}
               contentFit="cover"
             />

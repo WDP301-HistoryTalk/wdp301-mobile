@@ -8,6 +8,7 @@ export interface ContextCharacter {
   id: string;
   name: string;
   title?: string;
+  imageUrl?: string;
   image?: string;
   era?: ContextEra;
 }
