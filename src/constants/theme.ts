@@ -24,6 +24,25 @@ export const Colors = {
   },
 } as const;
 
+export const BrandColors = {
+  primary: '#EA580C',
+  primarySoft: '#FED7AA',
+  primaryMuted: 'rgba(234,88,12,0.08)',
+  primarySubtle: 'rgba(234,88,12,0.15)',
+  primaryFocus: 'rgba(234,88,12,0.25)',
+  primaryBorder: 'rgba(234,88,12,0.28)',
+  primaryStrongBorder: 'rgba(234,88,12,0.35)',
+  overlay: 'rgba(0,0,0,0.28)',
+  overlayMedium: 'rgba(0,0,0,0.45)',
+  pageOverlay: 'rgba(9,9,11,0.55)',
+  overlayStrong: 'rgba(9,9,11,0.72)',
+  pageOverlayStrong: 'rgba(9,9,11,0.82)',
+  white: '#ffffff',
+  muted: '#71717a',
+  borderSubtle: 'rgba(255,255,255,0.18)',
+  borderFaint: 'rgba(255,255,255,0.15)',
+} as const;
+
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
