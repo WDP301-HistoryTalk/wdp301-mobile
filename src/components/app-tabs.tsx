@@ -1,48 +1,131 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { Link, Slot, usePathname } from 'expo-router';
+import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+import { BrandColors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+
+const TAB_BAR_HORIZONTAL_PADDING = 16;
+
+const TABS = [
+  { href: '/', label: 'Trang chủ', icon: House },
+  { href: '/characters', label: 'Nhân vật', icon: Users },
+  { href: '/context', label: 'Bối cảnh', icon: BookOpen },
+  { href: '/quiz', label: 'Quiz', icon: Trophy },
+] as const;
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const colors = useTheme();
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Trang chủ</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/logo.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={styles.content}>
+        <Slot />
+      </View>
 
-      <NativeTabs.Trigger name="characters">
-        <NativeTabs.Trigger.Label>Nhân vật</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/logo.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+      <View
+        style={[
+          styles.bar,
+          {
+            backgroundColor: colors.backgroundElement,
+            borderTopColor: BrandColors.borderSubtle,
+            paddingBottom: Math.max(insets.bottom, 12),
+            paddingLeft: Math.max(insets.left, TAB_BAR_HORIZONTAL_PADDING),
+            paddingRight: Math.max(insets.right, TAB_BAR_HORIZONTAL_PADDING),
+          },
+        ]}>
+        <View style={styles.inner}>
+          {TABS.map(({ href, label, icon: Icon }) => {
+            const active =
+              href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 
-      <NativeTabs.Trigger name="context">
-        <NativeTabs.Trigger.Label>Bối cảnh</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/logo.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+            return (
+              <Link key={href} href={href as never} asChild>
+                <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
+                  <View style={[styles.pill, active && styles.pillActive]} />
 
-      <NativeTabs.Trigger name="quiz">
-        <NativeTabs.Trigger.Label>Quiz</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/logo.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+                  <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
+                    <Icon
+                      size={22}
+                      color={active ? BrandColors.primary : colors.textSecondary}
+                      strokeWidth={active ? 2.4 : 1.8}
+                    />
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      { color: active ? BrandColors.primary : colors.textSecondary },
+                    ]}
+                    numberOfLines={1}>
+                    {label}
+                  </Text>
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  bar: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  inner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    maxWidth: 520,
+    width: '100%',
+  },
+  tabItem: {
+    alignItems: 'center',
+    flexBasis: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    justifyContent: 'center',
+    gap: 5,
+    paddingBottom: 4,
+    paddingHorizontal: 6,
+  },
+  pressed: {
+    opacity: 0.65,
+  },
+  pill: {
+    alignSelf: 'stretch',
+    backgroundColor: 'transparent',
+    height: 3,
+    marginBottom: 6,
+  },
+  pillActive: {
+    backgroundColor: BrandColors.primary,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    borderRadius: 11,
+    height: 34,
+    justifyContent: 'center',
+    width: 44,
+  },
+  iconWrapActive: {
+    backgroundColor: BrandColors.primarySubtle,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
