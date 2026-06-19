@@ -1,15 +1,20 @@
+export type QuizLevel = 'EASY' | 'MEDIUM' | 'HARD';
+export type QuizEra = 'ALL' | 'ANCIENT' | 'MEDIEVAL' | 'MODERN' | 'CONTEMPORARY';
+export type QuizGrade = 10 | 11 | 12;
+
 export interface Quiz {
   quizId: string;
   title: string;
+  level: QuizLevel;
   description: string;
-  grade?: number;
-  chapterNumber?: number;
-  chapterTitle?: string;
-  era: string;
+  era: QuizEra;
   durationSeconds: number;
   playCount: number;
   rating: number;
-  contextTitle: string;
+  contextTitle?: string;
+  grade?: QuizGrade;
+  chapterNumber?: number;
+  chapterTitle?: string;
 }
 
 export interface QuizQuestion {
@@ -18,21 +23,21 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer: number;
   orderIndex: number;
-  explanation: string;
+  explanation?: string;
 }
 
 export interface QuizSession {
   sessionId: string;
   quizId: string;
   title: string;
+  limitedTime: number;
   durationSeconds: number;
   questions: QuizQuestion[];
 }
 
 export interface SubmitAnswers {
   sessionId: string;
-  answers: { questionId: string; selectedOption: number }[];
-  durationSeconds?: number;
+  answers: { questionId: string; selectedAnswer: number }[];
 }
 
 export interface QuizResult {
@@ -40,17 +45,46 @@ export interface QuizResult {
   score: number;
   totalQuestions: number;
   percentage: number;
+  startTime: string;
+  endTime: string;
   correctAnswers: number[];
   wrongAnswers: number[];
 }
 
 export interface MyResult {
-  resultId: string;
+  sessionId: string;
   quizId: string;
   quizTitle: string;
   score: number;
   totalQuestions: number;
   percentage: number;
-  durationSeconds: number;
   completedAt: string;
+}
+
+export interface MyResultsPage {
+  content: MyResult[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface QuizResultDetailQuestion extends QuizQuestion {
+  selectedAnswer: number;
+  correct: boolean;
+}
+
+export interface QuizResultDetail {
+  sessionId: string;
+  quizId: string;
+  quizTitle: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  limitedTime: number;
+  startedAt: string;
+  completedAt: string;
+  questions: QuizResultDetailQuestion[];
 }

@@ -1,6 +1,13 @@
 import { apiClient } from '@/lib/api-client';
 
-import type { MyResult, Quiz, QuizResult, QuizSession, SubmitAnswers } from './types';
+import type {
+  MyResultsPage,
+  Quiz,
+  QuizResult,
+  QuizResultDetail,
+  QuizSession,
+  SubmitAnswers,
+} from './types';
 
 export const quizApi = {
   list: (search?: string) => {
@@ -11,8 +18,14 @@ export const quizApi = {
   getById: (quizId: string) =>
     apiClient<Quiz>(`/quizzes/${quizId}`),
 
-  startSession: (quizId: string) =>
-    apiClient<QuizSession>(`/quizzes/${quizId}/start`, { method: 'POST' }),
+  startSession: async (quizId: string, limitedTime?: number) => {
+    const qs = limitedTime ? `?limitedTime=${limitedTime}` : '';
+    const session = await apiClient<QuizSession>(`/quizzes/${quizId}/start${qs}`, { method: 'POST' });
+    return {
+      ...session,
+      questions: [...session.questions].sort((a, b) => a.orderIndex - b.orderIndex),
+    };
+  },
 
   submit: (data: SubmitAnswers) =>
     apiClient<QuizResult>('/quizzes/submit', {
@@ -21,7 +34,10 @@ export const quizApi = {
     }),
 
   getMyResults: (page = 0, size = 10) =>
-    apiClient<{ content: MyResult[]; hasNext: boolean; currentPage: number; totalElements: number }>(
+    apiClient<MyResultsPage>(
       `/quizzes/results/me?page=${page}&size=${size}`
     ),
+
+  getMyResultBySession: (sessionId: string) =>
+    apiClient<QuizResultDetail>(`/quizzes/results/me/${sessionId}`),
 };

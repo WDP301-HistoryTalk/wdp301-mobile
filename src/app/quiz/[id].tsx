@@ -1,13 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ArrowLeft, BookOpen, CheckCircle2, Clock, Play, Star, Users,
+  ArrowLeft, BookOpen, CheckCircle2, Play, Star, Users,
 } from 'lucide-react-native';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, MUTED, ORANGE, TEXT, TEXT2 } from '@/constants/palette';
+import { useAuthStore } from '@/features/auth/store';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useStartQuiz } from '@/features/quiz/hooks/use-start-quiz';
 import { useQuiz } from '@/features/quiz/hooks/use-quiz';
@@ -42,17 +44,29 @@ export default function QuizDetailScreen() {
 
   const { data: quiz, isLoading, isError } = useQuiz(resolvedId ?? '');
   const { mutateAsync: startQuiz, isPending } = useStartQuiz();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [limitedTime, setLimitedTime] = useState<number | undefined>();
 
   const ec       = quiz ? ERA_COLORS[quiz.era as keyof typeof ERA_COLORS] : undefined;
   const eraLabel = quiz ? (ERA_LABELS[quiz.era as keyof typeof ERA_LABELS] ?? quiz.era) : '';
+  const timeOptions = useMemo(() => {
+    const values = [quiz?.durationSeconds, 300, 600, 900, 1200]
+      .filter((value): value is number => Boolean(value && value > 0));
+    return Array.from(new Set(values));
+  }, [quiz?.durationSeconds]);
 
   async function handleStart() {
     if (!quiz) return;
+    if (!isAuthenticated) {
+      Alert.alert('Cần đăng nhập', 'Bạn cần đăng nhập để bắt đầu làm quiz.');
+      return;
+    }
+
     try {
-      await startQuiz(quiz.quizId);
+      await startQuiz({ quizId: quiz.quizId, limitedTime });
       router.push('/quiz/play');
     } catch (e: any) {
-      // error handled by mutation
+      Alert.alert('Không thể bắt đầu quiz', e?.message ?? 'Vui lòng thử lại sau.');
     }
   }
 
@@ -109,9 +123,7 @@ export default function QuizDetailScreen() {
 
           {/* Stats */}
           <View style={ss.statsCard}>
-            <StatRow icon={Clock}    label="Thời gian làm bài"    value={formatDuration(quiz.durationSeconds)} />
-            <View style={ss.divider} />
-            <StatRow icon={Users}    label="Lượt làm"              value={`${quiz.playCount} lượt`} color="#60a5fa" />
+            <StatRow icon={Users}    label="Bạn đã làm"              value={`${quiz.playCount} lượt`} color="#60a5fa" />
             {quiz.grade ? (
               <>
                 <View style={ss.divider} />
@@ -124,6 +136,36 @@ export default function QuizDetailScreen() {
                 <StatRow icon={Star} label="Chương" value={quiz.chapterTitle} color="#34d399" />
               </>
             ) : null}
+          </View>
+
+          {/* Limited time */}
+          <View style={ss.timeCard}>
+            <Text style={ss.timeTitle}>Chọn thời gian</Text>
+            <Text style={ss.timeSub}>Mặc định sẽ dùng thời lượng của bộ câu hỏi.</Text>
+            <View style={ss.timeOptions}>
+              <TouchableOpacity
+                onPress={() => setLimitedTime(undefined)}
+                activeOpacity={0.8}
+                style={[ss.timeChip, limitedTime === undefined && ss.timeChipActive]}
+              >
+                <Text style={[ss.timeChipText, limitedTime === undefined && ss.timeChipTextActive]}>
+                  Mặc định
+                </Text>
+              </TouchableOpacity>
+
+              {timeOptions.map((seconds) => (
+                <TouchableOpacity
+                  key={seconds}
+                  onPress={() => setLimitedTime(seconds)}
+                  activeOpacity={0.8}
+                  style={[ss.timeChip, limitedTime === seconds && ss.timeChipActive]}
+                >
+                  <Text style={[ss.timeChipText, limitedTime === seconds && ss.timeChipTextActive]}>
+                    {formatDuration(seconds)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Tip */}
@@ -197,6 +239,22 @@ const ss = StyleSheet.create({
   statLabel: { color: MUTED, fontSize: 11, fontWeight: '500', marginBottom: 2 },
   statValue: { color: TEXT,  fontSize: 14, fontWeight: '700' },
   divider:   { height: 1, backgroundColor: BORDER, marginHorizontal: 0 },
+
+  timeCard: {
+    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    padding: 16, marginBottom: 16,
+  },
+  timeTitle: { color: TEXT, fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  timeSub: { color: MUTED, fontSize: 12, lineHeight: 18, marginBottom: 12 },
+  timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timeChip: {
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 999, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: BG,
+  },
+  timeChipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  timeChipText: { color: TEXT2, fontSize: 12, fontWeight: '700' },
+  timeChipTextActive: { color: '#fff' },
 
   tipCard: {
     flexDirection: 'row', gap: 12, padding: 14,

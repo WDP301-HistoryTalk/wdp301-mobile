@@ -7,7 +7,10 @@ export function useStartQuiz() {
   const startQuiz = useQuizStore((s) => s.startQuiz);
 
   return useMutation({
-    mutationFn: (quizId: string) => quizApi.startSession(quizId),
+    mutationFn: (params: string | { quizId: string; limitedTime?: number }) => {
+      if (typeof params === 'string') return quizApi.startSession(params);
+      return quizApi.startSession(params.quizId, params.limitedTime);
+    },
     onSuccess: (session) => {
       startQuiz(session);
     },

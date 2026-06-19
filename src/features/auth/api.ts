@@ -2,6 +2,18 @@ import type { ApiResponse, AuthResponse, RefreshTokenResponse } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
 
+async function parseJsonResponse<T>(res: Response, path: string): Promise<ApiResponse<T> | null> {
+  const raw = await res.text();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as ApiResponse<T>;
+  } catch {
+    const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 120);
+    throw new Error(`API tra ve du lieu khong phai JSON (${res.status}) tai ${BASE_URL}${path}: ${preview}`);
+  }
+}
+
 async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
@@ -11,9 +23,9 @@ async function post<T>(path: string, body: unknown, token?: string): Promise<T> 
     },
     body: JSON.stringify(body),
   });
-  const json: ApiResponse<T> = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Request failed');
-  return json.data;
+  const json = await parseJsonResponse<T>(res, path);
+  if (!res.ok) throw new Error(json?.message || 'Request failed');
+  return json?.data as T;
 }
 
 export const authApi = {

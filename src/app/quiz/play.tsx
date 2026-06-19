@@ -29,7 +29,7 @@ export default function QuizPlayScreen() {
   const { mutateAsync: submitQuiz, isPending: submitting } = useSubmitQuiz();
 
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [timeLeft,   setTimeLeft]   = useState(active?.session.durationSeconds ?? 0);
+  const [timeLeft,   setTimeLeft]   = useState(active?.session.limitedTime ?? 0);
 
   // Track elapsed with a ref so the interval closure never goes stale
   const elapsedRef    = useRef(0);
@@ -41,14 +41,14 @@ export default function QuizPlayScreen() {
   const answeredCount = Object.keys(userAnswers).length;
 
   // Animated progress bar
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const [progressAnim] = useState(() => new Animated.Value(0));
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: totalQ > 0 ? answeredCount / totalQ : 0,
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [answeredCount, totalQ]);
+  }, [answeredCount, progressAnim, totalQ]);
 
   // Submit — reads fresh state from Zustand to avoid stale closure
   const doSubmit = useCallback(async () => {
@@ -60,14 +60,13 @@ export default function QuizPlayScreen() {
 
     const answers = snap.session.questions.map((q) => ({
       questionId: q.questionId,
-      selectedOption: snap.userAnswers[q.questionId] ?? 0,
+      selectedAnswer: snap.userAnswers[q.questionId] ?? 0,
     }));
 
     try {
       await submitQuiz({
         sessionId: snap.session.sessionId,
         answers,
-        durationSeconds: elapsedRef.current,
       });
       router.replace('/quiz/result');
     } catch (e: any) {
@@ -80,7 +79,7 @@ export default function QuizPlayScreen() {
   useEffect(() => {
     if (!active) return;
     elapsedRef.current = 0;
-    const duration = active.session.durationSeconds;
+    const duration = active.session.limitedTime;
 
     const interval = setInterval(() => {
       elapsedRef.current += 1;

@@ -7,6 +7,18 @@ interface ApiClientOptions extends RequestInit {
   skipAuth?: boolean;
 }
 
+async function parseJsonResponse(res: Response, path: string) {
+  const raw = await res.text();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 120);
+    throw new Error(`API tra ve du lieu khong phai JSON (${res.status}) tai ${BASE_URL}${path}: ${preview}`);
+  }
+}
+
 export async function apiClient<T>(path: string, options: ApiClientOptions = {}): Promise<T> {
   const { skipAuth = false, ...fetchOptions } = options;
 
@@ -42,7 +54,7 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
     }
   }
 
-  const json = await res.json();
+  const json = await parseJsonResponse(res, path);
   if (!res.ok) throw new Error(json.message ?? 'Yêu cầu thất bại');
   return json.data as T;
 }
