@@ -1,18 +1,18 @@
 import '../global.css';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { DefaultTheme, Slot, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { BG, ORANGE } from '@/constants/palette';
 import { useAuthStore } from '@/features/auth/store';
 import { queryClient } from '@/lib/query-client';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const { isLoading, isAuthenticated, initialize } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
@@ -36,8 +36,8 @@ export default function RootLayout() {
   // Chờ load session từ SecureStore
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#121212' }}>
-        <ActivityIndicator size="large" color="#EA580C" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: BG }}>
+        <ActivityIndicator size="large" color={ORANGE} />
       </View>
     );
   }
@@ -49,9 +49,10 @@ export default function RootLayout() {
 
 
   return (
-    <GluestackUIProvider mode={colorScheme === 'dark' ? 'dark' : 'light'}>
+    // App mặc định dùng theme sáng, không theo system color scheme.
+    <GluestackUIProvider mode="light">
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={DefaultTheme}>
           {inAuthGroup ? (
             // Auth screens dùng Slot → (auth)/_layout.tsx → Stack
             <Slot />

@@ -17,19 +17,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
 import { chatApi } from '@/features/chat/api';
 import { useSessionMessages } from '@/features/chat/hooks/use-session-messages';
 import { useSendMessage } from '@/features/chat/hooks/use-send-message';
 import type { ChatMessage } from '@/features/chat/types';
-
-// ─── constants ────────────────────────────────────────────────────────────────
-const BG      = '#09090b';
-const CARD    = '#18181b';
-const BORDER  = 'rgba(255,255,255,0.07)';
-const ORANGE  = '#EA580C';
-const MUTED   = '#52525b';
-const TEXT    = '#f4f4f5';
-const TEXT2   = '#a1a1aa';
 
 // ─── typing indicator ─────────────────────────────────────────────────────────
 function TypingDots() {
@@ -358,7 +350,7 @@ const s = StyleSheet.create({
   },
   aiAvatar: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#27272a',
+    backgroundColor: SURFACE,
     borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)',
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,

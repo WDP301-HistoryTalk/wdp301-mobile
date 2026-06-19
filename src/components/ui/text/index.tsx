@@ -3,7 +3,7 @@ import React from 'react';
 import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
 const textStyle = tva({
-  base: 'text-zinc-50',
+  base: 'text-[#2B2118]',
   variants: {
     size: {
       '2xs': 'text-[10px] leading-[14px]',
@@ -21,7 +21,7 @@ const textStyle = tva({
       true: 'italic',
     },
     muted: {
-      true: 'text-zinc-400',
+      true: 'text-[#6B5B3E]',
     },
   },
   defaultVariants: { size: 'md' },

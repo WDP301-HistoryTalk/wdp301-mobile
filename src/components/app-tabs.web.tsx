@@ -2,8 +2,7 @@ import { Link, Slot, usePathname } from 'expo-router';
 import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BrandColors } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
 
 const TAB_BAR_HORIZONTAL_PADDING = 16;
 
@@ -16,22 +15,14 @@ const TABS = [
 
 export default function AppTabs() {
   const pathname = usePathname();
-  const colors = useTheme();
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={styles.root}>
       <View style={styles.content}>
         <Slot />
       </View>
 
-      <View
-        style={[
-          styles.bar,
-          {
-            backgroundColor: colors.backgroundElement,
-            borderTopColor: BrandColors.borderSubtle,
-          },
-        ]}>
+      <View style={styles.bar}>
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon: Icon }) => {
             const active =
@@ -40,22 +31,15 @@ export default function AppTabs() {
             return (
               <Link key={href} href={href as never} asChild>
                 <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
-                  <View style={[styles.pill, active && styles.pillActive]} />
-
                   <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
                     <Icon
                       size={22}
-                      color={active ? BrandColors.primary : colors.textSecondary}
+                      color={active ? ORANGE : MUTED}
                       strokeWidth={active ? 2.4 : 1.8}
                     />
                   </View>
 
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      { color: active ? BrandColors.primary : colors.textSecondary },
-                    ]}
-                    numberOfLines={1}>
+                  <Text style={[styles.tabLabel, { color: active ? ORANGE : MUTED }]} numberOfLines={1}>
                     {label}
                   </Text>
                 </Pressable>
@@ -71,6 +55,7 @@ export default function AppTabs() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: BG,
   },
   content: {
     flex: 1,
@@ -78,11 +63,15 @@ const styles = StyleSheet.create({
   },
   bar: {
     alignItems: 'center',
+    backgroundColor: CARD,
+    borderTopColor: BORDER,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingBottom: 20,
     paddingHorizontal: TAB_BAR_HORIZONTAL_PADDING,
+    paddingTop: 10,
   },
   inner: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     maxWidth: 520,
@@ -101,24 +90,15 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.65,
   },
-  pill: {
-    alignSelf: 'stretch',
-    backgroundColor: 'transparent',
-    height: 3,
-    marginBottom: 6,
-  },
-  pillActive: {
-    backgroundColor: BrandColors.primary,
-  },
   iconWrap: {
     alignItems: 'center',
-    borderRadius: 11,
-    height: 34,
+    borderRadius: 12,
+    height: 36,
     justifyContent: 'center',
-    width: 44,
+    width: 46,
   },
   iconWrapActive: {
-    backgroundColor: BrandColors.primarySubtle,
+    backgroundColor: ORANGE_TINT,
   },
   tabLabel: {
     fontSize: 10,

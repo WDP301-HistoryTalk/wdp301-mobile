@@ -17,6 +17,7 @@ import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import {
@@ -56,9 +57,9 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
       activeOpacity={0.8}
       style={{
         flexDirection: 'row',
-        backgroundColor: '#18181b',
+        backgroundColor: CARD,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderColor: BORDER,
         borderRadius: 20,
         padding: 14,
         gap: 14,
@@ -87,7 +88,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
             contentFit="cover"
           />
         ) : (
-          <Text style={{ fontSize: 32, fontWeight: '900', color: ec.text, opacity: 0.7 }}>
+          <Text style={{ fontSize: 32, fontWeight: '900', color: ec.glow, opacity: 0.7 }}>
             {item.name.charAt(0).toUpperCase()}
           </Text>
         )}
@@ -117,7 +118,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
         </View>
 
         {/* Name */}
-        <Heading size="sm" className="text-zinc-100 leading-5" numberOfLines={2}>
+        <Heading size="sm" className="text-[#2B2118] leading-5" numberOfLines={2}>
           {item.name}
         </Heading>
 
@@ -130,14 +131,14 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
 
         {/* Description preview */}
         {item.description ? (
-          <Text numberOfLines={2} style={{ fontSize: 11, color: '#52525b', lineHeight: 17 }}>
+          <Text numberOfLines={2} style={{ fontSize: 11, color: TEXT2, lineHeight: 17 }}>
             {item.description}
           </Text>
         ) : null}
       </View>
 
       <View style={{ justifyContent: 'center' }}>
-        <Text style={{ color: '#3f3f46', fontSize: 20, lineHeight: 20 }}>›</Text>
+        <Text style={{ color: MUTED, fontSize: 20, lineHeight: 20 }}>›</Text>
       </View>
     </TouchableOpacity>
   );
@@ -154,7 +155,7 @@ function SkeletonList() {
             flexDirection: 'row',
             gap: 14,
             marginBottom: 10,
-            backgroundColor: '#18181b',
+            backgroundColor: CARD,
             borderRadius: 20,
             padding: 14,
           }}
@@ -198,19 +199,19 @@ function ListHeader({
           marginBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: '#27272a',
+          backgroundColor: SURFACE,
           borderRadius: 16,
           paddingHorizontal: 14,
           height: 46,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.07)',
+          borderColor: BORDER,
         }}
       >
-        <Search size={15} color="#71717a" strokeWidth={2} />
+        <Search size={15} color={MUTED} strokeWidth={2} />
         <TextInput
-          style={{ flex: 1, marginLeft: 10, color: '#f4f4f5', fontSize: 14 }}
+          style={{ flex: 1, marginLeft: 10, color: TEXT, fontSize: 14 }}
           placeholder="Tìm kiếm bối cảnh lịch sử..."
-          placeholderTextColor="#52525b"
+          placeholderTextColor={MUTED}
           value={search}
           onChangeText={onSearchChange}
           autoCapitalize="none"
@@ -231,12 +232,12 @@ function ListHeader({
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 99,
-              backgroundColor: era === key ? '#EA580C' : '#27272a',
+              backgroundColor: era === key ? ORANGE : SURFACE,
               borderWidth: 1,
-              borderColor: era === key ? 'transparent' : 'rgba(255,255,255,0.07)',
+              borderColor: era === key ? 'transparent' : BORDER,
             }}
           >
-            <Text size="xs" bold style={{ color: era === key ? '#fff' : '#71717a' }}>
+            <Text size="xs" bold style={{ color: era === key ? '#fff' : MUTED }}>
               {label}
             </Text>
           </Pressable>
@@ -286,7 +287,7 @@ export default function ExploreScreen() {
   const contexts = data?.pages.flatMap((p) => p.content) ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
       {/* Fixed header — outside FlatList to avoid VirtualizedList key conflicts */}
       <ListHeader
         search={search}

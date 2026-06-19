@@ -1,5 +1,5 @@
 export interface ChatSession {
-  _id: string;
+  id: string;
   uid: string;
   characterId: string;
   contextId: string;
