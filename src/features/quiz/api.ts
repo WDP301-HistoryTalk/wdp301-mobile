@@ -5,6 +5,7 @@ import type {
   Quiz,
   QuizResult,
   QuizResultDetail,
+  QuizSummary,
   QuizSession,
   SubmitAnswers,
 } from './types';
@@ -12,7 +13,7 @@ import type {
 export const quizApi = {
   list: (search?: string) => {
     const qs = search ? `?search=${encodeURIComponent(search)}` : '';
-    return apiClient<Quiz[]>(`/quizzes${qs}`);
+    return apiClient<QuizSummary[]>(`/quizzes${qs}`);
   },
 
   getById: (quizId: string) =>

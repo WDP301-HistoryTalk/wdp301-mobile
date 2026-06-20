@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { BookOpen, Clock, Search, Star, Trophy, Users } from 'lucide-react-native';
+import { Search, Star, Trophy, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,25 +9,24 @@ import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, MUTED, ORANGE, TEXT } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useQuizzes } from '@/features/quiz/hooks/use-quizzes';
-import type { Quiz } from '@/features/quiz/types';
+import type { QuizLevel, QuizSummary } from '@/features/quiz/types';
 
-function formatDuration(secs: number) {
-  if (!secs) return '—';
-  const m = Math.floor(secs / 60);
-  return `${m} phút`;
-}
+const LEVEL_LABELS: Record<QuizLevel, string> = {
+  EASY: 'Dễ',
+  MEDIUM: 'Trung bình',
+  HARD: 'Khó',
+};
 
-function QuizCard({ quiz, onPress }: { quiz: Quiz; onPress: () => void }) {
+function QuizCard({ quiz, onPress }: { quiz: QuizSummary; onPress: () => void }) {
   const ec = ERA_COLORS[quiz.era as keyof typeof ERA_COLORS];
   const eraLabel = ERA_LABELS[quiz.era as keyof typeof ERA_LABELS] ?? quiz.era;
+  const levelLabel = LEVEL_LABELS[quiz.level] ?? quiz.level;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={s.card}>
-      {/* Era accent */}
       <View style={[s.cardAccent, { backgroundColor: ec?.text ?? ORANGE }]} />
 
       <View style={{ flex: 1, paddingLeft: 14 }}>
-        {/* Era + context */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <View style={[s.eraBadge, { backgroundColor: ec?.bg ?? 'rgba(234,88,12,0.15)', borderColor: `${ec?.text ?? ORANGE}40` }]}>
             <Text style={{ color: ec?.text ?? ORANGE, fontSize: 10, fontWeight: '700' }}>{eraLabel}</Text>
@@ -37,29 +36,20 @@ function QuizCard({ quiz, onPress }: { quiz: Quiz; onPress: () => void }) {
           ) : null}
         </View>
 
-        {/* Title */}
         <Text style={s.cardTitle} numberOfLines={2}>{quiz.title}</Text>
 
-        {/* Stats row */}
         <View style={s.statsRow}>
           <View style={s.statItem}>
-            <Clock size={12} color={MUTED} strokeWidth={1.75} />
-            <Text style={s.statText}>{formatDuration(quiz.durationSeconds)}</Text>
+            <Star size={12} color={MUTED} strokeWidth={1.75} />
+            <Text style={s.statText}>{levelLabel}</Text>
           </View>
           <View style={s.statItem}>
             <Users size={12} color={MUTED} strokeWidth={1.75} />
             <Text style={s.statText}>{quiz.playCount} lượt</Text>
           </View>
-          {quiz.grade ? (
-            <View style={s.statItem}>
-              <BookOpen size={12} color={MUTED} strokeWidth={1.75} />
-              <Text style={s.statText}>Lớp {quiz.grade}</Text>
-            </View>
-          ) : null}
         </View>
       </View>
 
-      {/* Arrow */}
       <View style={s.cardArrow}>
         <Text style={{ color: ORANGE, fontSize: 18, fontWeight: '300' }}>›</Text>
       </View>
@@ -78,17 +68,18 @@ function QuizSkeletons() {
 }
 
 export default function QuizListScreen() {
-  const router  = useRouter();
+  const router = useRouter();
   const [search, setSearch] = useState('');
-  const [query,  setQuery]  = useState('');
+  const [query, setQuery] = useState('');
 
   const { data: quizzes, isLoading, isError } = useQuizzes(query || undefined);
 
-  function submitSearch() { setQuery(search.trim()); }
+  function submitSearch() {
+    setQuery(search.trim());
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
-      {/* Header */}
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>Kiểm tra kiến thức</Text>
@@ -99,7 +90,6 @@ export default function QuizListScreen() {
         </View>
       </View>
 
-      {/* Search */}
       <View style={s.searchWrap}>
         <Search size={16} color={MUTED} strokeWidth={1.75} style={{ marginRight: 10 }} />
         <TextInput
@@ -113,12 +103,11 @@ export default function QuizListScreen() {
         />
         {query ? (
           <TouchableOpacity onPress={() => { setSearch(''); setQuery(''); }}>
-            <Text style={{ color: MUTED, fontSize: 13, paddingLeft: 8 }}>✕</Text>
+            <Text style={{ color: MUTED, fontSize: 13, paddingLeft: 8 }}>×</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* List */}
       {isLoading ? (
         <View style={{ marginTop: 8 }}>
           <QuizSkeletons />
@@ -158,8 +147,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20,
   },
-  headerSub:   { color: MUTED, fontSize: 12, marginBottom: 2 },
-  headerTitle: { color: TEXT,  fontSize: 24, fontWeight: '800' },
+  headerSub: { color: MUTED, fontSize: 12, marginBottom: 2 },
+  headerTitle: { color: TEXT, fontSize: 24, fontWeight: '800' },
   trophyWrap: {
     width: 46, height: 46, borderRadius: 15,
     backgroundColor: 'rgba(234,88,12,0.12)',
@@ -189,9 +178,9 @@ const s = StyleSheet.create({
     borderRadius: 6, borderWidth: 1,
   },
   cardTitle: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 20, marginBottom: 8 },
-  statsRow:  { flexDirection: 'row', gap: 14 },
-  statItem:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statText:  { color: MUTED, fontSize: 11 },
+  statsRow: { flexDirection: 'row', gap: 14 },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statText: { color: MUTED, fontSize: 11 },
   cardArrow: {
     width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
     marginLeft: 8,

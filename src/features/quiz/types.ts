@@ -2,16 +2,19 @@ export type QuizLevel = 'EASY' | 'MEDIUM' | 'HARD';
 export type QuizEra = 'ALL' | 'ANCIENT' | 'MEDIEVAL' | 'MODERN' | 'CONTEMPORARY';
 export type QuizGrade = 10 | 11 | 12;
 
-export interface Quiz {
+export interface QuizSummary {
   quizId: string;
   title: string;
   level: QuizLevel;
-  description: string;
   era: QuizEra;
-  durationSeconds: number;
   playCount: number;
-  rating: number;
   contextTitle?: string;
+}
+
+export interface Quiz extends QuizSummary {
+  description?: string;
+  durationSeconds?: number;
+  rating?: number;
   grade?: QuizGrade;
   chapterNumber?: number;
   chapterTitle?: string;
