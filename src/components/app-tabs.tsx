@@ -1,18 +1,19 @@
 import { Link, Slot, usePathname } from 'expo-router';
-import { BookOpen, House, MessageCircle, Trophy, Users } from 'lucide-react-native';
+import { BookOpen, House, MessageCircle, Trophy, User, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
 
-const TAB_BAR_HORIZONTAL_PADDING = 16;
+const TAB_BAR_HORIZONTAL_PADDING = 12;
 
 const TABS = [
-  { href: '/', label: 'Trang chu', icon: House },
-  { href: '/characters', label: 'Nhan vat', icon: Users },
+  { href: '/', label: 'Trang chủ', icon: House },
+  { href: '/characters', label: 'Nhân vật', icon: Users },
   { href: '/chat/history', label: 'Chat', icon: MessageCircle },
-  { href: '/context', label: 'Boi canh', icon: BookOpen },
+  { href: '/context', label: 'Bối cảnh', icon: BookOpen },
   { href: '/quiz', label: 'Quiz', icon: Trophy },
+  { href: '/profile', label: 'Cá nhân', icon: User },
 ] as const;
 
 export default function AppTabs() {

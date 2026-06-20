@@ -18,6 +18,7 @@ import { useMe } from '@/features/auth/hooks/use-me';
 import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
 import { useAuthStore } from '@/features/auth/store';
 import type { UpdateProfileInput } from '@/features/auth/types';
+import { useTiers } from '@/features/payment/hooks/use-tiers';
 
 const ROLE_LABEL: Record<string, string> = {
   CUSTOMER:      'Người dùng',
@@ -131,8 +132,12 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
 
   const { data: profile, isLoading, isError } = useMe();
+  const { data: tiers } = useTiers();
   const { mutateAsync: updateMe, isPending: saving }         = useUpdateMe();
   const { mutateAsync: changePwd, isPending: changingPwd }   = useChangePassword();
+
+  const activeTier = tiers?.find((t) => t.id === profile?.tierId);
+  const tierName = activeTier ? activeTier.title : 'Gói Miễn phí';
 
   // edit state
   const [editing, setEditing] = useState(false);
@@ -276,7 +281,39 @@ export default function ProfileScreen() {
                     <Text style={s.sectionTitle}>Gói dịch vụ</Text>
                   </View>
                 </View>
-                <View style={{ gap: 10, marginTop: 4 }}>
+                
+                {/* Current Active Package Box */}
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: SURFACE,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  borderWidth: 1,
+                  borderColor: BORDER,
+                  marginTop: 8,
+                  marginBottom: 4,
+                }}>
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ color: MUTED, fontSize: 11, fontWeight: '600' }}>Gói hiện tại</Text>
+                    <Text style={{ color: TEXT, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
+                      {tierName}
+                    </Text>
+                  </View>
+                  {activeTier && activeTier.amount > 0 ? (
+                    <View style={{ backgroundColor: 'rgba(234,88,12,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)' }}>
+                      <Text style={{ color: ORANGE, fontSize: 10, fontWeight: '800' }}>PRO</Text>
+                    </View>
+                  ) : (
+                    <View style={{ backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(100,116,139,0.2)' }}>
+                      <Text style={{ color: MUTED, fontSize: 10, fontWeight: '800' }}>FREE</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ gap: 10, marginTop: 8 }}>
                   <TouchableOpacity
                     onPress={() => router.push('/payment')}
                     activeOpacity={0.8}
