@@ -15,7 +15,11 @@
         "backgroundColor": "#121212",
         "foregroundImage": "./assets/logo.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.mobilehistorytalk"
     },
     "web": {
       "output": "static",
@@ -34,7 +38,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Cho phep HistoryTalk su dung micro de nhap noi dung bang giong noi",
+          "speechRecognitionPermission": "Cho phep HistoryTalk nhan dang giong noi thanh van ban"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
