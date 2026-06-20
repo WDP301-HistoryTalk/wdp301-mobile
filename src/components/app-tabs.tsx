@@ -1,5 +1,5 @@
 import { Link, Slot, usePathname } from 'expo-router';
-import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
+import { BookOpen, House, MessageCircle, Trophy, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,9 +8,10 @@ import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palett
 const TAB_BAR_HORIZONTAL_PADDING = 16;
 
 const TABS = [
-  { href: '/', label: 'Trang chủ', icon: House },
-  { href: '/characters', label: 'Nhân vật', icon: Users },
-  { href: '/context', label: 'Bối cảnh', icon: BookOpen },
+  { href: '/', label: 'Trang chu', icon: House },
+  { href: '/characters', label: 'Nhan vat', icon: Users },
+  { href: '/chat/history', label: 'Chat', icon: MessageCircle },
+  { href: '/context', label: 'Boi canh', icon: BookOpen },
   { href: '/quiz', label: 'Quiz', icon: Trophy },
 ] as const;
 
@@ -32,7 +33,8 @@ export default function AppTabs() {
             paddingLeft: Math.max(insets.left, TAB_BAR_HORIZONTAL_PADDING),
             paddingRight: Math.max(insets.right, TAB_BAR_HORIZONTAL_PADDING),
           },
-        ]}>
+        ]}
+      >
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon: Icon }) => {
             const active =
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
     gap: 5,
     justifyContent: 'center',
     paddingBottom: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   },
   pressed: {
     opacity: 0.65,
