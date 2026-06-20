@@ -5,7 +5,9 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { chatApi } from '@/features/chat/api';
 import { useCreateSession } from '@/features/chat/hooks/use-create-session';
+import type { ChatSession } from '@/features/chat/types';
 
 import { Badge, BadgeText } from '@/components/ui/badge';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -48,6 +50,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function getSessionTime(session: ChatSession) {
+  const value = session.lastMessageAt ?? session.updatedAt ?? session.createdAt;
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function getLatestSession(sessions: ChatSession[], contextId: string) {
+  return sessions
+    .filter((session) => session.contextId === contextId)
+    .sort((a, b) => getSessionTime(b) - getSessionTime(a))[0];
+}
+
 export default function CharacterDetailScreen() {
   const { id }     = useLocalSearchParams<{ id: string }>();
   const resolvedId = Array.isArray(id) ? id[0] : id;
@@ -60,14 +74,23 @@ export default function CharacterDetailScreen() {
     if (creatingFor) return;
     setCreatingFor(contextId);
     try {
-      const result = await createSession({ characterId: resolvedId!, contextId });
+      const existingSessions = await chatApi.getSessions({ characterId: resolvedId!, contextId });
+      const latestSession = getLatestSession(existingSessions, contextId);
+      const result = latestSession ? null : await createSession({ characterId: resolvedId!, contextId });
+      const session = latestSession ?? result?.session ?? result;
+      if (!session.id) throw new Error('Missing chat session id');
       router.push({
         pathname: '/chat/[sessionId]',
         params: {
-          sessionId:     result.session.id,
+          sessionId:     session.id,
+          characterId:   resolvedId!,
+          contextId,
           characterName: char?.name ?? '',
           characterImageUrl: char ? getCharacterImageUri(char) ?? '' : '',
+          characterModelUrl: char?.modelUrl ?? '',
           contextName,
+          greetingMessage: result?.greetingMessage ? JSON.stringify(result.greetingMessage) : '',
+          suggestedQuestions: result?.suggestedQuestions ? JSON.stringify(result.suggestedQuestions) : '',
         },
       });
     } catch (e: any) {
