@@ -21,7 +21,10 @@ export const quizApi = {
 
   startSession: async (quizId: string, limitedTime?: number) => {
     const qs = limitedTime ? `?limitedTime=${limitedTime}` : '';
-    const session = await apiClient<QuizSession>(`/quizzes/${quizId}/start${qs}`, { method: 'POST' });
+    const session = await apiClient<QuizSession>(`/quizzes/${quizId}/start${qs}`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
     return {
       ...session,
       questions: [...session.questions].sort((a, b) => a.orderIndex - b.orderIndex),
