@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as Speech from 'expo-speech';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Box, Ellipsis, MessageCircle, Mic, Phone, Send, Trash2, UserRound, Video } from 'lucide-react-native';
+import { ArrowLeft, Box, Ellipsis, MessageCircle, Mic, MicOff, Phone, PhoneOff, Send, Trash2, UserRound, Video } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,6 +33,11 @@ const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
 type ChatTimelineItem =
   | { type: 'message'; message: ChatMessage }
   | { type: 'voice-call'; id: string; startedAt: string; endedAt: string; messages: ChatMessage[] };
+
+type ActiveCall = {
+  mode: '2D' | '3D';
+  startedAt: number;
+};
 
 type SpeechRecognitionResultLike = {
   readonly length: number;
@@ -110,6 +115,12 @@ function formatCallTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatCallDuration(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 function TypingDots() {
@@ -241,6 +252,9 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [callElapsed, setCallElapsed] = useState(0);
+  const [callMuted, setCallMuted] = useState(false);
 
   const listRef = useRef<FlatList<ChatTimelineItem>>(null);
   const inputRef = useRef<TextInput>(null);
@@ -289,6 +303,26 @@ export default function ChatScreen() {
   useEffect(() => () => {
     void Speech.stop();
   }, []);
+
+  useEffect(() => {
+    if (!activeCall) {
+      const resetId = setTimeout(() => setCallElapsed(0), 0);
+      return () => clearTimeout(resetId);
+    }
+
+    const resetId = setTimeout(() => {
+      setCallElapsed(0);
+    }, 0);
+
+    const intervalId = setInterval(() => {
+      setCallElapsed(Math.floor((Date.now() - activeCall.startedAt) / 1000));
+    }, 1000);
+
+    return () => {
+      clearTimeout(resetId);
+      clearInterval(intervalId);
+    };
+  }, [activeCall]);
 
   const handleSend = useCallback(async (text?: string, messageType: ChatMessageType = 'TEXT') => {
     const content = (text ?? input).trim();
@@ -382,9 +416,16 @@ export default function ChatScreen() {
         return next;
       });
       setSuggestions(result.suggestedQuestions ?? []);
+      setCallMuted(false);
+      setActiveCall({ mode, startedAt: Date.now() });
     } catch (e: any) {
       Alert.alert('Loi', e?.message ?? `Khong the bat dau call ${mode}.`);
     }
+  }
+
+  function endActiveCall() {
+    setActiveCall(null);
+    setCallMuted(false);
   }
 
   async function handleNewSession() {
@@ -573,26 +614,74 @@ export default function ChatScreen() {
 
         <View style={s.divider} />
 
-        <View style={s.callActions}>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            style={s.callActionBtn}
-            onPress={() => void handleStartCall('2D')}
-            disabled={sending || isTyping}
-          >
-            <Video size={15} color={ORANGE} strokeWidth={2} />
-            <Text style={s.callActionText}>Call 2D</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            style={[s.callActionBtn, !resolvedCharacterModelUrl && { opacity: 0.45 }]}
-            onPress={() => void handleStartCall('3D')}
-            disabled={sending || isTyping || !resolvedCharacterModelUrl}
-          >
-            <Box size={15} color={ORANGE} strokeWidth={2} />
-            <Text style={s.callActionText}>Call 3D</Text>
-          </TouchableOpacity>
-        </View>
+        {activeCall ? (
+          <View style={s.callOverlay}>
+            <View style={s.callStage}>
+              {activeCall.mode === '2D' ? (
+                resolvedCharacterImageUrl ? (
+                  <Image source={{ uri: resolvedCharacterImageUrl }} style={s.callPortrait} contentFit="cover" />
+                ) : (
+                  <View style={s.callInitial}>
+                    <Text style={s.callInitialText}>{initial}</Text>
+                  </View>
+                )
+              ) : (
+                <View style={s.callModelStage}>
+                  <View style={s.callModelBox}>
+                    <Box size={54} color="#fff" strokeWidth={1.7} />
+                  </View>
+                  <Text style={s.callModelTitle}>3D model ready</Text>
+                  <Text style={s.callModelUrl} numberOfLines={2}>{resolvedCharacterModelUrl}</Text>
+                </View>
+              )}
+
+              <View style={s.callShade} />
+              <View style={s.callInfo}>
+                <Text style={s.callModeLabel}>{activeCall.mode === '2D' ? 'Call 2D' : 'Call 3D'}</Text>
+                <Text style={s.callName}>{characterName}</Text>
+                <Text style={s.callTimer}>{formatCallDuration(callElapsed)}</Text>
+              </View>
+
+              <View style={s.callControls}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={[s.callControlBtn, callMuted && s.callControlBtnActive]}
+                  onPress={() => setCallMuted((muted) => !muted)}
+                >
+                  {callMuted
+                    ? <MicOff size={20} color="#fff" strokeWidth={2} />
+                    : <Mic size={20} color="#fff" strokeWidth={2} />}
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.75} style={s.callEndBtn} onPress={endActiveCall}>
+                  <PhoneOff size={22} color="#fff" strokeWidth={2.3} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {!activeCall ? (
+          <View style={s.callActions}>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={s.callActionBtn}
+              onPress={() => void handleStartCall('2D')}
+              disabled={sending || isTyping}
+            >
+              <Video size={15} color={ORANGE} strokeWidth={2} />
+              <Text style={s.callActionText}>Call 2D</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={[s.callActionBtn, !resolvedCharacterModelUrl && { opacity: 0.45 }]}
+              onPress={() => void handleStartCall('3D')}
+              disabled={sending || isTyping || !resolvedCharacterModelUrl}
+            >
+              <Box size={15} color={ORANGE} strokeWidth={2} />
+              <Text style={s.callActionText}>Call 3D</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {loadingMessages ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -789,6 +878,129 @@ const s = StyleSheet.create({
     marginVertical: 6,
   },
   divider: { height: 1, backgroundColor: BORDER },
+  callOverlay: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: BG,
+  },
+  callStage: {
+    height: 360,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#1f130c',
+    borderWidth: 1,
+    borderColor: 'rgba(234,88,12,0.24)',
+  },
+  callPortrait: {
+    width: '100%',
+    height: '100%',
+  },
+  callInitial: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2c1810',
+  },
+  callInitialText: {
+    color: 'rgba(255,255,255,0.32)',
+    fontSize: 120,
+    fontWeight: '900',
+  },
+  callModelStage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: '#111827',
+  },
+  callModelBox: {
+    width: 110,
+    height: 110,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(234,88,12,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  callModelTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 18,
+  },
+  callModelUrl: {
+    color: 'rgba(255,255,255,0.56)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  callShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 190,
+    backgroundColor: 'rgba(0,0,0,0.46)',
+  },
+  callInfo: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 96,
+    alignItems: 'center',
+  },
+  callModeLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  callName: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  callTimer: {
+    color: 'rgba(255,255,255,0.76)',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+  callControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+  },
+  callControlBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  callControlBtnActive: {
+    backgroundColor: 'rgba(234,88,12,0.78)',
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
+  callEndBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dc2626',
+  },
   callActions: {
     flexDirection: 'row',
     gap: 10,
