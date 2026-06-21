@@ -37,7 +37,7 @@ export default function AppTabs() {
               return (
                 <Link key={href} href={href as never} asChild>
                   <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
-                    <View style={styles.homeWrap}>
+                    <View style={[styles.homeWrap, active && styles.homeWrapActive]}>
                       <Image source={require('@/assets/logo.png')} style={styles.homeLogo} resizeMode="contain" />
                     </View>
                   </Pressable>
@@ -119,6 +119,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -5,
+  },
+  homeWrapActive: {
+    backgroundColor: ORANGE_TINT,
   },
   homeLogo: {
     width: 40,
