@@ -8,6 +8,8 @@ import type {
 } from './types';
 
 export const chatApi = {
+  getHistory: () => apiClient<ChatSession[]>('/chat/history'),
+
   createSession: (characterId: string, contextId: string) =>
     apiClient<CreateSessionResponse>('/chat/sessions', {
       method: 'POST',

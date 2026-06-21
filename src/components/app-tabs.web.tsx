@@ -1,17 +1,22 @@
 import { Link, Slot, usePathname } from 'expo-router';
-import { BookOpen, House, Trophy, Users } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BookOpen, Trophy, User, Users } from 'lucide-react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
 
 const TAB_BAR_HORIZONTAL_PADDING = 16;
 
 const TABS = [
-  { href: '/', label: 'Trang chủ', icon: House },
   { href: '/characters', label: 'Nhân vật', icon: Users },
   { href: '/context', label: 'Bối cảnh', icon: BookOpen },
+  { href: '/', label: 'Trang chủ', icon: undefined },
   { href: '/quiz', label: 'Quiz', icon: Trophy },
+  { href: '/profile', label: 'Hồ sơ', icon: User },
 ] as const;
+
+function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function AppTabs() {
   const pathname = usePathname();
@@ -25,20 +30,27 @@ export default function AppTabs() {
       <View style={styles.bar}>
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+            const active = isActive(pathname, href);
+            const isHome = href === '/';
+
+            if (isHome) {
+              return (
+                <Link key={href} href={href as never} asChild>
+                  <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
+                    <View style={styles.homeWrap}>
+                      <Image source={require('@/assets/logo.png')} style={styles.homeLogo} resizeMode="contain" />
+                    </View>
+                  </Pressable>
+                </Link>
+              );
+            }
 
             return (
               <Link key={href} href={href as never} asChild>
                 <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
                   <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                    <Icon
-                      size={22}
-                      color={active ? ORANGE : MUTED}
-                      strokeWidth={active ? 2.4 : 1.8}
-                    />
+                    {Icon ? <Icon size={22} color={active ? ORANGE : MUTED} strokeWidth={active ? 2.4 : 1.8} /> : null}
                   </View>
-
                   <Text style={[styles.tabLabel, { color: active ? ORANGE : MUTED }]} numberOfLines={1}>
                     {label}
                   </Text>
@@ -66,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderTopColor: BORDER,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingBottom: 20,
+    paddingBottom: 10,
     paddingHorizontal: TAB_BAR_HORIZONTAL_PADDING,
     paddingTop: 10,
   },
@@ -74,7 +86,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    maxWidth: 520,
     width: '100%',
   },
   tabItem: {
@@ -99,6 +110,19 @@ const styles = StyleSheet.create({
   },
   iconWrapActive: {
     backgroundColor: ORANGE_TINT,
+  },
+  homeWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -5,
+  },
+  homeLogo: {
+    width: 40,
+    height: 40,
   },
   tabLabel: {
     fontSize: 10,

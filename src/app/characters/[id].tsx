@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin, MessageCircle, Skull } from 'lucide-react-native';
+import { ArrowLeft, Calendar, History, MapPin, MessageCircle, Skull } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +34,17 @@ const ERA_HERO_BG: Record<CharacterEra, string> = {
   MEDIEVAL:     '#1A0E38',
   MODERN:       '#0A2420',
   CONTEMPORARY: '#0D1B2A',
+};
+
+const floatingBtnStyle = {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: 'rgba(0,0,0,0.45)',
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.15)',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -133,25 +144,25 @@ export default function CharacterDetailScreen() {
             <View style={{ flex: 3, backgroundColor: 'rgba(43,33,24,0.94)' }} />
           </View>
 
-          {/* Floating back button */}
+          {/* Floating back + chat-history buttons */}
           <SafeAreaView edges={['top']} style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-              style={{
-                margin: 16,
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(0,0,0,0.45)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.15)',
-              }}
-            >
-              <ArrowLeft size={18} color="#f4f4f5" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', margin: 16 }}>
+              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={floatingBtnStyle}>
+                <ArrowLeft size={18} color="#f4f4f5" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/chat' as never,
+                    params: { characterId: char.id, characterName: char.name },
+                  })
+                }
+                activeOpacity={0.7}
+                style={floatingBtnStyle}
+              >
+                <History size={18} color="#f4f4f5" />
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
 
           {/* Name + era overlaid at bottom */}
