@@ -76,6 +76,8 @@ function readTextFromSse(raw: string, onToken?: (token: string) => void) {
 }
 
 export const chatApi = {
+  getHistory: () => apiClient<ChatSession[]>('/chat/history'),
+
   createSession: (characterId: string, contextId: string) =>
     apiClient<CreateSessionResponse>("/chat/sessions", {
       method: "POST",

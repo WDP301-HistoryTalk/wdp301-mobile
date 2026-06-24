@@ -1,18 +1,25 @@
-import { Link, Slot, usePathname } from 'expo-router';
-import { BookOpen, House, MessageCircle, Trophy, Users } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Slot, usePathname } from "expo-router";
+import { BookOpen, Trophy, User, Users } from "lucide-react-native";
+import { StyleSheet, View } from "react-native";
 
-import { BG, BORDER, CARD, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
+import { TabButton } from "@/components/tab-button";
+import { BG, BORDER, CARD } from "@/constants/palette";
 
 const TAB_BAR_HORIZONTAL_PADDING = 16;
 
 const TABS = [
-  { href: '/', label: 'Trang chu', icon: House },
-  { href: '/characters', label: 'Nhan vat', icon: Users },
-  { href: '/chat/history', label: 'Chat', icon: MessageCircle },
-  { href: '/context', label: 'Boi canh', icon: BookOpen },
-  { href: '/quiz', label: 'Quiz', icon: Trophy },
+  { href: "/characters", label: "Nhân vật", icon: Users },
+  { href: "/context", label: "Bối cảnh", icon: BookOpen },
+  { href: "/", label: "Trang chủ", icon: undefined },
+  { href: "/quiz", label: "Quiz", icon: Trophy },
+  { href: "/profile", label: "Hồ sơ", icon: User },
 ] as const;
+
+function isActive(pathname: string, href: string) {
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function AppTabs() {
   const pathname = usePathname();
@@ -25,28 +32,17 @@ export default function AppTabs() {
 
       <View style={styles.bar}>
         <View style={styles.inner}>
-          {TABS.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
-
-            return (
-              <Link key={href} href={href as never} asChild>
-                <Pressable style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
-                  <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                    <Icon
-                      size={22}
-                      color={active ? ORANGE : MUTED}
-                      strokeWidth={active ? 2.4 : 1.8}
-                    />
-                  </View>
-
-                  <Text style={[styles.tabLabel, { color: active ? ORANGE : MUTED }]} numberOfLines={1}>
-                    {label}
-                  </Text>
-                </Pressable>
-              </Link>
-            );
-          })}
+          {TABS.map(({ href, label, icon }) => (
+            <TabButton
+              key={href}
+              href={href}
+              label={label}
+              icon={icon}
+              isHome={href === "/"}
+              liftOffset={-5}
+              active={isActive(pathname, href)}
+            />
+          ))}
         </View>
       </View>
     </View>
@@ -60,50 +56,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   bar: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: CARD,
     borderTopColor: BORDER,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingBottom: 20,
+    paddingBottom: 5,
     paddingHorizontal: TAB_BAR_HORIZONTAL_PADDING,
-    paddingTop: 10,
+    paddingTop: 12,
   },
   inner: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    maxWidth: 520,
-    width: '100%',
-  },
-  tabItem: {
-    alignItems: 'center',
-    flexBasis: 0,
-    flexGrow: 1,
-    flexShrink: 1,
-    gap: 5,
-    justifyContent: 'center',
-    paddingBottom: 4,
-    paddingHorizontal: 4,
-  },
-  pressed: {
-    opacity: 0.65,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    borderRadius: 12,
-    height: 36,
-    justifyContent: 'center',
-    width: 46,
-  },
-  iconWrapActive: {
-    backgroundColor: ORANGE_TINT,
-  },
-  tabLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
 });
