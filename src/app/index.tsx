@@ -9,7 +9,22 @@ import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER_MEDIUM,
+  ORANGE_BORDER_STRONG,
+  ORANGE_TINT,
+  ORANGE_TINT_BADGE,
+  RED,
+  TEXT,
+  TEXT_OVERLAY,
+  TEXT_OVERLAY_DARK,
+  TEXT2,
+} from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
 import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type Character, type CharacterEra } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
@@ -55,8 +70,8 @@ function CharPortrait({ char, onPress }: { char: Character; onPress: () => void 
         {/* gradient */}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }}>
           <View style={{ flex: 1 }} />
-          <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.55)' }} />
-          <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.85)' }} />
+          <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY }} />
+          <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY_DARK }} />
         </View>
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 }}>
           {char.era && ec ? (
@@ -183,13 +198,13 @@ export default function HomeScreen() {
             <Image source={require('@/assets/logo.png')} style={{ width: 32, height: 32 }} contentFit="contain" />
             <View>
               <Text style={{ fontSize: 12, color: TEXT2 }}>{greeting()}</Text>
-              <Heading size="lg" className="text-[#2B2118]">{user?.userName ?? 'Bạn'}</Heading>
+              <Heading size="lg" className="text-history-text">{user?.userName ?? 'Bạn'}</Heading>
             </View>
           </View>
           <TouchableOpacity
             onPress={() => setMenuOpen((v) => !v)}
             activeOpacity={0.8}
-            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' }}
           >
             <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>{initial}</Text>
           </TouchableOpacity>
@@ -203,12 +218,12 @@ export default function HomeScreen() {
           borderWidth: 1, borderColor: BORDER,
         }}>
           {/* accent bar */}
-          <View style={{ height: 3, backgroundColor: '#EA580C' }} />
+          <View style={{ height: 3, backgroundColor: ORANGE }} />
           <View style={{ padding: 22 }}>
-            <Badge style={{ backgroundColor: 'rgba(234,88,12,0.18)', borderColor: 'rgba(234,88,12,0.4)', alignSelf: 'flex-start', marginBottom: 12 }}>
-              <BadgeText style={{ color: '#EA580C', fontSize: 10 }}>HistoryTalk</BadgeText>
+            <Badge style={{ backgroundColor: ORANGE_TINT_BADGE, borderColor: ORANGE_BORDER_STRONG, alignSelf: 'flex-start', marginBottom: 12 }}>
+              <BadgeText style={{ color: ORANGE, fontSize: 10 }}>HistoryTalk</BadgeText>
             </Badge>
-            <Heading size="2xl" className="text-[#2B2118] leading-8" style={{ marginBottom: 8 }}>
+            <Heading size="2xl" className="text-history-text leading-8" style={{ marginBottom: 8 }}>
               Khám phá lịch sử{'\n'}qua từng nhân vật
             </Heading>
             <Text size="sm" muted style={{ lineHeight: 20, marginBottom: 18 }}>
@@ -219,7 +234,7 @@ export default function HomeScreen() {
               activeOpacity={0.8}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 8,
-                backgroundColor: '#EA580C', borderRadius: 14,
+                backgroundColor: ORANGE, borderRadius: 14,
                 paddingHorizontal: 18, paddingVertical: 12,
                 alignSelf: 'flex-start',
               }}
@@ -241,7 +256,7 @@ export default function HomeScreen() {
               borderWidth: 1, borderColor: BORDER,
             }}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(234,88,12,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ORANGE_TINT, alignItems: 'center', justifyContent: 'center' }}>
               <Users size={22} color={ORANGE} strokeWidth={1.75} />
             </View>
             <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Nhân vật</Text>
@@ -272,13 +287,13 @@ export default function HomeScreen() {
         {/* ── Characters ──────────────────────────────────────────── */}
         <View style={{ marginBottom: 32 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-            <Heading size="lg" className="text-[#2B2118]">Nhân vật nổi bật</Heading>
+            <Heading size="lg" className="text-history-text">Nhân vật nổi bật</Heading>
             <TouchableOpacity
               onPress={() => router.push('/characters')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
             >
-              <Text style={{ color: '#EA580C', fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
-              <ChevronRight size={13} color="#EA580C" />
+              <Text style={{ color: ORANGE, fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
+              <ChevronRight size={13} color={ORANGE} />
             </TouchableOpacity>
           </View>
 
@@ -304,13 +319,13 @@ export default function HomeScreen() {
         {/* ── Contexts ────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Heading size="lg" className="text-[#2B2118]">Bối cảnh lịch sử</Heading>
+            <Heading size="lg" className="text-history-text">Bối cảnh lịch sử</Heading>
             <TouchableOpacity
               onPress={() => router.push('/context')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
             >
-              <Text style={{ color: '#EA580C', fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
-              <ChevronRight size={13} color="#EA580C" />
+              <Text style={{ color: ORANGE, fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
+              <ChevronRight size={13} color={ORANGE} />
             </TouchableOpacity>
           </View>
 
@@ -353,7 +368,7 @@ export default function HomeScreen() {
                 </View>
               </View>
               {/* Role badge */}
-              <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(234,88,12,0.15)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)', paddingHorizontal: 10, paddingVertical: 3 }}>
+              <View style={{ alignSelf: 'flex-start', backgroundColor: ORANGE_TINT, borderRadius: 8, borderWidth: 1, borderColor: ORANGE_BORDER_MEDIUM, paddingHorizontal: 10, paddingVertical: 3 }}>
                 <Text style={{ color: ORANGE, fontSize: 11, fontWeight: '600' }}>
                   {user?.role === 'CUSTOMER' ? 'Người dùng' : user?.role ?? 'Người dùng'}
                 </Text>

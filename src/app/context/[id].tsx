@@ -15,7 +15,17 @@ import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { BrandColors, Colors } from '@/constants/theme';
-import { BG, CARD, MUTED, ORANGE, ORANGE_BORDER, SURFACE, TEXT } from '@/constants/palette';
+import {
+  BG,
+  CARD,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER,
+  SURFACE,
+  TEXT,
+  TEXT_OVERLAY,
+  TEXT_OVERLAY_SOLID,
+} from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useHistoricalContext } from '@/features/historical-contexts/hooks/use-historical-context';
 import {
@@ -37,7 +47,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <VStack space="sm" style={{ marginBottom: 28 }}>
       <HStack space="sm" style={{ alignItems: 'center' }}>
         <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: ORANGE }} />
-        <Heading size="sm" className="text-[#2B2118]">{title}</Heading>
+        <Heading size="sm" className="text-history-text">{title}</Heading>
       </HStack>
       {children}
     </VStack>
@@ -66,7 +76,7 @@ function CharacterChip({ char, onPress }: { char: ContextCharacter; onPress: () 
           </Text>
         )}
       </View>
-      <Text size="2xs" className="text-[#6B5B3E] text-center mt-1.5" numberOfLines={2} style={{ maxWidth: 68 }}>
+      <Text size="2xs" className="text-history-muted text-center mt-1.5" numberOfLines={2} style={{ maxWidth: 68 }}>
         {char.name}
       </Text>
     </TouchableOpacity>
@@ -278,8 +288,8 @@ export default function ContextDetailScreen() {
               (anchored near the bottom) never lands on a light strip */}
           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 180 }}>
             <View style={{ flex: 2 }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(43,33,24,0.55)' }} />
-            <View style={{ flex: 3, backgroundColor: 'rgba(43,33,24,0.94)' }} />
+            <View style={{ flex: 2, backgroundColor: TEXT_OVERLAY }} />
+            <View style={{ flex: 3, backgroundColor: TEXT_OVERLAY_SOLID }} />
           </View>
 
           {/* Back button */}

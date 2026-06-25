@@ -3,7 +3,7 @@ import React from 'react';
 import { View, type ViewProps } from 'react-native';
 
 const cardStyle = tva({
-  base: 'bg-[#E8DAB8] rounded-2xl border border-[#DCC9A0]',
+  base: 'bg-history-surface rounded-2xl border border-history-border',
   variants: {
     size: {
       sm: 'p-3',
@@ -14,7 +14,7 @@ const cardStyle = tva({
       elevated: 'shadow',
       outline:  'bg-transparent',
       ghost:    'bg-transparent border-transparent',
-      filled:   'bg-[#E8DAB8]',
+      filled:   'bg-history-surface',
     },
   },
   defaultVariants: { size: 'md', variant: 'filled' },

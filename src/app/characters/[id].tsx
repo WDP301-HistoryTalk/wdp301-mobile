@@ -18,7 +18,20 @@ import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import { BG, CARD, BORDER, MUTED, SURFACE, TEXT } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER_ACTIVE,
+  ORANGE_BORDER_FAINT,
+  ORANGE_TINT,
+  SURFACE,
+  TEXT,
+  TEXT_OVERLAY,
+  TEXT_OVERLAY_SOLID,
+} from '@/constants/palette';
 import { useCharacter } from '@/features/characters/hooks/use-character';
 import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
 
@@ -53,8 +66,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <VStack space="sm" style={{ marginBottom: 28 }}>
       <HStack space="sm">
-        <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#EA580C' }} />
-        <Heading size="sm" className="text-[#2B2118]">{title}</Heading>
+        <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: ORANGE }} />
+        <Heading size="sm" className="text-history-text">{title}</Heading>
       </HStack>
       {children}
     </VStack>
@@ -163,8 +176,8 @@ export default function CharacterDetailScreen() {
               (anchored near the bottom) never lands on a light strip */}
           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 220 }}>
             <View style={{ flex: 2 }} />
-            <View style={{ flex: 2, backgroundColor: 'rgba(43,33,24,0.55)' }} />
-            <View style={{ flex: 3, backgroundColor: 'rgba(43,33,24,0.94)' }} />
+            <View style={{ flex: 2, backgroundColor: TEXT_OVERLAY }} />
+            <View style={{ flex: 3, backgroundColor: TEXT_OVERLAY_SOLID }} />
           </View>
 
           {/* Floating back + chat-history buttons */}
@@ -219,10 +232,10 @@ export default function CharacterDetailScreen() {
                 <HStack space="sm" className="flex-1">
                   <View style={{
                     width: 34, height: 34, borderRadius: 10,
-                    backgroundColor: 'rgba(234,88,12,0.15)',
+                    backgroundColor: ORANGE_TINT,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Calendar size={15} color="#EA580C" />
+                    <Calendar size={15} color={ORANGE} />
                   </View>
                   <VStack space="xs">
                     <Text size="2xs" muted bold className="uppercase tracking-widest">
@@ -290,14 +303,14 @@ export default function CharacterDetailScreen() {
                         paddingHorizontal: 12,
                         paddingVertical: 7,
                         borderWidth: 1,
-                        borderColor: loading ? 'rgba(234,88,12,0.6)' : 'rgba(234,88,12,0.2)',
+                        borderColor: loading ? ORANGE_BORDER_ACTIVE : ORANGE_BORDER_FAINT,
                         opacity: creatingFor && !loading ? 0.5 : 1,
                       }}
                     >
                       {loading
-                        ? <ActivityIndicator size="small" color="#EA580C" style={{ width: 11, height: 11 }} />
-                        : <MapPin size={11} color="#EA580C" />}
-                      <Text size="xs" className="text-[#2B2118] font-medium">
+                        ? <ActivityIndicator size="small" color={ORANGE} style={{ width: 11, height: 11 }} />
+                        : <MapPin size={11} color={ORANGE} />}
+                      <Text size="xs" className="text-history-text font-medium">
                         {ctx.name}
                       </Text>
                     </TouchableOpacity>

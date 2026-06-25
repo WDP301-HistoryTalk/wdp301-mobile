@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT_TINT_FAINT, TEXT2 } from '@/constants/palette';
 import { useQuizStore } from '@/features/quiz/store';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
@@ -97,9 +97,9 @@ export default function QuizResultScreen() {
                   {q.options.map((opt, oi) => {
                     const isUserAnswer  = wasAnswered && answerIdx === oi;
                     const isCorrectOpt  = oi === q.correctAnswer;
-                    let borderColor = BORDER;
-                    let bgColor = 'transparent';
-                    let textColor = TEXT2;
+                    let borderColor: string = BORDER;
+                    let bgColor: string = 'transparent';
+                    let textColor: string = TEXT2;
 
                     if (isCorrectOpt) { borderColor = 'rgba(34,197,94,0.5)'; bgColor = 'rgba(34,197,94,0.08)'; textColor = GREEN; }
                     if (isUserAnswer && !isCorrect) { borderColor = 'rgba(239,68,68,0.5)'; bgColor = 'rgba(239,68,68,0.08)'; textColor = RED; }
@@ -184,7 +184,7 @@ const ss = StyleSheet.create({
 
   explanation: {
     marginTop: 12, padding: 12,
-    backgroundColor: 'rgba(43,33,24,0.04)',
+    backgroundColor: TEXT_TINT_FAINT,
     borderRadius: 10, borderLeftWidth: 3, borderLeftColor: ORANGE,
   },
 

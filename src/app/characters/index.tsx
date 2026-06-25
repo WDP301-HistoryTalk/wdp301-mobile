@@ -17,7 +17,17 @@ import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  MUTED,
+  ORANGE,
+  SURFACE,
+  TEXT,
+  TEXT_OVERLAY_MEDIUM,
+  TEXT_OVERLAY_STRONG,
+} from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
 import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type Character, type CharacterEra } from '@/features/characters/types';
 
@@ -78,8 +88,8 @@ function CharacterCard({ item, onPress }: { item: Character; onPress: () => void
       {/* 3-layer pseudo-gradient overlay */}
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}>
         <View style={{ flex: 1 }} />
-        <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.45)' }} />
-        <View style={{ flex: 1, backgroundColor: 'rgba(43,33,24,0.82)' }} />
+        <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY_MEDIUM }} />
+        <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY_STRONG }} />
       </View>
 
       {/* Era badge + name */}
@@ -270,7 +280,7 @@ export default function CharactersScreen() {
         }
         ListFooterComponent={
           isFetchingNextPage ? (
-            <ActivityIndicator color="#EA580C" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
           ) : null
         }
         onEndReached={() => {

@@ -8,7 +8,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  GREEN,
+  MUTED,
+  ORANGE,
+  ORANGE_TINT_FAINT,
+  RED,
+  SURFACE,
+  TEXT,
+  TEXT2,
+} from '@/constants/palette';
 import { useSubmitQuiz } from '@/features/quiz/hooks/use-submit-quiz';
 import { useQuizStore } from '@/features/quiz/store';
 
@@ -283,7 +295,7 @@ const s = StyleSheet.create({
     backgroundColor: CARD, borderRadius: 16, borderWidth: 1.5, borderColor: BORDER,
     paddingHorizontal: 16, paddingVertical: 14,
   },
-  optionBtnSelected: { borderColor: ORANGE, backgroundColor: 'rgba(234,88,12,0.08)' },
+  optionBtnSelected: { borderColor: ORANGE, backgroundColor: ORANGE_TINT_FAINT },
   optionLetter: {
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: SURFACE, alignItems: 'center', justifyContent: 'center',

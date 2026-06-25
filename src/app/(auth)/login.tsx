@@ -42,7 +42,7 @@ export default function LoginScreen() {
   const errorMessage = login.error?.message ?? googleAuth.error?.message;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F2E8D5]">
+    <SafeAreaView className="flex-1 bg-history-bg">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -62,32 +62,32 @@ export default function LoginScreen() {
           </View>
 
           {/* Heading */}
-          <Text className="text-2xl font-bold text-[#2B2118] mb-1">Đăng nhập</Text>
-          <Text className="text-[#6B5B3E] mb-8">Chào mừng bạn trở lại HistoryTalk!</Text>
+          <Text className="text-2xl font-bold text-history-text mb-1">Đăng nhập</Text>
+          <Text className="text-history-muted mb-8">Chào mừng bạn trở lại HistoryTalk!</Text>
 
           {/* Error banner */}
           {errorMessage ? (
             <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
-              <AlertCircle size={16} color="#DC2626" />
+              <AlertCircle size={16} color="#9A3F43" />
               <Text className="text-red-700 text-sm flex-1">{errorMessage}</Text>
             </View>
           ) : null}
 
           {/* Email */}
           <View className="mb-4">
-            <Text className="text-sm font-medium text-[#6B5B3E] mb-2">Email</Text>
+            <Text className="text-sm font-medium text-history-muted mb-2">Email</Text>
             <Controller
               control={control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <View
-                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-[#FBF6EA] ${
-                    errors.email ? 'border-red-400' : 'border-[#DCC9A0]'
+                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-history-surface ${
+                    errors.email ? 'border-red-400' : 'border-history-border'
                   }`}
                 >
-                  <Mail size={18} color={errors.email ? '#DC2626' : MUTED} />
+                  <Mail size={18} color={errors.email ? '#9A3F43' : MUTED} />
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="your@email.com"
                     placeholderTextColor={MUTED}
                     keyboardType="email-address"
@@ -107,19 +107,19 @@ export default function LoginScreen() {
 
           {/* Password */}
           <View className="mb-2">
-            <Text className="text-sm font-medium text-[#6B5B3E] mb-2">Mật khẩu</Text>
+            <Text className="text-sm font-medium text-history-muted mb-2">Mật khẩu</Text>
             <Controller
               control={control}
               name="password"
               render={({ field: { onChange, onBlur, value } }) => (
                 <View
-                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-[#FBF6EA] ${
-                    errors.password ? 'border-red-400' : 'border-[#DCC9A0]'
+                  className={`flex-row items-center border rounded-xl px-4 h-14 bg-history-surface ${
+                    errors.password ? 'border-red-400' : 'border-history-border'
                   }`}
                 >
-                  <Lock size={18} color={errors.password ? '#DC2626' : MUTED} />
+                  <Lock size={18} color={errors.password ? '#9A3F43' : MUTED} />
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="••••••••"
                     placeholderTextColor={MUTED}
                     secureTextEntry={!showPassword}
@@ -166,14 +166,14 @@ export default function LoginScreen() {
 
           {/* Divider */}
           <View className="flex-row items-center mb-5">
-            <View className="flex-1 h-px bg-[#DCC9A0]" />
-            <Text className="mx-4 text-[#9C8B68] text-sm">hoặc tiếp tục với</Text>
-            <View className="flex-1 h-px bg-[#DCC9A0]" />
+            <View className="flex-1 h-px bg-history-border" />
+            <Text className="mx-4 text-history-muted text-sm">hoặc tiếp tục với</Text>
+            <View className="flex-1 h-px bg-history-border" />
           </View>
 
           {/* Google */}
           <TouchableOpacity
-            className="flex-row items-center justify-center border border-[#DCC9A0] rounded-xl h-14 mb-8 bg-[#FBF6EA]"
+            className="flex-row items-center justify-center border border-history-border rounded-xl h-14 mb-8 bg-history-surface"
             onPress={() => googleAuth.signInWithGoogle()}
             disabled={!googleAuth.isReady || googleAuth.isPending}
             activeOpacity={0.85}
@@ -186,14 +186,14 @@ export default function LoginScreen() {
                 <View className="mr-3">
                   <GoogleIcon size={20} />
                 </View>
-                <Text className="text-[#2B2118] font-medium text-base">Đăng nhập bằng Google</Text>
+                <Text className="text-history-text font-medium text-base">Đăng nhập bằng Google</Text>
               </>
             )}
           </TouchableOpacity>
 
           {/* Register link */}
           <View className="flex-row justify-center">
-            <Text className="text-[#6B5B3E]">Chưa có tài khoản? </Text>
+            <Text className="text-history-muted">Chưa có tài khoản? </Text>
             <Link href="/(auth)/register" asChild>
               <TouchableOpacity>
                 <Text className="text-primary-500 font-semibold">Đăng ký ngay</Text>

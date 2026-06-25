@@ -7,7 +7,20 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { AMBER, BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
+import {
+  AMBER,
+  BG,
+  BORDER,
+  CARD,
+  GREEN,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER_MEDIUM,
+  ORANGE_TINT_MUTED,
+  RED,
+  TEXT,
+  TEXT2,
+} from '@/constants/palette';
 import { useCancelOrder } from '@/features/payment/hooks/use-cancel-order';
 import { useMyOrders } from '@/features/payment/hooks/use-my-orders';
 import type { OrderHistoryItem, OrderStatus } from '@/features/payment/types';
@@ -171,7 +184,7 @@ const s = StyleSheet.create({
 
   smallBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(234,88,12,0.12)', borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)',
+    backgroundColor: ORANGE_TINT_MUTED, borderWidth: 1, borderColor: ORANGE_BORDER_MEDIUM,
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
   },
   smallBtnDanger: {

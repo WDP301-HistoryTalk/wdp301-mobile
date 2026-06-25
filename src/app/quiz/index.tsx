@@ -6,7 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, TEXT } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER_MUTED,
+  ORANGE_TINT,
+  ORANGE_TINT_MUTED,
+  TEXT,
+} from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useQuizzes } from '@/features/quiz/hooks/use-quizzes';
 import type { QuizLevel, QuizSummary } from '@/features/quiz/types';
@@ -28,7 +38,7 @@ function QuizCard({ quiz, onPress }: { quiz: QuizSummary; onPress: () => void })
 
       <View style={{ flex: 1, paddingLeft: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <View style={[s.eraBadge, { backgroundColor: ec?.bg ?? 'rgba(234,88,12,0.15)', borderColor: `${ec?.text ?? ORANGE}40` }]}>
+          <View style={[s.eraBadge, { backgroundColor: ec?.bg ?? ORANGE_TINT, borderColor: `${ec?.text ?? ORANGE}40` }]}>
             <Text style={{ color: ec?.text ?? ORANGE, fontSize: 10, fontWeight: '700' }}>{eraLabel}</Text>
           </View>
           {quiz.contextTitle ? (
@@ -151,8 +161,8 @@ const s = StyleSheet.create({
   headerTitle: { color: TEXT, fontSize: 24, fontWeight: '800' },
   trophyWrap: {
     width: 46, height: 46, borderRadius: 15,
-    backgroundColor: 'rgba(234,88,12,0.12)',
-    borderWidth: 1, borderColor: 'rgba(234,88,12,0.25)',
+    backgroundColor: ORANGE_TINT_MUTED,
+    borderWidth: 1, borderColor: ORANGE_BORDER_MUTED,
     alignItems: 'center', justifyContent: 'center',
   },
 

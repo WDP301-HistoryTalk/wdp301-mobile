@@ -38,7 +38,7 @@ export default function RegisterScreen() {
   const onSubmit = (data: RegisterInput) => register.mutate(data);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F2E8D5]">
+    <SafeAreaView className="flex-1 bg-history-bg">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -57,13 +57,13 @@ export default function RegisterScreen() {
             />
           </View>
 
-          <Text className="text-2xl font-bold text-[#2B2118] mb-1">Tạo tài khoản</Text>
-          <Text className="text-[#6B5B3E] mb-6">Tham gia cùng hàng nghìn người yêu lịch sử!</Text>
+          <Text className="text-2xl font-bold text-history-text mb-1">Tạo tài khoản</Text>
+          <Text className="text-history-muted mb-6">Tham gia cùng hàng nghìn người yêu lịch sử!</Text>
 
           {/* Error banner */}
           {register.error?.message ? (
             <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
-              <AlertCircle size={16} color="#DC2626" />
+              <AlertCircle size={16} color="#9A3F43" />
               <Text className="text-red-700 text-sm flex-1">{register.error.message}</Text>
             </View>
           ) : null}
@@ -83,9 +83,9 @@ export default function RegisterScreen() {
               control={control}
               name="userName"
               render={({ field: { onChange, onBlur, value } }) => (
-                <InputRow icon={<User size={18} color={errors.userName ? '#DC2626' : MUTED} />} hasError={!!errors.userName}>
+                <InputRow icon={<User size={18} color={errors.userName ? '#9A3F43' : MUTED} />} hasError={!!errors.userName}>
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="nguyenvana"
                     placeholderTextColor={MUTED}
                     autoCapitalize="none"
@@ -105,9 +105,9 @@ export default function RegisterScreen() {
               control={control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
-                <InputRow icon={<Mail size={18} color={errors.email ? '#DC2626' : MUTED} />} hasError={!!errors.email}>
+                <InputRow icon={<Mail size={18} color={errors.email ? '#9A3F43' : MUTED} />} hasError={!!errors.email}>
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="your@email.com"
                     placeholderTextColor={MUTED}
                     keyboardType="email-address"
@@ -128,9 +128,9 @@ export default function RegisterScreen() {
               control={control}
               name="password"
               render={({ field: { onChange, onBlur, value } }) => (
-                <InputRow icon={<Lock size={18} color={errors.password ? '#DC2626' : MUTED} />} hasError={!!errors.password}>
+                <InputRow icon={<Lock size={18} color={errors.password ? '#9A3F43' : MUTED} />} hasError={!!errors.password}>
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="••••••••"
                     placeholderTextColor={MUTED}
                     secureTextEntry={!showPassword}
@@ -152,9 +152,9 @@ export default function RegisterScreen() {
               control={control}
               name="confirmPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <InputRow icon={<Lock size={18} color={errors.confirmPassword ? '#DC2626' : MUTED} />} hasError={!!errors.confirmPassword}>
+                <InputRow icon={<Lock size={18} color={errors.confirmPassword ? '#9A3F43' : MUTED} />} hasError={!!errors.confirmPassword}>
                   <TextInput
-                    className="flex-1 ml-3 text-[#2B2118] text-base"
+                    className="flex-1 ml-3 text-history-text text-base"
                     placeholder="••••••••"
                     placeholderTextColor={MUTED}
                     secureTextEntry={!showConfirm}
@@ -188,7 +188,7 @@ export default function RegisterScreen() {
 
           {/* Login link */}
           <View className="flex-row justify-center">
-            <Text className="text-[#6B5B3E]">Đã có tài khoản? </Text>
+            <Text className="text-history-muted">Đã có tài khoản? </Text>
             <Link href="/(auth)/login" asChild>
               <TouchableOpacity>
                 <Text className="text-primary-500 font-semibold">Đăng nhập</Text>
@@ -212,7 +212,7 @@ function FieldWrapper({
 }) {
   return (
     <View className="mb-4">
-      <Text className="text-sm font-medium text-[#6B5B3E] mb-2">{label}</Text>
+      <Text className="text-sm font-medium text-history-muted mb-2">{label}</Text>
       {children}
       {error && <Text className="text-red-600 text-xs mt-1 ml-1">{error}</Text>}
     </View>
@@ -230,8 +230,8 @@ function InputRow({
 }) {
   return (
     <View
-      className={`flex-row items-center border rounded-xl px-4 h-14 bg-[#FBF6EA] ${
-        hasError ? 'border-red-400' : 'border-[#DCC9A0]'
+      className={`flex-row items-center border rounded-xl px-4 h-14 bg-history-surface ${
+        hasError ? 'border-red-400' : 'border-history-border'
       }`}
     >
       {icon}

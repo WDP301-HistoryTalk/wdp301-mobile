@@ -118,7 +118,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
         </View>
 
         {/* Name */}
-        <Heading size="sm" className="text-[#2B2118] leading-5" numberOfLines={2}>
+        <Heading size="sm" className="text-history-text leading-5" numberOfLines={2}>
           {item.name}
         </Heading>
 
@@ -310,7 +310,7 @@ export default function ExploreScreen() {
         ListEmptyComponent={isLoading ? LoadingState : isError ? ErrorState : EmptyState}
         ListFooterComponent={
           isFetchingNextPage ? (
-            <ActivityIndicator color="#EA580C" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
           ) : null
         }
         onEndReached={() => {

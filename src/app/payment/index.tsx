@@ -11,7 +11,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { AMBER, BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT2 } from '@/constants/palette';
+import {
+  AMBER,
+  BG,
+  BORDER,
+  CARD,
+  GREEN,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER,
+  ORANGE_BORDER_STRONG,
+  ORANGE_TINT_MUTED,
+  RED,
+  TEXT,
+  TEXT_TINT_FAINT,
+  TEXT2,
+} from '@/constants/palette';
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useCreateOrder } from '@/features/payment/hooks/use-create-order';
 import { useOrderStatus } from '@/features/payment/hooks/use-order-status';
@@ -185,7 +200,7 @@ const s = StyleSheet.create({
   tierCard: {
     backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 18,
   },
-  tierCardFeatured: { borderColor: 'rgba(234,88,12,0.4)' },
+  tierCardFeatured: { borderColor: ORANGE_BORDER_STRONG },
   tierHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   tierTitle: { color: TEXT, fontSize: 16, fontWeight: '800', textTransform: 'capitalize' },
   tierSub: { color: MUTED, fontSize: 12, marginTop: 2 },
@@ -199,9 +214,9 @@ const s = StyleSheet.create({
     marginTop: 18, height: 46, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnDefault: { backgroundColor: 'rgba(234,88,12,0.12)', borderWidth: 1, borderColor: 'rgba(234,88,12,0.35)' },
+  actionBtnDefault: { backgroundColor: ORANGE_TINT_MUTED, borderWidth: 1, borderColor: ORANGE_BORDER },
   actionBtnFeatured: { backgroundColor: ORANGE },
-  actionBtnCurrent: { backgroundColor: 'rgba(43,33,24,0.04)', borderWidth: 1, borderColor: BORDER },
+  actionBtnCurrent: { backgroundColor: TEXT_TINT_FAINT, borderWidth: 1, borderColor: BORDER },
 
   footNote: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

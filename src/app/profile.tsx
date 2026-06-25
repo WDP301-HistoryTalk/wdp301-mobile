@@ -12,7 +12,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
+import {
+  BG,
+  BORDER,
+  CARD,
+  GREEN,
+  MUTED,
+  ORANGE,
+  ORANGE_BORDER,
+  ORANGE_BORDER_FOCUS,
+  ORANGE_BORDER_MEDIUM,
+  ORANGE_TINT,
+  ORANGE_TINT_MUTED,
+  ORANGE_TINT_SOFT,
+  RED,
+  SURFACE,
+  TEXT,
+  TEXT_TINT_SOFT,
+  TEXT2,
+} from '@/constants/palette';
 import { useChangePassword } from '@/features/auth/hooks/use-change-password';
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
@@ -303,7 +321,7 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                   {activeTier && activeTier.amount > 0 ? (
-                    <View style={{ backgroundColor: 'rgba(234,88,12,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)' }}>
+                    <View style={{ backgroundColor: ORANGE_TINT, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: ORANGE_BORDER_MEDIUM }}>
                       <Text style={{ color: ORANGE, fontSize: 10, fontWeight: '800' }}>PRO</Text>
                     </View>
                   ) : (
@@ -543,8 +561,8 @@ const s = StyleSheet.create({
   heroName:      { color: TEXT,  fontSize: 20, fontWeight: '800', marginBottom: 4 },
   heroEmail:     { color: TEXT2, fontSize: 13, marginBottom: 12 },
   roleBadge: {
-    backgroundColor: 'rgba(234,88,12,0.15)', borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(234,88,12,0.35)',
+    backgroundColor: ORANGE_TINT, borderRadius: 10,
+    borderWidth: 1, borderColor: ORANGE_BORDER,
     paddingHorizontal: 14, paddingVertical: 5,
   },
   roleBadgeText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
@@ -570,8 +588,8 @@ const s = StyleSheet.create({
   sectionTitle: { color: TEXT, fontSize: 15, fontWeight: '700' },
   editBtn: {
     paddingHorizontal: 14, paddingVertical: 6,
-    backgroundColor: 'rgba(234,88,12,0.12)', borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(234,88,12,0.3)',
+    backgroundColor: ORANGE_TINT_MUTED, borderRadius: 10,
+    borderWidth: 1, borderColor: ORANGE_BORDER_MEDIUM,
   },
   editBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 
@@ -591,7 +609,7 @@ const s = StyleSheet.create({
   },
   fieldIcon: {
     width: 28, height: 28, borderRadius: 8,
-    backgroundColor: 'rgba(43,33,24,0.05)',
+    backgroundColor: TEXT_TINT_SOFT,
     alignItems: 'center', justifyContent: 'center',
     marginTop: 2,
   },
@@ -613,8 +631,8 @@ const s = StyleSheet.create({
     backgroundColor: SURFACE,
   },
   genderBtnActive: {
-    borderColor: 'rgba(234,88,12,0.5)',
-    backgroundColor: 'rgba(234,88,12,0.1)',
+    borderColor: ORANGE_BORDER_FOCUS,
+    backgroundColor: ORANGE_TINT_SOFT,
   },
 
   saveBtn: {
