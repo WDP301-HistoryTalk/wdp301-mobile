@@ -2,7 +2,6 @@ import { useAuthStore } from "@/features/auth/store";
 import { BASE_URL, apiClient } from "@/lib/api-client";
 
 import type {
-  ChatHistoryGroup,
   ChatMessageType,
   ChatSession,
   CreateSessionResponse,
@@ -151,8 +150,6 @@ export const chatApi = {
     if (params?.contextId) qs.set("contextId", params.contextId);
     return apiClient<ChatSession[]>(`/chat/sessions?${qs.toString()}`);
   },
-
-  getHistory: () => apiClient<ChatHistoryGroup[]>("/chat/history"),
 
   deleteSession: async (sessionId: string) => {
     const token = useAuthStore.getState().accessToken;

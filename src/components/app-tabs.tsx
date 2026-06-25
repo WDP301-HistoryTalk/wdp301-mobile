@@ -1,5 +1,5 @@
 import { Slot, usePathname } from "expo-router";
-import { BookOpen, Trophy, User, Users } from "lucide-react-native";
+import { BookOpen, MessageCircle, Trophy, User, Users } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

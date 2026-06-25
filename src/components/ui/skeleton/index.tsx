@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, type ViewStyle } from 'react-native';
+
+import { BORDER } from '@/constants/palette';
 
 type SkeletonProps = {
   style?: ViewStyle;
@@ -7,7 +9,7 @@ type SkeletonProps = {
 };
 
 const Skeleton = ({ radius = 12, style }: SkeletonProps) => {
-  const opacity = useRef(new Animated.Value(0.45)).current;
+  const [opacity] = useState(() => new Animated.Value(0.45));
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -22,7 +24,7 @@ const Skeleton = ({ radius = 12, style }: SkeletonProps) => {
 
   return (
     <Animated.View
-      style={[{ backgroundColor: '#DCC9A0', borderRadius: radius, opacity }, style]}
+      style={[{ backgroundColor: BORDER, borderRadius: radius, opacity }, style]}
     />
   );
 };

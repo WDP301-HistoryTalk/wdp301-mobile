@@ -26,13 +26,14 @@ export function useGoogleAuth() {
       router.replace('/');
     },
   });
+  const { mutate } = mutation;
 
   useEffect(() => {
     if (response?.type === 'success') {
       const idToken = response.params.id_token;
-      if (idToken) mutation.mutate(idToken);
+      if (idToken) mutate(idToken);
     }
-  }, [response]);
+  }, [mutate, response]);
 
   return {
     signInWithGoogle: () => promptAsync(),
