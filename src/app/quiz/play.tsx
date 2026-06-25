@@ -2,11 +2,12 @@ import { useRouter } from 'expo-router';
 import { AlertCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, ScrollView,
+  ActivityIndicator, Animated, ScrollView,
   StyleSheet, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Text } from '@/components/ui/text';
 import {
   BG,
@@ -42,6 +43,9 @@ export default function QuizPlayScreen() {
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft,   setTimeLeft]   = useState(active?.session.limitedTime ?? 0);
+  const [exitConfirmVisible,   setExitConfirmVisible]   = useState(false);
+  const [submitConfirmVisible, setSubmitConfirmVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Track elapsed with a ref so the interval closure never goes stale
   const elapsedRef    = useRef(0);
@@ -83,7 +87,7 @@ export default function QuizPlayScreen() {
       router.replace('/quiz/result');
     } catch (e: any) {
       submittingRef.current = false;
-      Alert.alert('Lỗi', e?.message ?? 'Không thể nộp bài. Thử lại?');
+      setErrorMessage(e?.message ?? 'Không thể nộp bài. Thử lại?');
     }
   }, [submitQuiz, router]);
 
@@ -111,14 +115,7 @@ export default function QuizPlayScreen() {
 
   function handleSubmitPress() {
     if (answeredCount < totalQ) {
-      Alert.alert(
-        'Chưa trả lời hết',
-        `Bạn còn ${totalQ - answeredCount} câu chưa trả lời. Vẫn nộp bài?`,
-        [
-          { text: 'Tiếp tục làm', style: 'cancel' },
-          { text: 'Nộp bài', style: 'destructive', onPress: () => void doSubmit() },
-        ]
-      );
+      setSubmitConfirmVisible(true);
     } else {
       void doSubmit();
     }
@@ -147,15 +144,7 @@ export default function QuizPlayScreen() {
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={s.header}>
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert('Thoát bài thi?', 'Tiến trình sẽ bị mất.', [
-              { text: 'Ở lại',  style: 'cancel' },
-              { text: 'Thoát', style: 'destructive', onPress: () => router.replace('/quiz') },
-            ])
-          }
-          style={s.exitBtn}
-        >
+        <TouchableOpacity onPress={() => setExitConfirmVisible(true)} style={s.exitBtn}>
           <Text style={{ color: TEXT2, fontSize: 13, fontWeight: '600' }}>✕ Thoát</Text>
         </TouchableOpacity>
 
@@ -182,7 +171,7 @@ export default function QuizPlayScreen() {
       {/* ── Question ───────────────────────────────────────────── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
       >
         <Text style={s.qCounter}>Câu {currentIdx + 1} / {totalQ}</Text>
 
@@ -262,6 +251,43 @@ export default function QuizPlayScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <ConfirmDialog
+        visible={exitConfirmVisible}
+        title="Thoát bài thi?"
+        message="Tiến trình sẽ bị mất, không được lưu lại."
+        cancelText="Ở lại"
+        confirmText="Thoát"
+        destructive
+        onCancel={() => setExitConfirmVisible(false)}
+        onConfirm={() => {
+          setExitConfirmVisible(false);
+          useQuizStore.getState().clearAll();
+          router.replace('/quiz');
+        }}
+      />
+
+      <ConfirmDialog
+        visible={submitConfirmVisible}
+        title="Chưa trả lời hết"
+        message={`Bạn còn ${totalQ - answeredCount} câu chưa trả lời. Vẫn nộp bài?`}
+        cancelText="Tiếp tục làm"
+        confirmText="Nộp bài"
+        destructive
+        onCancel={() => setSubmitConfirmVisible(false)}
+        onConfirm={() => {
+          setSubmitConfirmVisible(false);
+          void doSubmit();
+        }}
+      />
+
+      <ConfirmDialog
+        visible={!!errorMessage}
+        title="Lỗi"
+        message={errorMessage ?? ''}
+        confirmText="Đóng"
+        onConfirm={() => setErrorMessage(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -304,6 +330,7 @@ const s = StyleSheet.create({
   optionText: { flex: 1, color: TEXT2, fontSize: 14, fontWeight: '500', lineHeight: 20 },
 
   footer: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 14,
     borderTopWidth: 1, borderTopColor: BORDER,

@@ -1,6 +1,8 @@
 import { Slot, usePathname } from "expo-router";
 import { BookOpen, Trophy, User, Users } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
@@ -24,13 +26,32 @@ function isActive(pathname: string, href: string) {
 export default function AppTabs() {
   const pathname = usePathname();
 
+  // Hide the tab bar entirely while an active quiz session is running, so the
+  // only way out is the in-screen "Thoát" confirm — no escaping via a tab tap.
+  const hideTabBar = pathname === "/quiz/play";
+  const hideProgress = useSharedValue(hideTabBar ? 1 : 0);
+  const [barHeight, setBarHeight] = useState(0);
+
+  useEffect(() => {
+    hideProgress.value = withTiming(hideTabBar ? 1 : 0, { duration: 250 });
+  }, [hideTabBar, hideProgress]);
+
+  const barAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hideProgress.value * barHeight }],
+    marginBottom: -hideProgress.value * barHeight,
+  }));
+
   return (
     <View style={styles.root}>
       <View style={styles.content}>
         <Slot />
       </View>
 
-      <View style={styles.bar}>
+      <Animated.View
+        onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
+        pointerEvents={hideTabBar ? "none" : "auto"}
+        style={[styles.bar, barAnimStyle]}
+      >
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon }) => (
             <TabButton
@@ -44,7 +65,7 @@ export default function AppTabs() {
             />
           ))}
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
