@@ -7,40 +7,42 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+import { HistoryTalkColors } from './palette';
+
 export const Colors = {
   light: {
-    text: '#2B2118',
-    background: '#F2E8D5',
-    backgroundElement: '#E8DAB8',
-    backgroundSelected: '#DCC9A0',
-    textSecondary: '#6B5B3E',
+    text: HistoryTalkColors.light.textPrimary,
+    background: HistoryTalkColors.light.bgMain,
+    backgroundElement: HistoryTalkColors.light.surface,
+    backgroundSelected: HistoryTalkColors.light.border,
+    textSecondary: HistoryTalkColors.light.textSecondary,
   },
   dark: {
-    text: '#ffffff',
-    background: '#121212',
-    backgroundElement: '#1e1e1e',
-    backgroundSelected: '#2a2a2a',
-    textSecondary: '#a1a1aa',
+    text: HistoryTalkColors.dark.textPrimary,
+    background: HistoryTalkColors.dark.bgMain,
+    backgroundElement: HistoryTalkColors.dark.surface,
+    backgroundSelected: HistoryTalkColors.dark.border,
+    textSecondary: HistoryTalkColors.dark.textSecondary,
   },
 } as const;
 
 export const BrandColors = {
-  primary: '#EA580C',
-  primarySoft: '#FED7AA',
-  primaryMuted: 'rgba(234,88,12,0.08)',
-  primarySubtle: 'rgba(234,88,12,0.15)',
-  primaryFocus: 'rgba(234,88,12,0.25)',
-  primaryBorder: 'rgba(234,88,12,0.28)',
-  primaryStrongBorder: 'rgba(234,88,12,0.35)',
+  primary: HistoryTalkColors.light.accent,
+  primarySoft: HistoryTalkColors.light.accentSoft,
+  primaryMuted: 'rgba(114,56,61,0.08)',
+  primarySubtle: 'rgba(114,56,61,0.15)',
+  primaryFocus: 'rgba(114,56,61,0.25)',
+  primaryBorder: 'rgba(114,56,61,0.28)',
+  primaryStrongBorder: 'rgba(114,56,61,0.35)',
   overlay: 'rgba(0,0,0,0.28)',
   overlayMedium: 'rgba(0,0,0,0.45)',
   pageOverlay: 'rgba(9,9,11,0.55)',
   overlayStrong: 'rgba(9,9,11,0.72)',
   pageOverlayStrong: 'rgba(9,9,11,0.82)',
   white: '#ffffff',
-  muted: '#71717a',
-  borderSubtle: 'rgba(255,255,255,0.18)',
-  borderFaint: 'rgba(255,255,255,0.15)',
+  muted: HistoryTalkColors.light.textSecondary,
+  borderSubtle: HistoryTalkColors.light.border,
+  borderFaint: 'rgba(50,45,41,0.10)',
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
