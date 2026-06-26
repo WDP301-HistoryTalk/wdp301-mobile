@@ -1,35 +1,95 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle2, RefreshCw, RotateCcw, XCircle } from 'lucide-react-native';
-import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CheckCircle2, ChevronRight, RotateCcw, XCircle, Zap } from 'lucide-react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT_TINT_FAINT, TEXT2 } from '@/constants/palette';
-import { useQuizStore } from '@/features/quiz/store';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, ORANGE_BORDER_STRONG, ORANGE_TINT, ORANGE_TINT_FAINT, RED, TEXT, TEXT2, TEXT_TINT_FAINT } from '@/constants/palette';
 import { quizApi } from '@/features/quiz/api';
+import { useQuizStore } from '@/features/quiz/store';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
 function ScoreRing({ percentage }: { percentage: number }) {
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
   const color = percentage >= 70 ? GREEN : percentage >= 50 ? ORANGE : RED;
   const label = percentage >= 80 ? 'Xuất sắc' : percentage >= 60 ? 'Tốt' : percentage >= 40 ? 'Khá' : 'Cần cố gắng';
 
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   return (
-    <View style={{ alignItems: 'center', marginBottom: 8 }}>
-      <View style={[ss.ring, { borderColor: color }]}>
+    <Animated.View style={{ alignItems: 'center', marginBottom: 24, opacity: opacityAnim, transform: [{ scale: scaleAnim }] }}>
+      <View style={[ss.ring, { borderColor: color, shadowColor: color }]}>
         <Text style={[ss.ringScore, { color }]}>{percentage}%</Text>
         <Text style={ss.ringLabel}>{label}</Text>
       </View>
-    </View>
+    </Animated.View>
+  );
+}
+
+function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number; score: number }) {
+  const slideInAnim = useRef(new Animated.Value(50)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideInAnim, { toValue: 0, duration: 500, delay: 200, useNativeDriver: true }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={[ss.scoreRowContainer, { transform: [{ translateY: slideInAnim }], opacity: opacityAnim }]}>
+      {/* Correct */}
+      <View style={ss.scoreCardWrapper}>
+        <View style={[ss.scoreCard, ss.scoreCardCorrect]}>
+          <View style={ss.scoreIconContainer}>
+            <CheckCircle2 size={20} color={GREEN} strokeWidth={2.5} />
+          </View>
+          <Text style={[ss.scoreNum, { color: GREEN }]}>{correct}</Text>
+          <Text style={ss.scoreCardLabel}>Đúng</Text>
+        </View>
+      </View>
+
+      {/* Wrong */}
+      <View style={ss.scoreCardWrapper}>
+        <View style={[ss.scoreCard, ss.scoreCardWrong]}>
+          <View style={ss.scoreIconContainer}>
+            <XCircle size={20} color={RED} strokeWidth={2.5} />
+          </View>
+          <Text style={[ss.scoreNum, { color: RED }]}>{wrong}</Text>
+          <Text style={ss.scoreCardLabel}>Sai</Text>
+        </View>
+      </View>
+
+      {/* Score */}
+      <View style={ss.scoreCardWrapper}>
+        <View style={[ss.scoreCard, ss.scoreCardScore]}>
+          <View style={ss.scoreIconContainer}>
+            <Zap size={20} color={ORANGE} strokeWidth={2.5} />
+          </View>
+          <Text style={[ss.scoreNum, { color: ORANGE }]}>{score.toFixed(1)}</Text>
+          <Text style={ss.scoreCardLabel}>Điểm</Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
 export default function QuizResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
-  const router    = useRouter();
+  const router = useRouter();
   const finishedStore = useQuizStore((s) => s.finished);
-  const clearAll  = useQuizStore((s) => s.clearAll);
+  const clearAll = useQuizStore((s) => s.clearAll);
 
   const { data: detailData, isLoading } = useQuery({
     queryKey: ['quiz-result-detail', sessionId],
@@ -39,27 +99,34 @@ export default function QuizResultScreen() {
 
   const finished = sessionId && detailData
     ? {
-        quizTitle: detailData.quizTitle,
-        result: {
-          resultId: detailData.sessionId,
-          score: detailData.score,
-          totalQuestions: detailData.totalQuestions,
-          percentage: detailData.percentage,
-          startTime: detailData.startedAt,
-          endTime: detailData.completedAt,
-          correctAnswers: Array(detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
-          wrongAnswers: Array(detailData.totalQuestions - detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
-        },
-        questions: detailData.questions,
-        userAnswers: detailData.questions.reduce((acc, q) => {
-          acc[q.questionId] = q.selectedAnswer;
-          return acc;
-        }, {} as Record<string, number>),
-      }
+      quizTitle: detailData.quizTitle,
+      result: {
+        resultId: detailData.sessionId,
+        score: detailData.score,
+        totalQuestions: detailData.totalQuestions,
+        percentage: detailData.percentage,
+        startTime: detailData.startedAt,
+        endTime: detailData.completedAt,
+        correctAnswers: Array(detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
+        wrongAnswers: Array(detailData.totalQuestions - detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
+      },
+      questions: detailData.questions,
+      userAnswers: detailData.questions.reduce((acc, q) => {
+        acc[q.questionId] = q.selectedAnswer;
+        return acc;
+      }, {} as Record<string, number>),
+    }
     : finishedStore;
 
-  function goHome() { clearAll(); router.replace('/quiz'); }
-  function retry()  { clearAll(); router.replace('/quiz'); }
+  function goHome() {
+    clearAll();
+    router.replace('/quiz');
+  }
+
+  function retry() {
+    clearAll();
+    router.replace('/quiz');
+  }
 
   if (sessionId && isLoading) {
     return (
@@ -71,95 +138,136 @@ export default function QuizResultScreen() {
 
   if (!finished) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <Text style={{ color: MUTED }}>Không có kết quả</Text>
-        <TouchableOpacity onPress={() => router.replace('/quiz')} style={{ padding: 12, backgroundColor: CARD, borderRadius: 12 }}>
-          <Text style={{ color: ORANGE }}>← Về danh sách quiz</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 20 }}>
+        <View style={{ alignItems: 'center' }}>
+          <XCircle size={48} color={MUTED} strokeWidth={1.5} style={{ marginBottom: 12 }} />
+          <Text style={{ color: TEXT, fontSize: 18, fontWeight: '700', marginBottom: 4 }}>Không có kết quả</Text>
+          <Text style={{ color: MUTED, fontSize: 13 }}>Hãy hoàn thành một bài quiz để xem kết quả</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.replace('/quiz')} style={[ss.actionPrimary, { marginTop: 16, width: '100%' }]}>
+          <ChevronRight size={16} color="#fff" strokeWidth={2} />
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Về danh sách quiz</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   const { result, questions, userAnswers, quizTitle } = finished;
+  const correctCount = result.correctAnswers.length;
+  const wrongCount = result.wrongAnswers.length;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* ── Hero ────────────────────────────────────────────────── */}
         <View style={ss.hero}>
-          <Text style={ss.quizTitle} numberOfLines={2}>{quizTitle}</Text>
+          <Text style={ss.quizTitle} numberOfLines={2}>
+            {quizTitle}
+          </Text>
 
           <ScoreRing percentage={result.percentage} />
 
-          {/* Score stats */}
-          <View style={ss.scoreRow}>
-            <View style={[ss.scoreCard, { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.07)' }]}>
-              <Text style={[ss.scoreNum, { color: GREEN }]}>{result.correctAnswers.length}</Text>
-              <Text style={ss.scoreCardLabel}>Đúng</Text>
+          <ScoreStats correct={correctCount} wrong={wrongCount} score={result.score} />
+
+          {/* Performance badge */}
+          {result.percentage >= 70 && (
+            <View style={ss.performanceBadge}>
+              <Zap size={14} color={GREEN} strokeWidth={2} />
+              <Text style={ss.performanceBadgeText}>Kết quả xuất sắc!</Text>
             </View>
-            <View style={[ss.scoreCard, { borderColor: 'rgba(239,68,68,0.3)', backgroundColor: 'rgba(239,68,68,0.07)' }]}>
-              <Text style={[ss.scoreNum, { color: RED }]}>{result.wrongAnswers.length}</Text>
-              <Text style={ss.scoreCardLabel}>Sai</Text>
-            </View>
-            <View style={[ss.scoreCard, { borderColor: BORDER, backgroundColor: CARD }]}>
-              <Text style={[ss.scoreNum, { color: ORANGE }]}>{result.score.toFixed(1)}</Text>
-              <Text style={ss.scoreCardLabel}>Điểm</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* ── Review ──────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 20 }}>
-          <Text style={ss.sectionTitle}>Xem lại đáp án</Text>
+          <View style={ss.sectionHeader}>
+            <Text style={ss.sectionTitle}>Xem lại đáp án</Text>
+            <Text style={ss.sectionSubtitle}>{correctCount}/{questions.length} câu đúng</Text>
+          </View>
 
           {questions.map((q, qi) => {
-            const answerIdx  = userAnswers[q.questionId];
-            const isCorrect  = answerIdx === q.correctAnswer;
+            const answerIdx = userAnswers[q.questionId];
+            const isCorrect = answerIdx === q.correctAnswer;
             const wasAnswered = answerIdx !== undefined;
 
             return (
               <View key={q.questionId} style={ss.reviewCard}>
                 {/* Question header */}
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-                  {isCorrect
-                    ? <CheckCircle2 size={18} color={GREEN} strokeWidth={2} style={{ marginTop: 2 }} />
-                    : <XCircle      size={18} color={RED}   strokeWidth={2} style={{ marginTop: 2 }} />}
-                  <Text style={ss.qIndex}>Câu {qi + 1}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <View style={[ss.questionNumberBadge, isCorrect ? ss.badgeCorrect : ss.badgeWrong]}>
+                    <Text style={[ss.questionNumber, { color: isCorrect ? GREEN : RED }]}>
+                      {qi + 1}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={ss.questionStatus}>{isCorrect ? '✓ Đúng' : '✗ Sai'}</Text>
+                  </View>
+                  {isCorrect ? (
+                    <CheckCircle2 size={20} color={GREEN} strokeWidth={2} />
+                  ) : (
+                    <XCircle size={20} color={RED} strokeWidth={2} />
+                  )}
                 </View>
 
                 <Text style={ss.qContent}>{q.content}</Text>
 
                 {/* Options */}
-                <View style={{ gap: 8 }}>
+                <View style={{ gap: 10, marginTop: 14 }}>
                   {q.options.map((opt, oi) => {
-                    const isUserAnswer  = wasAnswered && answerIdx === oi;
-                    const isCorrectOpt  = oi === q.correctAnswer;
+                    const isUserAnswer = wasAnswered && answerIdx === oi;
+                    const isCorrectOpt = oi === q.correctAnswer;
                     let borderColor: string = BORDER;
                     let bgColor: string = 'transparent';
                     let textColor: string = TEXT2;
+                    let borderWidth = 1;
 
-                    if (isCorrectOpt) { borderColor = 'rgba(34,197,94,0.5)'; bgColor = 'rgba(34,197,94,0.08)'; textColor = GREEN; }
-                    if (isUserAnswer && !isCorrect) { borderColor = 'rgba(239,68,68,0.5)'; bgColor = 'rgba(239,68,68,0.08)'; textColor = RED; }
+                    if (isCorrectOpt) {
+                      borderColor = GREEN;
+                      bgColor = 'rgba(74, 140, 98, 0.08)';
+                      textColor = TEXT;
+                      borderWidth = 2;
+                    }
+                    if (isUserAnswer && !isCorrect) {
+                      borderColor = RED;
+                      bgColor = 'rgba(154, 63, 67, 0.08)';
+                      textColor = TEXT;
+                      borderWidth = 2;
+                    }
 
                     return (
-                      <View key={oi} style={[ss.reviewOpt, { borderColor, backgroundColor: bgColor }]}>
-                        <Text style={[ss.optLetter, { color: textColor }]}>{OPTION_LETTERS[oi]}</Text>
-                        <Text style={{ flex: 1, color: textColor, fontSize: 13, lineHeight: 18 }}>{opt}</Text>
-                        {isCorrectOpt && <CheckCircle2 size={14} color={GREEN} strokeWidth={2.5} />}
-                        {isUserAnswer && !isCorrect && <XCircle size={14} color={RED} strokeWidth={2.5} />}
+                      <View
+                        key={oi}
+                        style={[
+                          ss.reviewOpt,
+                          { borderColor, backgroundColor: bgColor, borderWidth },
+                        ]}
+                      >
+                        <View style={[ss.optLetterBadge, { borderColor, backgroundColor: bgColor }]}>
+                          <Text style={[ss.optLetter, { color: borderColor }]}>
+                            {OPTION_LETTERS[oi]}
+                          </Text>
+                        </View>
+                        <Text style={{ flex: 1, color: textColor, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>
+                          {opt}
+                        </Text>
+                        {isCorrectOpt && <CheckCircle2 size={16} color={GREEN} strokeWidth={2.5} />}
+                        {isUserAnswer && !isCorrect && <XCircle size={16} color={RED} strokeWidth={2.5} />}
                       </View>
                     );
                   })}
                 </View>
 
                 {/* Explanation */}
-                {q.explanation ? (
+                {q.explanation && (
                   <View style={ss.explanation}>
-                    <Text style={{ color: TEXT2, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Giải thích:</Text>
-                    <Text style={{ color: TEXT2, fontSize: 13, lineHeight: 19 }}>{q.explanation}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+                      <Text style={{ color: TEXT2, fontSize: 12, fontWeight: '700' }}>Giải thích</Text>
+                    </View>
+                    <Text style={{ color: TEXT2, fontSize: 13, lineHeight: 20 }}>
+                      {q.explanation}
+                    </Text>
                   </View>
-                ) : null}
+                )}
               </View>
             );
           })}
@@ -168,13 +276,21 @@ export default function QuizResultScreen() {
 
       {/* ── Action buttons ──────────────────────────────────────────── */}
       <View style={ss.actions}>
-        <TouchableOpacity onPress={retry} activeOpacity={0.8} style={ss.actionSecondary}>
-          <RotateCcw size={16} color={TEXT2} strokeWidth={2} />
-          <Text style={{ color: TEXT2, fontWeight: '600' }}>Làm lại</Text>
+        <TouchableOpacity
+          onPress={retry}
+          activeOpacity={0.7}
+          style={[ss.actionSecondary]}
+        >
+          <RotateCcw size={18} color={ORANGE} strokeWidth={2} />
+          <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 15 }}>Làm lại</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={goHome} activeOpacity={0.8} style={ss.actionPrimary}>
-          <RefreshCw size={16} color="#fff" strokeWidth={2} />
-          <Text style={{ color: '#fff', fontWeight: '800' }}>Về danh sách</Text>
+        <TouchableOpacity
+          onPress={goHome}
+          activeOpacity={0.85}
+          style={ss.actionPrimary}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Về danh sách</Text>
+          <ChevronRight size={18} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -183,60 +299,240 @@ export default function QuizResultScreen() {
 
 const ss = StyleSheet.create({
   hero: {
-    alignItems: 'center', padding: 24, paddingBottom: 28,
-    borderBottomWidth: 1, borderBottomColor: BORDER, marginBottom: 24,
+    alignItems: 'center',
+    padding: 24,
+    paddingBottom: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+    marginBottom: 24,
+    backgroundColor: CARD,
   },
-  quizTitle: { color: TEXT, fontSize: 16, fontWeight: '700', textAlign: 'center', marginBottom: 24 },
+  quizTitle: {
+    color: TEXT,
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 32,
+    letterSpacing: -0.5,
+  },
 
   ring: {
-    width: 140, height: 140, borderRadius: 70,
-    borderWidth: 6, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 20,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
-  ringScore: { fontSize: 36, fontWeight: '900' },
-  ringLabel: { color: MUTED, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  ringScore: {
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  ringLabel: {
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
 
-  scoreRow: { flexDirection: 'row', gap: 12 },
+  scoreRowContainer: {
+    width: '100%',
+    marginTop: 8,
+
+    flexDirection: 'row',
+    gap: 10,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  scoreCardWrapper: {
+    flex: 1,
+  },
   scoreCard: {
-    flex: 1, alignItems: 'center', paddingVertical: 14,
-    borderRadius: 16, borderWidth: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
   },
-  scoreNum:       { fontSize: 24, fontWeight: '900', marginBottom: 4 },
-  scoreCardLabel: { color: MUTED, fontSize: 11, fontWeight: '600' },
+  scoreCardCorrect: {
+    borderColor: 'rgba(74, 140, 98, 0.4)',
+    backgroundColor: 'rgba(74, 140, 98, 0.06)',
+  },
+  scoreCardWrong: {
+    borderColor: 'rgba(154, 63, 67, 0.4)',
+    backgroundColor: 'rgba(154, 63, 67, 0.06)',
+  },
+  scoreCardScore: {
+    borderColor: ORANGE_BORDER_STRONG,
+    backgroundColor: ORANGE_TINT_FAINT,
+  },
+  scoreIconContainer: {
+    marginBottom: 8,
+  },
+  scoreNum: {
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  scoreCardLabel: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: '600',
+  },
 
-  sectionTitle: { color: TEXT, fontSize: 18, fontWeight: '800', marginBottom: 14 },
+  performanceBadge: {
+    marginTop: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    backgroundColor: 'rgba(74, 140, 98, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 140, 98, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  performanceBadgeText: {
+    color: GREEN,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: TEXT,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  sectionSubtitle: {
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: '600',
+  },
 
   reviewCard: {
-    backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER,
-    padding: 18, marginBottom: 14,
+    backgroundColor: CARD,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 16,
+    marginBottom: 14,
   },
-  qIndex:   { color: MUTED, fontSize: 11, fontWeight: '700', marginBottom: 0, marginTop: 1 },
-  qContent: { color: TEXT, fontSize: 15, fontWeight: '600', lineHeight: 22, marginBottom: 14 },
+  questionNumberBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  badgeCorrect: {
+    borderColor: GREEN,
+    backgroundColor: 'rgba(74, 140, 98, 0.1)',
+  },
+  badgeWrong: {
+    borderColor: RED,
+    backgroundColor: 'rgba(154, 63, 67, 0.1)',
+  },
+  questionNumber: {
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  questionStatus: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  qContent: {
+    color: TEXT,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
 
   reviewOpt: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderRadius: 10, borderWidth: 1,
-    paddingHorizontal: 12, paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
-  optLetter: { fontWeight: '800', fontSize: 12, width: 18 },
+  optLetterBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    flexShrink: 0,
+  },
+  optLetter: {
+    fontWeight: '900',
+    fontSize: 12,
+  },
 
   explanation: {
-    marginTop: 12, padding: 12,
+    marginTop: 16,
+    padding: 12,
     backgroundColor: TEXT_TINT_FAINT,
-    borderRadius: 10, borderLeftWidth: 3, borderLeftColor: ORANGE,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: ORANGE,
   },
 
   actions: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', gap: 12, padding: 20, paddingBottom: 32,
-    backgroundColor: BG, borderTopWidth: 1, borderTopColor: BORDER,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    paddingBottom: 24,
+    backgroundColor: BG,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
   },
   actionSecondary: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, paddingVertical: 14,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ORANGE_TINT,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: ORANGE,
+    paddingVertical: 14,
   },
   actionPrimary: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 14,
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ORANGE,
+    borderRadius: 12,
+    paddingVertical: 14,
+    shadowColor: ORANGE,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
 });
