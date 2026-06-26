@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { BG, MUTED, ORANGE, ORANGE_TINT } from '@/constants/palette';
+import { AppFonts } from '@/constants/theme';
 
 type IconComponent = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   tabLabel: {
+    fontFamily: AppFonts.bodySemiBold,
     fontSize: 10,
     fontWeight: '600',
     textAlign: 'center',

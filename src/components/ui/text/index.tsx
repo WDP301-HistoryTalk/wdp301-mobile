@@ -2,6 +2,8 @@ import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import React from 'react';
 import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
+import { AppFonts } from '@/constants/theme';
+
 const textStyle = tva({
   base: 'text-history-text',
   variants: {
@@ -38,10 +40,11 @@ type TextProps = RNTextProps & {
 };
 
 const Text = React.forwardRef<React.ElementRef<typeof RNText>, TextProps>(
-  ({ className, size = 'md', bold, italic, muted, ...props }, ref) => (
+  ({ className, size = 'md', bold, italic, muted, style, ...props }, ref) => (
     <RNText
       ref={ref}
       className={textStyle({ size, bold, italic, muted, class: className })}
+      style={[{ fontFamily: bold ? AppFonts.bodyBold : AppFonts.body }, style]}
       {...props}
     />
   )

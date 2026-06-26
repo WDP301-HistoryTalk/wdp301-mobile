@@ -2,6 +2,8 @@ import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import React from 'react';
 import { Text, type TextProps } from 'react-native';
 
+import { AppFonts } from '@/constants/theme';
+
 const headingStyle = tva({
   base: 'text-history-text font-bold tracking-tight',
   variants: {
@@ -28,10 +30,11 @@ type HeadingProps = TextProps & {
 };
 
 const Heading = React.forwardRef<React.ElementRef<typeof Text>, HeadingProps>(
-  ({ className, size = 'lg', ...props }, ref) => (
+  ({ className, size = 'lg', style, ...props }, ref) => (
     <Text
       ref={ref}
       className={headingStyle({ size, class: className })}
+      style={[{ fontFamily: AppFonts.bodyExtraBold }, style]}
       {...props}
     />
   )

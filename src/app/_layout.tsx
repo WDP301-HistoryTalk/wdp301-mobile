@@ -1,6 +1,7 @@
 import '../global.css';
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
 import { DefaultTheme, Slot, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -9,10 +10,12 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { BG, ORANGE } from '@/constants/palette';
+import { FontAssets } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/store';
 import { queryClient } from '@/lib/query-client';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts(FontAssets);
   const { isLoading, isAuthenticated, initialize } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
@@ -34,7 +37,7 @@ export default function RootLayout() {
   }, [isAuthenticated, inAuthGroup, isLoading, router]);
 
   // Chờ load session từ SecureStore
-  if (isLoading) {
+  if (!fontsLoaded || isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: BG }}>
         <ActivityIndicator size="large" color={ORANGE} />

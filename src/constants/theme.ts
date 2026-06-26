@@ -72,6 +72,26 @@ export const Fonts = Platform.select({
   },
 });
 
+export const AppFonts = {
+  body: 'VLOutfit-Regular',
+  bodyMedium: 'VLOutfit-Medium',
+  bodySemiBold: 'VLOutfit-SemiBold',
+  bodyBold: 'VLOutfit-Bold',
+  bodyExtraBold: 'VLOutfit-ExtraBold',
+  display: 'VLZolina-Medium',
+  displayBlack: 'VLZolina-Black',
+} as const;
+
+export const FontAssets = {
+  [AppFonts.body]: require('@/assets/fonts/VL Outfit-Regular.otf'),
+  [AppFonts.bodyMedium]: require('@/assets/fonts/VL Outfit-Medium.otf'),
+  [AppFonts.bodySemiBold]: require('@/assets/fonts/VL Outfit-SemiBold.otf'),
+  [AppFonts.bodyBold]: require('@/assets/fonts/VL Outfit-Bold.otf'),
+  [AppFonts.bodyExtraBold]: require('@/assets/fonts/VL Outfit-ExtraBold.otf'),
+  [AppFonts.display]: require('@/assets/fonts/VL ZOLINA-MEDIUM.ttf'),
+  [AppFonts.displayBlack]: require('@/assets/fonts/VL ZOLINA-BLACK.ttf'),
+} as const;
+
 export const Spacing = {
   half: 2,
   one: 4,
