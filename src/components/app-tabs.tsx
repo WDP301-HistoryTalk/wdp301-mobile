@@ -1,7 +1,9 @@
 import { Slot, usePathname } from "expo-router";
 import { BookOpen, MessageCircle, Trophy, User, Users } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
@@ -27,13 +29,30 @@ export default function AppTabs() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
+  // Hide the tab bar entirely while an active quiz session is running, so the
+  // only way out is the in-screen "Thoát" confirm — no escaping via a tab tap.
+  const hideTabBar = pathname === "/quiz/play";
+  const hideProgress = useSharedValue(hideTabBar ? 1 : 0);
+  const [barHeight, setBarHeight] = useState(0);
+
+  useEffect(() => {
+    hideProgress.value = withTiming(hideTabBar ? 1 : 0, { duration: 250 });
+  }, [hideTabBar, hideProgress]);
+
+  const barAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hideProgress.value * barHeight }],
+    marginBottom: -hideProgress.value * barHeight,
+  }));
+
   return (
     <View style={styles.root}>
       <View style={styles.content}>
         <Slot />
       </View>
 
-      <View
+      <Animated.View
+        onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
+        pointerEvents={hideTabBar ? "none" : "auto"}
         style={[
           styles.bar,
           {
@@ -41,6 +60,7 @@ export default function AppTabs() {
             paddingLeft: Math.max(insets.left, TAB_BAR_HORIZONTAL_PADDING),
             paddingRight: Math.max(insets.right, TAB_BAR_HORIZONTAL_PADDING),
           },
+          barAnimStyle,
         ]}
       >
         <View style={styles.inner}>
@@ -56,7 +76,7 @@ export default function AppTabs() {
             />
           ))}
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
