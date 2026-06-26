@@ -63,12 +63,12 @@ const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
 type ChatTimelineItem =
   | { type: "message"; message: ChatMessage }
   | {
-      type: "voice-call";
-      id: string;
-      startedAt: string;
-      endedAt: string;
-      messages: ChatMessage[];
-    };
+    type: "voice-call";
+    id: string;
+    startedAt: string;
+    endedAt: string;
+    messages: ChatMessage[];
+  };
 
 type ActiveCall = {
   mode: "2D" | "3D";
@@ -155,8 +155,8 @@ function groupTimelineMessages(messages: ChatMessage[]): ChatTimelineItem[] {
     const currentTime = getMessageTime(message);
     const previousTime = activeVoiceCall
       ? getMessageTime(
-          activeVoiceCall.messages[activeVoiceCall.messages.length - 1],
-        )
+        activeVoiceCall.messages[activeVoiceCall.messages.length - 1],
+      )
       : 0;
     if (activeVoiceCall && currentTime - previousTime <= CALL_GROUP_GAP_MS) {
       activeVoiceCall.messages.push(message);
@@ -748,7 +748,7 @@ export default function ChatScreen() {
       Alert.alert(
         "Khong the bat micro",
         e?.message ??
-          "Can chay bang development build/native build sau khi cai @react-native-voice/voice.",
+        "Can chay bang development build/native build sau khi cai @react-native-voice/voice.",
       );
     }
   }
@@ -1031,7 +1031,7 @@ export default function ChatScreen() {
             style={s.textInput}
             value={input}
             onChangeText={setInput}
-            placeholder={`Hoi ${characterName}...`}
+            placeholder={`Hỏi ${characterName}...`}
             placeholderTextColor={MUTED}
             multiline
             maxLength={1000}
