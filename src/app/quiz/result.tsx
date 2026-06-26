@@ -1,11 +1,13 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, RefreshCw, RotateCcw, XCircle } from 'lucide-react-native';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, RED, TEXT, TEXT_TINT_FAINT, TEXT2 } from '@/constants/palette';
 import { useQuizStore } from '@/features/quiz/store';
+import { quizApi } from '@/features/quiz/api';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -24,12 +26,48 @@ function ScoreRing({ percentage }: { percentage: number }) {
 }
 
 export default function QuizResultScreen() {
+  const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router    = useRouter();
-  const finished  = useQuizStore((s) => s.finished);
+  const finishedStore = useQuizStore((s) => s.finished);
   const clearAll  = useQuizStore((s) => s.clearAll);
+
+  const { data: detailData, isLoading } = useQuery({
+    queryKey: ['quiz-result-detail', sessionId],
+    queryFn: () => quizApi.getMyResultBySession(sessionId!),
+    enabled: !!sessionId,
+  });
+
+  const finished = sessionId && detailData
+    ? {
+        quizTitle: detailData.quizTitle,
+        result: {
+          resultId: detailData.sessionId,
+          score: detailData.score,
+          totalQuestions: detailData.totalQuestions,
+          percentage: detailData.percentage,
+          startTime: detailData.startedAt,
+          endTime: detailData.completedAt,
+          correctAnswers: Array(detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
+          wrongAnswers: Array(detailData.totalQuestions - detailData.questions.filter((q) => q.selectedAnswer === q.correctAnswer).length).fill(0),
+        },
+        questions: detailData.questions,
+        userAnswers: detailData.questions.reduce((acc, q) => {
+          acc[q.questionId] = q.selectedAnswer;
+          return acc;
+        }, {} as Record<string, number>),
+      }
+    : finishedStore;
 
   function goHome() { clearAll(); router.replace('/quiz'); }
   function retry()  { clearAll(); router.replace('/quiz'); }
+
+  if (sessionId && isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={ORANGE} />
+      </SafeAreaView>
+    );
+  }
 
   if (!finished) {
     return (

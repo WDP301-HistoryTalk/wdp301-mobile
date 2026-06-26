@@ -73,7 +73,7 @@ export function TabButton({
               <Icon size={22} color={active ? ORANGE : MUTED} strokeWidth={active ? 2.4 : 1.8} />
             ) : null}
           </Animated.View>
-          {!isHome && label ? (
+          {label ? (
             <Text style={[styles.tabLabel, { color: active ? ORANGE : MUTED }]} numberOfLines={1}>
               {label}
             </Text>
@@ -103,15 +103,15 @@ const styles = StyleSheet.create({
     width: 46,
   },
   homeWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeLogo: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
   },
   tabLabel: {
     fontFamily: AppFonts.bodySemiBold,

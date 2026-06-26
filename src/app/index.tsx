@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { BookOpen, ChevronRight, LogOut, MapPin, Mail, User, Users } from 'lucide-react-native';
+import { BookOpen, ChevronRight, LogOut, MapPin, Mail, User, Users, MessageCircle, Trophy } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,8 @@ import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type Character, type Char
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import { formatContextYear, type HistoricalContext } from '@/features/historical-contexts/types';
 import { useAuthStore } from '@/features/auth/store';
+import { useChatHistory } from '@/features/chat/hooks/use-chat-history';
+import { useQuizResults } from '@/features/quiz/hooks/use-quiz-results';
 
 const ERA_CARD_BG: Record<CharacterEra, string> = {
   ANCIENT:      '#1C0E06',
@@ -37,6 +39,19 @@ const ERA_CARD_BG: Record<CharacterEra, string> = {
   MODERN:       '#061A18',
   CONTEMPORARY: '#071020',
 };
+
+function formatRelative(iso?: string) {
+  if (!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'Vừa xong';
+  if (min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} giờ trước`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day} ngày trước`;
+  return new Date(iso).toLocaleDateString('vi-VN');
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -52,34 +67,34 @@ function CharPortrait({ char, onPress }: { char: Character; onPress: () => void 
   const imageUri = getCharacterImageUri(char);
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.82} style={{ width: 120 }}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.82} style={{ width: 100 }}>
       <View style={{
-        width: 120, height: 156, borderRadius: 20,
+        width: 100, height: 130, borderRadius: 16,
         backgroundColor: cardBg, overflow: 'hidden',
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
       }}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+          <Image source={{ uri: imageUri }} style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: 15 }} contentFit="cover" />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 52, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: char.era ? 0.18 : 0.3 }}>
+            <Text style={{ fontSize: 44, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: char.era ? 0.18 : 0.3 }}>
               {char.name.charAt(0)}
             </Text>
           </View>
         )}
         {/* gradient */}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }}>
           <View style={{ flex: 1 }} />
           <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY }} />
           <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY_DARK }} />
         </View>
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }}>
           {char.era && ec ? (
-            <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}33`, marginBottom: 4, alignSelf: 'flex-start' }}>
+            <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}33`, marginBottom: 2, alignSelf: 'flex-start', paddingVertical: 1, paddingHorizontal: 4 }}>
               <BadgeText style={{ color: ec.text, fontSize: 8 }}>{ERA_LABELS[char.era]}</BadgeText>
             </Badge>
           ) : null}
-          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', lineHeight: 16 }} numberOfLines={2}>
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', lineHeight: 14 }} numberOfLines={2}>
             {char.name}
           </Text>
         </View>
@@ -102,39 +117,40 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
       style={{
         flexDirection: 'row',
         backgroundColor: CARD,
-        borderRadius: 18,
-        padding: 12,
-        gap: 12,
-        marginBottom: 10,
+        borderRadius: 16,
+        padding: 10,
+        gap: 8,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: BORDER,
+        alignItems: 'center',
       }}
     >
       <View style={{
-        width: 60, height: 70, borderRadius: 14,
+        width: 50, height: 56, borderRadius: 10,
         backgroundColor: cardBg, overflow: 'hidden',
         alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {imgUri ? (
           <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
-          <Text style={{ fontSize: 26, fontWeight: '900', color: ec.glow, opacity: 0.65 }}>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: ec.glow, opacity: 0.65 }}>
             {ctx.name.charAt(0)}
           </Text>
         )}
       </View>
 
-      <View style={{ flex: 1, justifyContent: 'center', gap: 4 }}>
-        <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}30`, alignSelf: 'flex-start' }}>
-          <BadgeText style={{ color: ec.text, fontSize: 9 }}>{ERA_LABELS[ctx.era]}</BadgeText>
+      <View style={{ flex: 1, justifyContent: 'center', gap: 2 }}>
+        <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}30`, alignSelf: 'flex-start', paddingVertical: 1, paddingHorizontal: 4 }}>
+          <BadgeText style={{ color: ec.text, fontSize: 8 }}>{ERA_LABELS[ctx.era]}</BadgeText>
         </Badge>
-        <Text style={{ color: TEXT, fontSize: 14, fontWeight: '700', lineHeight: 19 }} numberOfLines={2}>
+        <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700', lineHeight: 17 }} numberOfLines={1}>
           {ctx.name}
         </Text>
         {(yearTxt ?? ctx.location) ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {ctx.location ? <MapPin size={10} color={TEXT2} /> : null}
-            <Text style={{ color: TEXT2, fontSize: 11 }} numberOfLines={1}>
+            {ctx.location ? <MapPin size={9} color={TEXT2} /> : null}
+            <Text style={{ color: TEXT2, fontSize: 10 }} numberOfLines={1} ellipsizeMode="tail">
               {[yearTxt, ctx.location].filter(Boolean).join(' · ')}
             </Text>
           </View>
@@ -142,7 +158,7 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
       </View>
 
       <View style={{ justifyContent: 'center' }}>
-        <ChevronRight size={16} color={MUTED} />
+        <ChevronRight size={14} color={MUTED} />
       </View>
     </TouchableOpacity>
   );
@@ -151,8 +167,8 @@ function ContextRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
 // ─── Skeleton loaders ─────────────────────────────────────────────────────────
 function CharSkeletons() {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
-      {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ width: 120, height: 156 }} radius={20} />)}
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+      {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ width: 100, height: 130 }} radius={16} />)}
     </ScrollView>
   );
 }
@@ -161,12 +177,12 @@ function CtxSkeletons() {
   return (
     <View>
       {[0, 1, 2].map((i) => (
-        <View key={i} style={{ flexDirection: 'row', gap: 12, marginBottom: 10, backgroundColor: CARD, borderRadius: 18, padding: 12 }}>
-          <Skeleton style={{ width: 60, height: 70 }} radius={14} />
-          <View style={{ flex: 1, gap: 8 }}>
-            <Skeleton style={{ height: 12, width: '45%' }} radius={6} />
-            <Skeleton style={{ height: 16, width: '80%' }} radius={6} />
-            <Skeleton style={{ height: 11, width: '60%' }} radius={6} />
+        <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, backgroundColor: CARD, borderRadius: 16, padding: 10, alignItems: 'center' }}>
+          <Skeleton style={{ width: 50, height: 56 }} radius={10} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Skeleton style={{ height: 10, width: '40%' }} radius={4} />
+            <Skeleton style={{ height: 14, width: '75%' }} radius={4} />
+            <Skeleton style={{ height: 10, width: '50%' }} radius={4} />
           </View>
         </View>
       ))}
@@ -184,116 +200,120 @@ export default function HomeScreen() {
 
   const { data: charData, isLoading: charLoading } = useCharacters({});
   const { data: ctxData,  isLoading: ctxLoading  } = useHistoricalContexts({});
+  const { data: chatDataHistory } = useChatHistory();
+  const { data: quizResultsData } = useQuizResults(0, 3);
 
   const characters = charData?.pages[0]?.content?.slice(0, 8) ?? [];
   const contexts   = ctxData?.pages[0]?.content?.slice(0, 4) ?? [];
+  const recentChats = chatDataHistory?.slice(0, 3) ?? [];
+  const recentQuizzes = quizResultsData?.content ?? [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* ── Header ──────────────────────────────────────────────── */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Image source={require('@/assets/logo.png')} style={{ width: 32, height: 32 }} contentFit="contain" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Image source={require('@/assets/logo.png')} style={{ width: 28, height: 28 }} contentFit="contain" />
             <View>
-              <Text style={{ fontSize: 12, color: TEXT2 }}>{greeting()}</Text>
-              <Heading size="lg" className="text-history-text">{user?.userName ?? 'Bạn'}</Heading>
+              <Text style={{ fontSize: 11, color: TEXT2 }}>{greeting()}</Text>
+              <Heading size="md" className="text-history-text">{user?.userName ?? 'Bạn'}</Heading>
             </View>
           </View>
           <TouchableOpacity
             onPress={() => setMenuOpen((v) => !v)}
             activeOpacity={0.8}
-            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>{initial}</Text>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{initial}</Text>
           </TouchableOpacity>
         </View>
 
         {/* ── Hero banner ─────────────────────────────────────────── */}
         <View style={{
-          marginHorizontal: 20, marginBottom: 28,
-          borderRadius: 24, overflow: 'hidden',
+          marginHorizontal: 20, marginBottom: 24,
+          borderRadius: 20, overflow: 'hidden',
           backgroundColor: CARD,
           borderWidth: 1, borderColor: BORDER,
         }}>
           {/* accent bar */}
           <View style={{ height: 3, backgroundColor: ORANGE }} />
-          <View style={{ padding: 22 }}>
-            <Badge style={{ backgroundColor: ORANGE_TINT_BADGE, borderColor: ORANGE_BORDER_STRONG, alignSelf: 'flex-start', marginBottom: 12 }}>
-              <BadgeText style={{ color: ORANGE, fontSize: 10 }}>HistoryTalk</BadgeText>
+          <View style={{ padding: 16 }}>
+            <Badge style={{ backgroundColor: ORANGE_TINT_BADGE, borderColor: ORANGE_BORDER_STRONG, alignSelf: 'flex-start', marginBottom: 8, paddingVertical: 1, paddingHorizontal: 6 }}>
+              <BadgeText style={{ color: ORANGE, fontSize: 9 }}>HistoryTalk</BadgeText>
             </Badge>
-            <Heading size="2xl" className="text-history-text leading-8" style={{ marginBottom: 8 }}>
-              Khám phá lịch sử{'\n'}qua từng nhân vật
+            <Heading size="xl" className="text-history-text leading-7" style={{ marginBottom: 4 }}>
+              Khám phá lịch sử qua từng nhân vật
             </Heading>
-            <Text size="sm" muted style={{ lineHeight: 20, marginBottom: 18 }}>
+            <Text size="xs" muted style={{ lineHeight: 18, marginBottom: 12 }}>
               Trò chuyện và tìm hiểu về các sự kiện, nhân vật lịch sử nổi tiếng Việt Nam và thế giới.
             </Text>
             <TouchableOpacity
               onPress={() => router.push('/characters')}
               activeOpacity={0.8}
               style={{
-                flexDirection: 'row', alignItems: 'center', gap: 8,
-                backgroundColor: ORANGE, borderRadius: 14,
-                paddingHorizontal: 18, paddingVertical: 12,
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: ORANGE, borderRadius: 10,
+                paddingHorizontal: 14, paddingVertical: 8,
                 alignSelf: 'flex-start',
               }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Bắt đầu ngay</Text>
-              <ChevronRight size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Bắt đầu ngay</Text>
+              <ChevronRight size={14} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* ── Quick access ────────────────────────────────────────── */}
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 32 }}>
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 24 }}>
           <TouchableOpacity
             onPress={() => router.push('/characters')}
             activeOpacity={0.8}
             style={{
-              flex: 1, backgroundColor: CARD, borderRadius: 20,
-              padding: 18, alignItems: 'center', gap: 10,
+              flex: 1, backgroundColor: CARD, borderRadius: 16,
+              padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10,
               borderWidth: 1, borderColor: BORDER,
             }}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: ORANGE_TINT, alignItems: 'center', justifyContent: 'center' }}>
-              <Users size={22} color={ORANGE} strokeWidth={1.75} />
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: ORANGE_TINT, alignItems: 'center', justifyContent: 'center' }}>
+              <Users size={18} color={ORANGE} strokeWidth={1.75} />
             </View>
-            <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Nhân vật</Text>
-            <Text style={{ color: TEXT2, fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
-              Danh sách nhân vật lịch sử
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Nhân vật</Text>
+              <Text style={{ color: TEXT2, fontSize: 10, marginTop: 1 }}>Danh sách nhân vật</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => router.push('/context')}
             activeOpacity={0.8}
             style={{
-              flex: 1, backgroundColor: CARD, borderRadius: 20,
-              padding: 18, alignItems: 'center', gap: 10,
+              flex: 1, backgroundColor: CARD, borderRadius: 16,
+              padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10,
               borderWidth: 1, borderColor: BORDER,
             }}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(79,70,229,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-              <BookOpen size={22} color="#4F46E5" strokeWidth={1.75} />
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(79,70,229,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen size={18} color="#4F46E5" strokeWidth={1.75} />
             </View>
-            <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Bối cảnh</Text>
-            <Text style={{ color: TEXT2, fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
-              Sự kiện và giai đoạn lịch sử
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }}>Bối cảnh</Text>
+              <Text style={{ color: TEXT2, fontSize: 10, marginTop: 1 }}>Sự kiện lịch sử</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* ── Characters ──────────────────────────────────────────── */}
-        <View style={{ marginBottom: 32 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
-            <Heading size="lg" className="text-history-text">Nhân vật nổi bật</Heading>
+        {/* ── Characters (Featured) [3rd position] ────────────────── */}
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 }}>
+            <Heading size="md" className="text-history-text">Nhân vật nổi bật</Heading>
             <TouchableOpacity
               onPress={() => router.push('/characters')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
             >
-              <Text style={{ color: ORANGE, fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
-              <ChevronRight size={13} color={ORANGE} />
+              <Text style={{ color: ORANGE, fontSize: 12, fontWeight: '600' }}>Xem tất cả</Text>
+              <ChevronRight size={12} color={ORANGE} />
             </TouchableOpacity>
           </View>
 
@@ -303,7 +323,7 @@ export default function HomeScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
             >
               {characters.map((char) => (
                 <CharPortrait
@@ -316,16 +336,96 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* ── Contexts ────────────────────────────────────────────── */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Heading size="lg" className="text-history-text">Bối cảnh lịch sử</Heading>
+        {/* ── Recent Chats [4th position] ─────────────────────────── */}
+        {recentChats.length > 0 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Heading size="md" className="text-history-text">Trò chuyện gần đây</Heading>
+              <TouchableOpacity
+                onPress={() => router.push('/chat/history')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
+              >
+                <Text style={{ color: ORANGE, fontSize: 12, fontWeight: '600' }}>Xem tất cả</Text>
+                <ChevronRight size={12} color={ORANGE} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: 8 }}>
+              {recentChats.map((session) => (
+                <TouchableOpacity
+                  key={session.id}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: CARD,
+                    borderRadius: 16,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    gap: 10,
+                    borderWidth: 1,
+                    borderColor: BORDER,
+                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/chat/[sessionId]',
+                      params: {
+                        sessionId: session.id,
+                        characterId: session.characterId,
+                        contextId: session.contextId,
+                        characterName: session.characterName ?? '',
+                        characterImageUrl: session.characterImage ?? '',
+                        characterModelUrl: session.characterModelUrl ?? '',
+                        contextName: session.contextName ?? '',
+                      },
+                    })
+                  }
+                >
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16,
+                    backgroundColor: ORANGE_TINT, alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                    {session.characterImage ? (
+                      <Image source={{ uri: session.characterImage }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <MessageCircle size={16} color={ORANGE} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                      {session.characterName ?? session.title ?? 'Cuộc trò chuyện'}
+                    </Text>
+                    {session.lastMessage ? (
+                      <Text style={{ color: TEXT2, fontSize: 11 }} numberOfLines={1}>
+                        {session.lastMessage}
+                      </Text>
+                    ) : (
+                      <Text style={{ color: ORANGE, fontSize: 11, fontWeight: '600' }}>
+                        Bắt đầu trò chuyện ngay →
+                      </Text>
+                    )}
+                  </View>
+                  {session.lastMessageAt || session.updatedAt ? (
+                    <Text style={{ color: TEXT2, fontSize: 10 }}>
+                      {formatRelative(session.lastMessageAt ?? session.updatedAt)}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ── Contexts [5th position] ─────────────────────────────── */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Heading size="md" className="text-history-text">Bối cảnh lịch sử</Heading>
             <TouchableOpacity
               onPress={() => router.push('/context')}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
             >
-              <Text style={{ color: ORANGE, fontSize: 13, fontWeight: '600' }}>Xem tất cả</Text>
-              <ChevronRight size={13} color={ORANGE} />
+              <Text style={{ color: ORANGE, fontSize: 12, fontWeight: '600' }}>Xem tất cả</Text>
+              <ChevronRight size={12} color={ORANGE} />
             </TouchableOpacity>
           </View>
 
@@ -341,6 +441,83 @@ export default function HomeScreen() {
             ))
           )}
         </View>
+
+        {/* ── Recent Quizzes [6th position] ───────────────────────── */}
+        {recentQuizzes.length > 0 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Heading size="md" className="text-history-text">Kết quả quiz gần đây</Heading>
+              <TouchableOpacity
+                onPress={() => router.push('/quiz')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
+              >
+                <Text style={{ color: ORANGE, fontSize: 12, fontWeight: '600' }}>Làm quiz mới</Text>
+                <ChevronRight size={12} color={ORANGE} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: 8 }}>
+              {recentQuizzes.map((item) => {
+                const correctCount = Math.round((item.percentage / 100) * item.totalQuestions);
+                const isLowScore = item.percentage < 50;
+                const scoreColor = item.percentage >= 70 ? '#22C55E' : item.percentage >= 50 ? ORANGE : '#EF4444';
+                return (
+                  <TouchableOpacity
+                    key={item.sessionId}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: CARD,
+                      borderRadius: 16,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      gap: 10,
+                      borderWidth: 1,
+                      borderColor: isLowScore ? 'rgba(239,68,68,0.2)' : BORDER,
+                    }}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/quiz/result',
+                        params: { sessionId: item.sessionId },
+                      })
+                    }
+                  >
+                    <View style={{
+                      width: 32, height: 32, borderRadius: 16,
+                      backgroundColor: isLowScore ? 'rgba(239,68,68,0.08)' : 'rgba(234,179,8,0.1)',
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Trophy size={16} color={isLowScore ? '#EF4444' : '#EAB308'} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ color: TEXT, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                        {item.quizTitle}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ color: TEXT2, fontSize: 11 }}>
+                          Đúng {correctCount}/{item.totalQuestions} câu
+                        </Text>
+                        {isLowScore && (
+                          <View style={{ backgroundColor: 'rgba(234,179,8,0.12)', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(234,179,8,0.3)', paddingHorizontal: 5, paddingVertical: 1 }}>
+                            <Text style={{ color: '#B45309', fontSize: 9, fontWeight: '700' }}>Ôn tập ngay</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <Text style={{ color: scoreColor, fontSize: 13, fontWeight: '800' }}>
+                        {item.percentage}%
+                      </Text>
+                      <Text style={{ color: TEXT2, fontSize: 9 }}>
+                        {new Date(item.completedAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
       </ScrollView>
 
