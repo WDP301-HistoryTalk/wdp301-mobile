@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Box,
   Ellipsis,
+  History,
   MessageCircle,
   Mic,
   MicOff,
@@ -224,6 +225,7 @@ function TypingDots() {
   );
 }
 
+// Keep voice call card
 function VoiceCallCard({
   item,
 }: {
@@ -268,7 +270,7 @@ function MessageBubble({
     return (
       <View style={s.userRow}>
         <View style={s.userBubble}>
-          <Text style={s.userText}>{message.content}</Text>
+          <Text className="text-white" style={s.userText}>{message.content}</Text>
         </View>
       </View>
     );
@@ -649,6 +651,16 @@ export default function ChatScreen() {
       });
   }
 
+  function openChatHistory() {
+    setMenuOpen(false);
+    if (characterId) {
+      router.push({
+        pathname: "/chat" as never,
+        params: { characterId, characterName },
+      });
+    }
+  }
+
   function createNewSessionFromMenu() {
     setMenuOpen(false);
     void handleNewSession();
@@ -835,6 +847,19 @@ export default function ChatScreen() {
                   <Text style={s.menuHint} numberOfLines={1}>
                     {characterName}
                   </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                style={s.menuItem}
+                onPress={openChatHistory}
+              >
+                <View style={s.menuIcon}>
+                  <History size={16} color={ORANGE} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.menuLabel}>Xem lịch sử chat</Text>
                 </View>
               </TouchableOpacity>
 
