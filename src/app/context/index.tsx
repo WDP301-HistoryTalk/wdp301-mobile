@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Badge, BadgeText } from '@/components/ui/badge';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -31,24 +30,24 @@ import {
 type EraFilter = ContextEra | 'ALL';
 
 const ERA_FILTER: { key: EraFilter; label: string }[] = [
-  { key: 'ALL',          label: 'Tất cả'    },
-  { key: 'ANCIENT',      label: 'Cổ đại'    },
-  { key: 'MEDIEVAL',     label: 'Trung đại' },
-  { key: 'MODERN',       label: 'Hiện đại'  },
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'ANCIENT', label: 'Cổ đại' },
+  { key: 'MEDIEVAL', label: 'Trung đại' },
+  { key: 'MODERN', label: 'Hiện đại' },
   { key: 'CONTEMPORARY', label: 'Đương đại' },
 ];
 
 const ERA_CARD_BG: Record<ContextEra, string> = {
-  ANCIENT:      '#1C0E06',
-  MEDIEVAL:     '#120828',
-  MODERN:       '#061A18',
+  ANCIENT: '#1C0E06',
+  MEDIEVAL: '#120828',
+  MODERN: '#061A18',
   CONTEMPORARY: '#071020',
 };
 
 // ─── Context card ─────────────────────────────────────────────────────────────
 function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () => void }) {
-  const ec       = ERA_COLORS[item.era] ?? ERA_COLORS.ANCIENT;
-  const cardBg   = ERA_CARD_BG[item.era] ?? '#1C0E06';
+  const ec = ERA_COLORS[item.era] ?? ERA_COLORS.ANCIENT;
+  const cardBg = ERA_CARD_BG[item.era] ?? '#1C0E06';
   const yearText = formatContextYear(item);
 
   return (
@@ -56,29 +55,19 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
       onPress={onPress}
       activeOpacity={0.8}
       style={{
-        flexDirection: 'row',
         backgroundColor: CARD,
         borderWidth: 1,
         borderColor: BORDER,
-        borderRadius: 20,
-        padding: 14,
-        gap: 14,
-        marginBottom: 10,
+        borderRadius: 18,
+        overflow: 'hidden',
       }}
     >
-      {/* Era-coloured thumbnail */}
+      {/* Thumbnail */}
       <View
         style={{
-          width: 68,
-          height: 80,
-          borderRadius: 16,
+          width: '100%',
+          aspectRatio: 4 / 3,
           backgroundColor: cardBg,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.06)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          flexShrink: 0,
         }}
       >
         {((item as any).imageUrl ?? item.image) ? (
@@ -88,57 +77,61 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
             contentFit="cover"
           />
         ) : (
-          <Text style={{ fontSize: 32, fontWeight: '900', color: ec.glow, opacity: 0.7 }}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 36, fontWeight: '900', color: ec.glow, opacity: 0.65 }}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
         )}
+        {/* Era badge overlay */}
+        <View
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            backgroundColor: `${ec.bg}CC`,
+            borderRadius: 99,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+          }}
+        >
+          <Text style={{ fontSize: 9, fontWeight: '700', color: ec.text }}>
+            {ERA_LABELS[item.era]}
+          </Text>
+        </View>
       </View>
 
-      {/* Content */}
-      <View style={{ flex: 1, gap: 5 }}>
-        {/* Badges */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
-          <Badge style={{ backgroundColor: ec.bg, borderColor: `${ec.text}30` }}>
-            <BadgeText style={{ color: ec.text, fontSize: 9 }}>
-              {ERA_LABELS[item.era]}
-            </BadgeText>
-          </Badge>
-          {item.category ? (
-            <Badge
-              style={{
-                backgroundColor: `${CATEGORY_COLORS[item.category]}18`,
-                borderColor: `${CATEGORY_COLORS[item.category]}35`,
-              }}
-            >
-              <BadgeText style={{ color: CATEGORY_COLORS[item.category], fontSize: 9 }}>
-                {CATEGORY_LABELS[item.category]}
-              </BadgeText>
-            </Badge>
-          ) : null}
-        </View>
+      {/* Body */}
+      <View style={{ padding: 10, gap: 4 }}>
+        {item.category ? (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              backgroundColor: `${CATEGORY_COLORS[item.category]}18`,
+              borderRadius: 99,
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+            }}
+          >
+            <Text style={{ fontSize: 9, fontWeight: '700', color: CATEGORY_COLORS[item.category] }}>
+              {CATEGORY_LABELS[item.category]}
+            </Text>
+          </View>
+        ) : null}
 
-        {/* Name */}
-        <Heading size="sm" className="text-history-text leading-5" numberOfLines={2}>
+        <Heading size="xs" numberOfLines={2} style={{ lineHeight: 18 }}>
           {item.name}
         </Heading>
 
-        {/* Year · location */}
         {(yearText ?? item.location) ? (
           <Text size="xs" muted numberOfLines={1}>
             {[yearText, item.location].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
 
-        {/* Description preview */}
-        {item.description ? (
-          <Text numberOfLines={2} style={{ fontSize: 11, color: TEXT2, lineHeight: 17 }}>
-            {item.description}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={{ justifyContent: 'center' }}>
-        <Text style={{ color: MUTED, fontSize: 20, lineHeight: 20 }}>›</Text>
+        <Text numberOfLines={2} style={{ fontSize: 10, color: TEXT2, lineHeight: 15 }}>
+          {item.description}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -267,9 +260,9 @@ function EmptyState() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ExploreScreen() {
   const router = useRouter();
-  const [search, setSearch]             = useState('');
+  const [search, setSearch] = useState('');
   const [debouncedSearch, setDebounced] = useState('');
-  const [era, setEra]                   = useState<EraFilter>('ALL');
+  const [era, setEra] = useState<EraFilter>('ALL');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = (text: string) => {
@@ -281,7 +274,7 @@ export default function ExploreScreen() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useHistoricalContexts({
       search: debouncedSearch || undefined,
-      era:    era === 'ALL' ? undefined : era,
+      era: era === 'ALL' ? undefined : era,
     });
 
   const contexts = data?.pages.flatMap((p) => p.content) ?? [];
@@ -299,8 +292,10 @@ export default function ExploreScreen() {
         style={{ flex: 1 }}
         data={isLoading ? [] : contexts}
         keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={{ gap: 10, paddingHorizontal: 20 }}
         renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: 20 }}>
+          <View style={{ flex: 1 }}>
             <ContextCard
               item={item}
               onPress={() => router.push({ pathname: '/context/[id]', params: { id: item.id } })}
