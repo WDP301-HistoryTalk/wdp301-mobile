@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
 
   // Placeholder when no image
   placeholderWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 60,
