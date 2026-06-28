@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { Search, Star, Trophy, Users } from 'lucide-react-native';
+import { Search, Star, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -12,9 +13,8 @@ import {
   CARD,
   MUTED,
   ORANGE,
-  ORANGE_BORDER_MUTED,
   ORANGE_TINT,
-  ORANGE_TINT_MUTED,
+  SURFACE,
   TEXT,
 } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
@@ -90,18 +90,13 @@ export default function QuizListScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
-      <View style={s.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerSub}>Kiểm tra kiến thức</Text>
-          <Text style={s.headerTitle}>Bộ câu hỏi</Text>
-        </View>
-        <View style={s.trophyWrap}>
-          <Trophy size={22} color={ORANGE} strokeWidth={1.75} />
-        </View>
+      <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
+        <Heading size="3xl">Bộ câu hỏi</Heading>
+        <Text size="sm" muted className="mt-1">Kiểm tra kiến thức lịch sử qua các bộ câu hỏi</Text>
       </View>
 
       <View style={s.searchWrap}>
-        <Search size={16} color={MUTED} strokeWidth={1.75} style={{ marginRight: 10 }} />
+        <Search size={15} color={MUTED} strokeWidth={2} />
         <TextInput
           style={s.searchInput}
           value={search}
@@ -153,25 +148,12 @@ export default function QuizListScreen() {
 }
 
 const s = StyleSheet.create({
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20,
-  },
-  headerSub: { color: MUTED, fontSize: 12, marginBottom: 2 },
-  headerTitle: { color: TEXT, fontSize: 24, fontWeight: '800' },
-  trophyWrap: {
-    width: 46, height: 46, borderRadius: 15,
-    backgroundColor: ORANGE_TINT_MUTED,
-    borderWidth: 1, borderColor: ORANGE_BORDER_MUTED,
-    alignItems: 'center', justifyContent: 'center',
-  },
-
   searchWrap: {
     flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: 20, marginBottom: 8,
-    backgroundColor: CARD, borderRadius: 14,
+    marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: SURFACE, borderRadius: 16,
     borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, height: 46,
   },
   searchInput: { flex: 1, color: TEXT, fontSize: 14 },
 
