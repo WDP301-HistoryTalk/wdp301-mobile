@@ -74,3 +74,19 @@ export const Radius = {
   card: 16,
   pill: 999,
 } as const;
+
+export const FontSize = {
+  xs: 11,   // micro labels, timestamps, hints
+  sm: 12,   // pills, badges, metadata, captions
+  md: 14,   // body text, inputs, list items
+  lg: 15,   // card titles, item titles
+  xl: 17,   // section headers, prominent numbers
+} as const;
+
+export const FontWeight = {
+  regular: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
+  extrabold: '800' as const,
+} as const;
