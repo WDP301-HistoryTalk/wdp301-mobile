@@ -1,10 +1,12 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronRight, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Clock, MessageCircle, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmModal } from '@/components/confirm-modal';
 import { chatApi } from '@/features/chat/api';
 import { useCreateSession } from '@/features/chat/hooks/use-create-session';
 import type { ChatSession } from '@/features/chat/types';
@@ -18,9 +20,11 @@ import {
   BG,
   BORDER,
   CARD,
+  MUTED,
   ORANGE,
   SURFACE,
   TEXT,
+  TEXT2,
 } from '@/constants/palette';
 import { useCharacter } from '@/features/characters/hooks/use-character';
 import { ERA_COLORS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
@@ -53,14 +57,50 @@ function getLatestSession(sessions: ChatSession[], contextId: string) {
     .sort((a, b) => getSessionTime(b) - getSessionTime(a))[0];
 }
 
+function formatSessionDate(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 export default function CharacterDetailScreen() {
   const { id }     = useLocalSearchParams<{ id: string }>();
   const resolvedId = Array.isArray(id) ? id[0] : id;
   const router     = useRouter();
   const insets     = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: char, isLoading, isError } = useCharacter(resolvedId ?? '');
   const { mutateAsync: createSession }     = useCreateSession();
   const [creatingFor, setCreatingFor]      = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete]  = useState<ChatSession | null>(null);
+  const [deletingId, setDeletingId]        = useState<string | undefined>();
+
+  const { data: sessions = [] } = useQuery({
+    queryKey: ['character-sessions', resolvedId],
+    queryFn: async () => {
+      if (!char?.contexts?.length) return [];
+      const results = await Promise.all(
+        char.contexts.map((ctx) =>
+          chatApi.getSessions({ characterId: resolvedId!, contextId: ctx.contextId.id }),
+        ),
+      );
+      return results.flat().sort((a, b) => getSessionTime(b) - getSessionTime(a));
+    },
+    enabled: !!resolvedId && !!char,
+  });
+
+  const deleteSession = useMutation({
+    mutationFn: (sessionId: string) => chatApi.deleteSession(sessionId),
+    onMutate: (sessionId) => setDeletingId(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['character-sessions', resolvedId] });
+      await queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+      setPendingDelete(null);
+    },
+    onError: (e: any) => Alert.alert('Lỗi', e?.message ?? 'Không thể xoá cuộc trò chuyện'),
+    onSettled: () => setDeletingId(undefined),
+  });
 
   async function startChat(contextId: string, contextName: string) {
     if (creatingFor) return;
@@ -206,9 +246,84 @@ export default function CharacterDetailScreen() {
 
           {/* Tính cách */}
           {char.personality ? (
-            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch' }}>
+            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 28 }}>
               {char.personality}
             </Text>
+          ) : null}
+
+          {/* ── Lịch sử trò chuyện ─────────────────────────── */}
+          {sessions.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <Clock size={16} color={ORANGE} />
+                <Heading size="md">Lịch sử trò chuyện</Heading>
+              </View>
+              <View style={{ gap: 10 }}>
+                {sessions.map((session) => {
+                  const title = session.sessionTitle ?? session.title ?? session.contextName ?? 'Cuộc trò chuyện';
+                  const isDeleting = deletingId === session.id;
+                  return (
+                    <TouchableOpacity
+                      key={session.id}
+                      activeOpacity={0.75}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/chat/[sessionId]',
+                          params: {
+                            sessionId: session.id,
+                            characterId: session.characterId,
+                            contextId: session.contextId,
+                            characterName: char.name,
+                            characterImageUrl: getCharacterImageUri(char) ?? '',
+                            characterModelUrl: char.modelUrl ?? '',
+                            contextName: session.contextName ?? '',
+                          },
+                        })
+                      }
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: 14,
+                        borderRadius: 14,
+                        backgroundColor: CARD,
+                        borderWidth: 1,
+                        borderColor: BORDER,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: TEXT, fontSize: 14, fontWeight: '800' }} numberOfLines={1}>
+                          {title}
+                        </Text>
+                        <Text style={{ color: MUTED, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                          {[session.contextName, formatSessionDate(session.lastMessageAt)].filter(Boolean).join(' · ')}
+                        </Text>
+                        {session.lastMessage ? (
+                          <Text style={{ color: TEXT2, fontSize: 12, lineHeight: 17, marginTop: 5 }} numberOfLines={2}>
+                            {session.lastMessage}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Pressable
+                        hitSlop={10}
+                        disabled={isDeleting}
+                        onPress={(e) => { e.stopPropagation(); setPendingDelete(session); }}
+                        style={({ pressed }) => ({
+                          width: 34, height: 34, borderRadius: 10,
+                          alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: 'rgba(220,38,38,0.08)',
+                          opacity: pressed || isDeleting ? 0.6 : 1,
+                        })}
+                      >
+                        {isDeleting
+                          ? <ActivityIndicator size="small" color="#dc2626" />
+                          : <Trash2 size={15} color="#dc2626" />}
+                      </Pressable>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           ) : null}
 
         </VStack>
@@ -260,6 +375,22 @@ export default function CharacterDetailScreen() {
           <ButtonText size="md">Chat với {char.name}</ButtonText>
         </Button>
       </View>
+
+      {/* ── Confirm delete modal ───────────────────────────── */}
+      <ConfirmModal
+        visible={!!pendingDelete}
+        title="Xoá cuộc trò chuyện?"
+        message="Cuộc trò chuyện này sẽ bị xoá vĩnh viễn và không thể khôi phục lại."
+        cancelText="Huỷ"
+        confirmText="Xoá"
+        variant="danger"
+        loading={deleteSession.isPending}
+        icon={<Trash2 size={22} color="#dc2626" />}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete && !deleteSession.isPending) deleteSession.mutate(pendingDelete.id);
+        }}
+      />
     </View>
   );
 }
