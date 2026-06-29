@@ -36,12 +36,10 @@ function StatRow({ icon: Icon, label, value, color }: {
 }) {
   return (
     <View style={ss.statRow}>
-      <View style={[ss.statIcon, { backgroundColor: `${color ?? ORANGE}18` }]}>
-        <Icon size={16} color={color ?? ORANGE} strokeWidth={1.75} />
-      </View>
+      <Icon size={16} color={color ?? MUTED} strokeWidth={1.75} />
       <View style={{ flex: 1 }}>
         <Text style={ss.statLabel}>{label}</Text>
-        <Text style={ss.statValue}>{value}</Text>
+        <Text style={[ss.statValue, color ? { color } : undefined]}>{value}</Text>
       </View>
     </View>
   );
@@ -116,11 +114,8 @@ export default function QuizDetailScreen() {
 
       {quiz && (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-          {/* Era badge */}
           {ec && (
-            <View style={[ss.eraBadge, { backgroundColor: ec.bg, borderColor: `${ec.text}40` }]}>
-              <Text style={{ color: ec.text, fontSize: 11, fontWeight: '700' }}>{eraLabel}</Text>
-            </View>
+            <Text style={{ color: ec.text, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>{eraLabel}</Text>
           )}
 
           <Text style={ss.title}>{quiz.title}</Text>
@@ -149,9 +144,7 @@ export default function QuizDetailScreen() {
           <View style={ss.timeCard}>
             <View style={ss.timeToggleRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={[ss.timeIconWrap, { backgroundColor: timeEnabled ? `${ORANGE}18` : `${MUTED}18` }]}>
-                  <Timer size={16} color={timeEnabled ? ORANGE : MUTED} strokeWidth={1.75} />
-                </View>
+                <Timer size={18} color={timeEnabled ? ORANGE : MUTED} strokeWidth={1.75} />
                 <View>
                   <Text style={{ color: TEXT, fontWeight: '700', fontSize: 15 }}>Giới hạn thời gian</Text>
                   <Text style={{ color: MUTED, fontSize: 12, marginTop: 1 }}>
@@ -226,10 +219,6 @@ const ss = StyleSheet.create({
   },
   headerTitle: { color: TEXT, fontSize: 17, fontWeight: '700' },
 
-  eraBadge: {
-    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 8, borderWidth: 1, marginBottom: 12,
-  },
   title: { color: TEXT, fontSize: 24, fontWeight: '800', lineHeight: 30, marginBottom: 6 },
   contextTitle: { color: MUTED, fontSize: 13, marginBottom: 18 },
 
@@ -238,10 +227,7 @@ const ss = StyleSheet.create({
     paddingHorizontal: 16, marginBottom: 16,
   },
   statRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14,
-  },
-  statIcon: {
-    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14,
   },
   statLabel: { color: MUTED, fontSize: 11, fontWeight: '500', marginBottom: 2 },
   statValue: { color: TEXT, fontSize: 14, fontWeight: '700' },
@@ -253,9 +239,6 @@ const ss = StyleSheet.create({
   },
   timeToggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  timeIconWrap: {
-    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
   timeInputRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
