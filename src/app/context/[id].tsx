@@ -232,7 +232,7 @@ function IntroVideo({
             style={introStyles.closeButton}
           >
             <X size={18} color={Colors.dark.text} />
-            <Text style={introStyles.closeText}>Đóng</Text>
+            <Text className="text-[#f7f1e8]" style={introStyles.closeText}>Đóng</Text>
           </TouchableOpacity>
         </View>
         {youtubeEmbedUrl ? (
