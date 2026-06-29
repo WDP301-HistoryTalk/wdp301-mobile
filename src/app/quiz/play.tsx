@@ -76,10 +76,12 @@ export default function QuizPlayScreen() {
     const snap = useQuizStore.getState().active;
     if (!snap) return;
 
-    const answers = snap.session.questions.map((q) => ({
-      questionId: q.questionId,
-      selectedAnswer: snap.userAnswers[q.questionId] ?? 0,
-    }));
+    const answers = snap.session.questions
+      .filter((q) => snap.userAnswers[q.questionId] !== undefined)
+      .map((q) => ({
+        questionId: q.questionId,
+        selectedAnswer: snap.userAnswers[q.questionId] as number,
+      }));
 
     try {
       await submitQuiz({ sessionId: snap.session.sessionId, answers });
