@@ -485,6 +485,7 @@ export default function ChatScreen() {
                     : m,
                 ),
               );
+              listRef.current?.scrollToEnd({ animated: false });
             },
           );
 
@@ -1042,7 +1043,7 @@ export default function ChatScreen() {
                 activeOpacity={0.75}
                 style={s.suggestionChip}
               >
-                <Text style={s.suggestionText} numberOfLines={2}>
+                <Text style={s.suggestionText} numberOfLines={1}>
                   {q}
                 </Text>
               </TouchableOpacity>
@@ -1449,7 +1450,8 @@ const s = StyleSheet.create({
   suggestionsBar: {
     borderTopWidth: 1,
     borderTopColor: BORDER,
-    maxHeight: 100,
+    height: 56,
+    flexShrink: 0,
   },
   suggestionChip: {
     backgroundColor: CARD,
@@ -1458,7 +1460,6 @@ const s = StyleSheet.create({
     borderColor: ORANGE_BORDER_MUTED,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    maxWidth: 220,
   },
   suggestionText: {
     color: TEXT2,
