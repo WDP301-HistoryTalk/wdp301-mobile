@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
+import { BG, BORDER, CARD, FontSize, MUTED, ORANGE, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import {
@@ -88,7 +88,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
 
       {/* Body */}
       <View style={{ padding: 10, gap: 4, flex: 1 }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: ec.text }}>
+        <Text style={{ fontSize: FontSize.sm, fontWeight: '700', color: ec.text }}>
           {ERA_LABELS[item.era]}
         </Text>
         {item.category ? (
@@ -101,23 +101,23 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
               paddingVertical: 2,
             }}
           >
-            <Text style={{ fontSize: 9, fontWeight: '700', color: CATEGORY_COLORS[item.category] }}>
+            <Text style={{ fontSize: FontSize.xs, fontWeight: '700', color: CATEGORY_COLORS[item.category] }}>
               {CATEGORY_LABELS[item.category]}
             </Text>
           </View>
         ) : null}
 
-        <Heading size="xs" numberOfLines={2} style={{ lineHeight: 18 }}>
+        <Heading numberOfLines={2} style={{ fontSize: FontSize.lg, lineHeight: 20 }}>
           {item.name}
         </Heading>
 
         {(yearText ?? item.location) ? (
-          <Text size="xs" muted numberOfLines={1}>
+          <Text muted numberOfLines={1} style={{ fontSize: FontSize.xs }}>
             {[yearText, item.location].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
 
-        <Text numberOfLines={2} style={{ fontSize: 10, color: TEXT2, lineHeight: 15 }}>
+        <Text numberOfLines={2} style={{ fontSize: FontSize.sm, color: TEXT2, lineHeight: 17 }}>
           {item.description}
         </Text>
       </View>
