@@ -1,9 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronRight, Clock, MessageCircle, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, MessageCircle, Search, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmModal } from '@/components/confirm-modal';
@@ -29,6 +37,8 @@ import {
 import { useCharacter } from '@/features/characters/hooks/use-character';
 import { ERA_COLORS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
 
+type ActiveTab = 'info' | 'chat';
+
 function formatDate(y?: number, m?: number, d?: number, bc?: boolean): string | null {
   if (!y) return null;
   const parts: string[] = [];
@@ -36,6 +46,13 @@ function formatDate(y?: number, m?: number, d?: number, bc?: boolean): string | 
   if (m) parts.push(String(m).padStart(2, '0'));
   parts.push(String(y));
   return parts.join('/') + (bc ? ' TCN' : '');
+}
+
+function formatSessionDate(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 const ERA_HERO_BG: Record<CharacterEra, string> = {
@@ -53,30 +70,27 @@ function getSessionTime(session: ChatSession) {
 
 function getLatestSession(sessions: ChatSession[], contextId: string) {
   return sessions
-    .filter((session) => session.contextId === contextId)
+    .filter((s) => s.contextId === contextId)
     .sort((a, b) => getSessionTime(b) - getSessionTime(a))[0];
 }
 
-function formatSessionDate(value?: string) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 export default function CharacterDetailScreen() {
-  const { id }     = useLocalSearchParams<{ id: string }>();
-  const resolvedId = Array.isArray(id) ? id[0] : id;
-  const router     = useRouter();
-  const insets     = useSafeAreaInsets();
+  const { id }      = useLocalSearchParams<{ id: string }>();
+  const resolvedId  = Array.isArray(id) ? id[0] : id;
+  const router      = useRouter();
+  const insets      = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
   const { data: char, isLoading, isError } = useCharacter(resolvedId ?? '');
   const { mutateAsync: createSession }     = useCreateSession();
-  const [creatingFor, setCreatingFor]      = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete]  = useState<ChatSession | null>(null);
-  const [deletingId, setDeletingId]        = useState<string | undefined>();
 
-  const { data: sessions = [] } = useQuery({
+  const [activeTab, setActiveTab]         = useState<ActiveTab>('info');
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [creatingFor, setCreatingFor]     = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ChatSession | null>(null);
+  const [deletingId, setDeletingId]       = useState<string | undefined>();
+
+  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ['character-sessions', resolvedId],
     queryFn: async () => {
       if (!char?.contexts?.length) return [];
@@ -88,6 +102,14 @@ export default function CharacterDetailScreen() {
       return results.flat().sort((a, b) => getSessionTime(b) - getSessionTime(a));
     },
     enabled: !!resolvedId && !!char,
+  });
+
+  const filteredSessions = sessions.filter((s) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [s.sessionTitle, s.title, s.contextName, s.lastMessage]
+      .filter(Boolean)
+      .some((v) => v!.toLowerCase().includes(q));
   });
 
   const deleteSession = useMutation({
@@ -114,14 +136,14 @@ export default function CharacterDetailScreen() {
       router.push({
         pathname: '/chat/[sessionId]',
         params: {
-          sessionId:     session.id,
-          characterId:   resolvedId!,
+          sessionId:          session.id,
+          characterId:        resolvedId!,
           contextId,
-          characterName: char?.name ?? '',
-          characterImageUrl: char ? getCharacterImageUri(char) ?? '' : '',
-          characterModelUrl: char?.modelUrl ?? '',
+          characterName:      char?.name ?? '',
+          characterImageUrl:  char ? getCharacterImageUri(char) ?? '' : '',
+          characterModelUrl:  char?.modelUrl ?? '',
           contextName,
-          greetingMessage: result?.greetingMessage ? JSON.stringify(result.greetingMessage) : '',
+          greetingMessage:    result?.greetingMessage    ? JSON.stringify(result.greetingMessage)    : '',
           suggestedQuestions: result?.suggestedQuestions ? JSON.stringify(result.suggestedQuestions) : '',
         },
       });
@@ -164,6 +186,7 @@ export default function CharacterDetailScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        keyboardShouldPersistTaps="handled"
       >
         {/* ── Hero image ─────────────────────────────────────── */}
         <View style={{ height: 360, width: '100%', backgroundColor: heroBg }}>
@@ -182,84 +205,152 @@ export default function CharacterDetailScreen() {
           )}
         </View>
 
-        {/* ── Character info ─────────────────────────────────── */}
+        {/* ── Name / title / dates ───────────────────────────── */}
         <VStack style={{ paddingHorizontal: 24, paddingTop: 28, alignItems: 'center' }}>
-
-          {/* Name */}
           <Heading size="3xl" style={{ textAlign: 'center', marginBottom: 8 }}>
             {char.name}
           </Heading>
-
-          {/* Title */}
           {char.title ? (
             <Text style={{ color: ORANGE, fontWeight: '600', textAlign: 'center', marginBottom: 4, fontSize: 15 }}>
               {char.title}
             </Text>
           ) : null}
-
-          {/* Date range */}
           {dateRange ? (
-            <Text style={{ color: ORANGE, textAlign: 'center', marginBottom: 28, fontSize: 14 }}>
+            <Text style={{ color: ORANGE, textAlign: 'center', fontSize: 14 }}>
               {dateRange}
             </Text>
           ) : null}
+        </VStack>
 
-          {/* Context list */}
-          {char.contexts && char.contexts.length > 0 ? (
-            <View style={{ width: '100%', marginBottom: 28, gap: 10 }}>
-              {char.contexts.map((ctx) => (
-                <TouchableOpacity
-                  key={ctx.contextId.id}
-                  onPress={() => router.push({ pathname: '/context/[id]', params: { id: ctx.contextId.id } })}
-                  activeOpacity={0.7}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: SURFACE,
-                    borderRadius: 14,
-                    paddingVertical: 16,
-                    paddingHorizontal: 16,
-                    borderWidth: 1,
-                    borderColor: `${ORANGE}33`,
-                  }}
-                >
-                  <View style={{
-                    width: 8, height: 8, borderRadius: 4,
-                    backgroundColor: ORANGE,
-                    marginRight: 12,
-                  }} />
-                  <Text style={{ flex: 1, fontWeight: '600', fontSize: 14 }}>
-                    {ctx.name}
-                  </Text>
-                  <ChevronRight size={18} color={ORANGE} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : null}
+        {/* ── Tab bar ────────────────────────────────────────── */}
+        <View style={{
+          flexDirection: 'row',
+          marginTop: 24,
+          marginHorizontal: 24,
+          backgroundColor: CARD,
+          borderRadius: 14,
+          padding: 4,
+          borderWidth: 1,
+          borderColor: BORDER,
+        }}>
+          {(['info', 'chat'] as ActiveTab[]).map((tab) => {
+            const isActive = activeTab === tab;
+            const label = tab === 'info' ? 'Thông tin' : `Trò chuyện${sessions.length > 0 ? ` (${sessions.length})` : ''}`;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.75}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  backgroundColor: isActive ? ORANGE : 'transparent',
+                }}
+              >
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: isActive ? '#fff' : MUTED,
+                }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-          {/* Tiểu sử */}
-          {char.background ? (
-            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 16 }}>
-              {char.background}
-            </Text>
-          ) : null}
-
-          {/* Tính cách */}
-          {char.personality ? (
-            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 28 }}>
-              {char.personality}
-            </Text>
-          ) : null}
-
-          {/* ── Lịch sử trò chuyện ─────────────────────────── */}
-          {sessions.length > 0 ? (
-            <View style={{ width: '100%' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Clock size={16} color={ORANGE} />
-                <Heading size="md">Lịch sử trò chuyện</Heading>
+        {/* ── Tab: Thông tin ─────────────────────────────────── */}
+        {activeTab === 'info' ? (
+          <VStack style={{ paddingHorizontal: 24, paddingTop: 20 }}>
+            {char.contexts && char.contexts.length > 0 ? (
+              <View style={{ width: '100%', marginBottom: 24, gap: 10 }}>
+                {char.contexts.map((ctx) => (
+                  <TouchableOpacity
+                    key={ctx.contextId.id}
+                    onPress={() => router.push({ pathname: '/context/[id]', params: { id: ctx.contextId.id } })}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: SURFACE,
+                      borderRadius: 14,
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      borderWidth: 1,
+                      borderColor: `${ORANGE}33`,
+                    }}
+                  >
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE, marginRight: 12 }} />
+                    <Text style={{ flex: 1, fontWeight: '600', fontSize: 14 }}>{ctx.name}</Text>
+                    <ChevronRight size={18} color={ORANGE} />
+                  </TouchableOpacity>
+                ))}
               </View>
+            ) : null}
+
+            {char.background ? (
+              <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 16 }}>
+                {char.background}
+              </Text>
+            ) : null}
+
+            {char.personality ? (
+              <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch' }}>
+                {char.personality}
+              </Text>
+            ) : null}
+          </VStack>
+        ) : null}
+
+        {/* ── Tab: Trò chuyện ────────────────────────────────── */}
+        {activeTab === 'chat' ? (
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+            {/* Search bar */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              backgroundColor: CARD,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: BORDER,
+              paddingHorizontal: 14,
+              marginBottom: 14,
+              height: 46,
+            }}>
+              <Search size={16} color={MUTED} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Tìm kiếm cuộc trò chuyện..."
+                placeholderTextColor={MUTED}
+                style={{ flex: 1, color: TEXT, fontSize: 14 }}
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            {/* Sessions list */}
+            {sessionsLoading ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={ORANGE} />
+              </View>
+            ) : filteredSessions.length === 0 ? (
+              <View style={{ paddingVertical: 48, alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: TEXT, fontSize: 15, fontWeight: '700' }}>
+                  {searchQuery ? 'Không tìm thấy kết quả' : 'Chưa có cuộc trò chuyện'}
+                </Text>
+                <Text style={{ color: MUTED, fontSize: 13, textAlign: 'center' }}>
+                  {searchQuery
+                    ? 'Thử từ khoá khác hoặc xoá bộ lọc'
+                    : `Nhấn "Chat với ${char.name}" để bắt đầu`}
+                </Text>
+              </View>
+            ) : (
               <View style={{ gap: 10 }}>
-                {sessions.map((session) => {
+                {filteredSessions.map((session) => {
                   const title = session.sessionTitle ?? session.title ?? session.contextName ?? 'Cuộc trò chuyện';
                   const isDeleting = deletingId === session.id;
                   return (
@@ -270,13 +361,13 @@ export default function CharacterDetailScreen() {
                         router.push({
                           pathname: '/chat/[sessionId]',
                           params: {
-                            sessionId: session.id,
-                            characterId: session.characterId,
-                            contextId: session.contextId,
-                            characterName: char.name,
+                            sessionId:        session.id,
+                            characterId:      session.characterId,
+                            contextId:        session.contextId,
+                            characterName:    char.name,
                             characterImageUrl: getCharacterImageUri(char) ?? '',
                             characterModelUrl: char.modelUrl ?? '',
-                            contextName: session.contextName ?? '',
+                            contextName:      session.contextName ?? '',
                           },
                         })
                       }
@@ -323,10 +414,9 @@ export default function CharacterDetailScreen() {
                   );
                 })}
               </View>
-            </View>
-          ) : null}
-
-        </VStack>
+            )}
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* ── Sticky back button ─────────────────────────────── */}
@@ -340,12 +430,9 @@ export default function CharacterDetailScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
+              width: 44, height: 44, borderRadius: 22,
               backgroundColor: 'rgba(255,255,255,0.92)',
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'center', justifyContent: 'center',
             }}
           >
             <ArrowLeft size={20} color="#1c1917" />
