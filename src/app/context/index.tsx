@@ -55,6 +55,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
       onPress={onPress}
       activeOpacity={0.8}
       style={{
+        flex: 1,
         backgroundColor: CARD,
         borderWidth: 1,
         borderColor: BORDER,
@@ -86,7 +87,7 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
       </View>
 
       {/* Body */}
-      <View style={{ padding: 10, gap: 4 }}>
+      <View style={{ padding: 10, gap: 4, flex: 1 }}>
         <Text style={{ fontSize: 11, fontWeight: '700', color: ec.text }}>
           {ERA_LABELS[item.era]}
         </Text>
