@@ -623,9 +623,9 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={{ gap: 8 }}>
-              {recentChats.map((session) => (
+              {recentChats.map((session, i) => (
                 <TouchableOpacity
-                  key={session.id}
+                  key={session.id ?? i}
                   activeOpacity={0.8}
                   style={{
                     flexDirection: "row",

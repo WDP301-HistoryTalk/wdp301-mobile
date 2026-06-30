@@ -49,8 +49,7 @@ export default function AppTabs() {
 
       <Animated.View
         onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
-        pointerEvents={hideTabBar ? "none" : "auto"}
-        style={[styles.bar, barAnimStyle]}
+        style={[styles.bar, barAnimStyle, { pointerEvents: hideTabBar ? "none" : "auto" }]}
       >
         <View style={styles.inner}>
           {TABS.map(({ href, label, icon }) => (

@@ -399,9 +399,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.15,
     // text shadow for extra punch on bright images
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadow: '0px 1px 3px rgba(0,0,0,0.55)',
   },
   charTitle: {
     // #E0E0E0 at 85% opacity — clearly subordinate to the name
@@ -412,8 +410,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
     lineHeight: 14,
     // match the shadow style for consistency
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadow: '0px 1px 2px rgba(0,0,0,0.45)',
   },
 });
