@@ -163,6 +163,7 @@ function ListHeader({
       >
         <Search size={15} color={MUTED} strokeWidth={2} />
         <TextInput
+          nativeID="characters-search"
           style={{ flex: 1, marginLeft: 10, color: TEXT, fontSize: 14 }}
           placeholder="Tìm kiếm nhân vật..."
           placeholderTextColor={MUTED}
@@ -399,7 +400,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.15,
     // text shadow for extra punch on bright images
-    textShadow: '0px 1px 3px rgba(0,0,0,0.55)',
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   charTitle: {
     // #E0E0E0 at 85% opacity — clearly subordinate to the name
@@ -410,6 +413,8 @@ const styles = StyleSheet.create({
     marginTop: 3,
     lineHeight: 14,
     // match the shadow style for consistency
-    textShadow: '0px 1px 2px rgba(0,0,0,0.45)',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

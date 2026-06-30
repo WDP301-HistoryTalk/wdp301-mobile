@@ -189,6 +189,7 @@ function ListHeader({
       >
         <Search size={15} color={MUTED} strokeWidth={2} />
         <TextInput
+          nativeID="contexts-search"
           style={{ flex: 1, marginLeft: 10, color: TEXT, fontSize: 14 }}
           placeholder="Tìm kiếm bối cảnh lịch sử..."
           placeholderTextColor={MUTED}

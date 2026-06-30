@@ -580,9 +580,9 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
             >
-              {characters.map((char) => (
+              {characters.map((char, idx) => (
                 <CharPortrait
-                  key={char.id}
+                  key={char.id ?? `char-${idx}`}
                   char={char}
                   onPress={() =>
                     router.push({
@@ -742,9 +742,9 @@ export default function HomeScreen() {
           {ctxLoading ? (
             <CtxSkeletons />
           ) : (
-            contexts.map((ctx) => (
+            contexts.map((ctx, idx) => (
               <ContextRow
-                key={ctx.id}
+                key={ctx.id ?? `ctx-${idx}`}
                 ctx={ctx}
                 onPress={() =>
                   router.push({
@@ -784,7 +784,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={{ gap: 8 }}>
-              {recentQuizzes.map((item) => {
+              {recentQuizzes.map((item, idx) => {
                 const correctCount = Math.round(
                   (item.percentage / 100) * item.totalQuestions,
                 );
@@ -797,7 +797,7 @@ export default function HomeScreen() {
                       : "#EF4444";
                 return (
                   <TouchableOpacity
-                    key={item.sessionId}
+                    key={item.sessionId ?? idx}
                     activeOpacity={0.8}
                     style={{
                       flexDirection: "row",
