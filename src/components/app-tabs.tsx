@@ -1,5 +1,5 @@
 import { Slot, usePathname } from "expo-router";
-import { BookOpen, MessageCircle, Trophy, User, Users } from "lucide-react-native";
+import { BookOpen, Trophy, User, Users } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,7 +12,6 @@ const TAB_BAR_HORIZONTAL_PADDING = 12;
 
 const TABS = [
   { href: "/characters", label: "Nhân vật", icon: Users },
-  { href: "/chat/history", label: "Chat", icon: MessageCircle },
   { href: "/context", label: "Bối cảnh", icon: BookOpen },
   { href: "/", label: "Trang chủ", icon: undefined },
   { href: "/quiz", label: "Quiz", icon: Trophy },
