@@ -48,8 +48,10 @@ export default function QuizPlayScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Track elapsed with a ref so the interval closure never goes stale
-  const elapsedRef    = useRef(0);
-  const submittingRef = useRef(false);
+  const elapsedRef       = useRef(0);
+  const submittingRef    = useRef(false);
+  const timedOutRef      = useRef(false);
+  const timeoutRetryRef  = useRef(0);
 
   const questions     = active?.session.questions ?? [];
   const userAnswers   = active?.userAnswers ?? {};
@@ -74,37 +76,47 @@ export default function QuizPlayScreen() {
     const snap = useQuizStore.getState().active;
     if (!snap) return;
 
-    const answers = snap.session.questions.map((q) => ({
-      questionId: q.questionId,
-      selectedAnswer: snap.userAnswers[q.questionId] ?? 0,
-    }));
+    const answers = snap.session.questions
+      .filter((q) => snap.userAnswers[q.questionId] !== undefined)
+      .map((q) => ({
+        questionId: q.questionId,
+        selectedAnswer: snap.userAnswers[q.questionId] as number,
+      }));
 
     try {
-      await submitQuiz({
-        sessionId: snap.session.sessionId,
-        answers,
-      });
+      await submitQuiz({ sessionId: snap.session.sessionId, answers });
       router.replace('/quiz/result');
     } catch (e: any) {
       submittingRef.current = false;
-      setErrorMessage(e?.message ?? 'Không thể nộp bài. Thử lại?');
+      // When triggered by timeout: silently retry up to 3 times before showing error
+      if (timedOutRef.current && timeoutRetryRef.current < 3) {
+        timeoutRetryRef.current += 1;
+        setTimeout(() => void doSubmit(), 2000);
+      } else {
+        setErrorMessage(e?.message ?? 'Không thể nộp bài. Thử lại?');
+      }
     }
   }, [submitQuiz, router]);
 
-  // Countdown timer — all side effects happen OUTSIDE any state updater
+  // Countdown timer — only runs when there is an actual time limit
   useEffect(() => {
     if (!active) return;
-    elapsedRef.current = 0;
     const duration = active.session.limitedTime;
+    if (!duration) return;   // 0 = no limit, skip entirely
+
+    elapsedRef.current = 0;
+    timedOutRef.current = false;
+    timeoutRetryRef.current = 0;
 
     const interval = setInterval(() => {
       elapsedRef.current += 1;
-      setElapsed(elapsedRef.current);                         // Zustand update — outside React state setter
+      setElapsed(elapsedRef.current);
       const remaining = Math.max(0, duration - elapsedRef.current);
-      setTimeLeft(remaining);                                  // plain value, not updater fn
+      setTimeLeft(remaining);
 
       if (remaining === 0) {
         clearInterval(interval);
+        timedOutRef.current = true;
         void doSubmit();
       }
     }, 1000);
@@ -137,7 +149,8 @@ export default function QuizPlayScreen() {
   const question     = questions[currentIdx];
   const selected     = question ? userAnswers[question.questionId] : undefined;
   const isLast       = currentIdx === totalQ - 1;
-  const timerWarning = timeLeft > 0 && timeLeft <= 60;
+  const hasTimeLimit = (active.session.limitedTime ?? 0) > 0;
+  const timerWarning = hasTimeLimit && timeLeft <= 60;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
@@ -150,7 +163,7 @@ export default function QuizPlayScreen() {
 
         <View style={[s.timer, timerWarning && s.timerWarn]}>
           <Text style={[s.timerText, timerWarning && { color: RED }]}>
-            {formatTime(timeLeft)}
+            {hasTimeLimit ? formatTime(timeLeft) : '∞'}
           </Text>
         </View>
 

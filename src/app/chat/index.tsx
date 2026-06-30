@@ -99,9 +99,16 @@ export default function ChatHistoryScreen() {
             <SessionRow
               session={item}
               onPress={() =>
-                router.push({
+                router.replace({
                   pathname: '/chat/[sessionId]',
-                  params: { sessionId: item.id, characterName: characterName ?? '' },
+                  params: {
+                    sessionId: item.id,
+                    characterId: item.characterId ?? '',
+                    characterName: item.characterName ?? characterName ?? '',
+                    characterImageUrl: item.characterImage ?? '',
+                    contextId: item.contextId ?? '',
+                    contextName: item.contextName ?? '',
+                  },
                 })
               }
             />

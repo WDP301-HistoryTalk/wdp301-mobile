@@ -83,26 +83,13 @@ function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () =
             </Text>
           </View>
         )}
-        {/* Era badge overlay */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 8,
-            left: 8,
-            backgroundColor: `${ec.bg}CC`,
-            borderRadius: 99,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-          }}
-        >
-          <Text style={{ fontSize: 9, fontWeight: '700', color: ec.text }}>
-            {ERA_LABELS[item.era]}
-          </Text>
-        </View>
       </View>
 
       {/* Body */}
       <View style={{ padding: 10, gap: 4 }}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: ec.text }}>
+          {ERA_LABELS[item.era]}
+        </Text>
         {item.category ? (
           <View
             style={{

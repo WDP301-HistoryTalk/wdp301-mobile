@@ -1,20 +1,18 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, History, MapPin, MessageCircle, Skull } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, ChevronRight, Clock, MessageCircle, Trash2 } from 'lucide-react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmModal } from '@/components/confirm-modal';
 import { chatApi } from '@/features/chat/api';
 import { useCreateSession } from '@/features/chat/hooks/use-create-session';
 import type { ChatSession } from '@/features/chat/types';
 
-import { Badge, BadgeText } from '@/components/ui/badge';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Divider } from '@/components/ui/divider';
 import { Heading } from '@/components/ui/heading';
-import { HStack } from '@/components/ui/hstack';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
@@ -24,16 +22,12 @@ import {
   CARD,
   MUTED,
   ORANGE,
-  ORANGE_BORDER_ACTIVE,
-  ORANGE_BORDER_FAINT,
-  ORANGE_TINT,
   SURFACE,
   TEXT,
-  TEXT_OVERLAY,
-  TEXT_OVERLAY_SOLID,
+  TEXT2,
 } from '@/constants/palette';
 import { useCharacter } from '@/features/characters/hooks/use-character';
-import { ERA_COLORS, ERA_LABELS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
+import { ERA_COLORS, getCharacterImageUri, type CharacterEra } from '@/features/characters/types';
 
 function formatDate(y?: number, m?: number, d?: number, bc?: boolean): string | null {
   if (!y) return null;
@@ -51,29 +45,6 @@ const ERA_HERO_BG: Record<CharacterEra, string> = {
   CONTEMPORARY: '#0D1B2A',
 };
 
-const floatingBtnStyle = {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: 'rgba(0,0,0,0.45)',
-  alignItems: 'center' as const,
-  justifyContent: 'center' as const,
-  borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.15)',
-};
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <VStack space="sm" style={{ marginBottom: 28 }}>
-      <HStack space="sm">
-        <View style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: ORANGE }} />
-        <Heading size="sm" className="text-history-text">{title}</Heading>
-      </HStack>
-      {children}
-    </VStack>
-  );
-}
-
 function getSessionTime(session: ChatSession) {
   const value = session.lastMessageAt ?? session.updatedAt ?? session.createdAt;
   const time = value ? new Date(value).getTime() : 0;
@@ -86,13 +57,50 @@ function getLatestSession(sessions: ChatSession[], contextId: string) {
     .sort((a, b) => getSessionTime(b) - getSessionTime(a))[0];
 }
 
+function formatSessionDate(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 export default function CharacterDetailScreen() {
   const { id }     = useLocalSearchParams<{ id: string }>();
   const resolvedId = Array.isArray(id) ? id[0] : id;
   const router     = useRouter();
+  const insets     = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: char, isLoading, isError } = useCharacter(resolvedId ?? '');
   const { mutateAsync: createSession }     = useCreateSession();
   const [creatingFor, setCreatingFor]      = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete]  = useState<ChatSession | null>(null);
+  const [deletingId, setDeletingId]        = useState<string | undefined>();
+
+  const { data: sessions = [] } = useQuery({
+    queryKey: ['character-sessions', resolvedId],
+    queryFn: async () => {
+      if (!char?.contexts?.length) return [];
+      const results = await Promise.all(
+        char.contexts.map((ctx) =>
+          chatApi.getSessions({ characterId: resolvedId!, contextId: ctx.contextId.id }),
+        ),
+      );
+      return results.flat().sort((a, b) => getSessionTime(b) - getSessionTime(a));
+    },
+    enabled: !!resolvedId && !!char,
+  });
+
+  const deleteSession = useMutation({
+    mutationFn: (sessionId: string) => chatApi.deleteSession(sessionId),
+    onMutate: (sessionId) => setDeletingId(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['character-sessions', resolvedId] });
+      await queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+      setPendingDelete(null);
+    },
+    onError: (e: any) => Alert.alert('Lỗi', e?.message ?? 'Không thể xoá cuộc trò chuyện'),
+    onSettled: () => setDeletingId(undefined),
+  });
 
   async function startChat(contextId: string, contextName: string) {
     if (creatingFor) return;
@@ -148,6 +156,7 @@ export default function CharacterDetailScreen() {
   const bornDate  = formatDate(char.bornYear,  char.bornMonth,  char.bornDay,  char.isBornBc);
   const deathDate = formatDate(char.deathYear, char.deathMonth, char.deathDay, char.isDeathBc);
   const imageUri  = getCharacterImageUri(char);
+  const dateRange = [bornDate, deathDate].filter(Boolean).join('  –  ');
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
@@ -156,173 +165,195 @@ export default function CharacterDetailScreen() {
         bounces={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* ── Full-bleed hero ─────────────────────────────────────── */}
-        <View style={{ height: 380, width: '100%', backgroundColor: heroBg }}>
+        {/* ── Hero image ─────────────────────────────────────── */}
+        <View style={{ height: 360, width: '100%', backgroundColor: heroBg }}>
           {imageUri ? (
             <Image
               source={{ uri: imageUri }}
-              style={{ position: 'absolute', width: '100%', height: '100%' }}
+              style={{ width: '100%', height: '100%' }}
               contentFit="cover"
             />
           ) : (
-            <View style={{ position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 130, fontWeight: '900', color: ec?.glow ?? TEXT, opacity: 0.14 }}>
                 {char.name.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
-
-          {/* 3-layer bottom gradient — stays dark all the way down so the name/title text
-              (anchored near the bottom) never lands on a light strip */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 220 }}>
-            <View style={{ flex: 2 }} />
-            <View style={{ flex: 2, backgroundColor: TEXT_OVERLAY }} />
-            <View style={{ flex: 3, backgroundColor: TEXT_OVERLAY_SOLID }} />
-          </View>
-
-          {/* Floating back + chat-history buttons */}
-          <SafeAreaView edges={['top']} style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', margin: 16 }}>
-              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={floatingBtnStyle}>
-                <ArrowLeft size={18} color="#f4f4f5" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: '/chat' as never,
-                    params: { characterId: char.id, characterName: char.name },
-                  })
-                }
-                activeOpacity={0.7}
-                style={floatingBtnStyle}
-              >
-                <History size={18} color="#f4f4f5" />
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-
-          {/* Name + era overlaid at bottom */}
-          <View style={{ position: 'absolute', bottom: 50, left: 20, right: 20 }}>
-            {char.era && ec ? (
-              <Badge
-                className="mb-2.5"
-                style={{ backgroundColor: ec.bg, borderColor: `${ec.text}33` }}
-              >
-                <BadgeText style={{ color: ec.text, fontSize: 11 }}>
-                  {ERA_LABELS[char.era]}
-                </BadgeText>
-              </Badge>
-            ) : null}
-            <Heading size="4xl" className="text-white leading-9" numberOfLines={2}>
-              {char.name}
-            </Heading>
-            {char.title ? (
-              <Text size="sm" className="text-white/55 mt-1">{char.title}</Text>
-            ) : null}
-          </View>
         </View>
 
-        {/* ── Body ───────────────────────────────────────────────── */}
-        <VStack style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+        {/* ── Character info ─────────────────────────────────── */}
+        <VStack style={{ paddingHorizontal: 24, paddingTop: 28, alignItems: 'center' }}>
 
-          {/* Dates */}
-          {(bornDate || deathDate) ? (
-            <Card className="mb-7 flex-row gap-4">
-              {bornDate ? (
-                <HStack space="sm" className="flex-1">
+          {/* Name */}
+          <Heading size="3xl" style={{ textAlign: 'center', marginBottom: 8 }}>
+            {char.name}
+          </Heading>
+
+          {/* Title */}
+          {char.title ? (
+            <Text style={{ color: ORANGE, fontWeight: '600', textAlign: 'center', marginBottom: 4, fontSize: 15 }}>
+              {char.title}
+            </Text>
+          ) : null}
+
+          {/* Date range */}
+          {dateRange ? (
+            <Text style={{ color: ORANGE, textAlign: 'center', marginBottom: 28, fontSize: 14 }}>
+              {dateRange}
+            </Text>
+          ) : null}
+
+          {/* Context list */}
+          {char.contexts && char.contexts.length > 0 ? (
+            <View style={{ width: '100%', marginBottom: 28, gap: 10 }}>
+              {char.contexts.map((ctx) => (
+                <TouchableOpacity
+                  key={ctx.contextId.id}
+                  onPress={() => router.push({ pathname: '/context/[id]', params: { id: ctx.contextId.id } })}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: SURFACE,
+                    borderRadius: 14,
+                    paddingVertical: 16,
+                    paddingHorizontal: 16,
+                    borderWidth: 1,
+                    borderColor: `${ORANGE}33`,
+                  }}
+                >
                   <View style={{
-                    width: 34, height: 34, borderRadius: 10,
-                    backgroundColor: ORANGE_TINT,
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Calendar size={15} color={ORANGE} />
-                  </View>
-                  <VStack space="xs">
-                    <Text size="2xs" muted bold className="uppercase tracking-widest">
-                      Sinh năm
-                    </Text>
-                    <Text size="sm" bold>{bornDate}</Text>
-                  </VStack>
-                </HStack>
-              ) : null}
-              {bornDate && deathDate ? (
-                <Divider orientation="vertical" />
-              ) : null}
-              {deathDate ? (
-                <HStack space="sm" className="flex-1">
-                  <View style={{
-                    width: 34, height: 34, borderRadius: 10,
-                    backgroundColor: 'rgba(113,113,122,0.15)',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Skull size={15} color={MUTED} />
-                  </View>
-                  <VStack space="xs">
-                    <Text size="2xs" muted bold className="uppercase tracking-widest">
-                      Mất năm
-                    </Text>
-                    <Text size="sm" bold>{deathDate}</Text>
-                  </VStack>
-                </HStack>
-              ) : null}
-            </Card>
+                    width: 8, height: 8, borderRadius: 4,
+                    backgroundColor: ORANGE,
+                    marginRight: 12,
+                  }} />
+                  <Text style={{ flex: 1, fontWeight: '600', fontSize: 14 }}>
+                    {ctx.name}
+                  </Text>
+                  <ChevronRight size={18} color={ORANGE} />
+                </TouchableOpacity>
+              ))}
+            </View>
           ) : null}
 
           {/* Tiểu sử */}
           {char.background ? (
-            <Section title="Tiểu sử">
-              <Text muted size="sm" style={{ lineHeight: 22 }}>{char.background}</Text>
-            </Section>
+            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 16 }}>
+              {char.background}
+            </Text>
           ) : null}
 
           {/* Tính cách */}
           {char.personality ? (
-            <Section title="Tính cách">
-              <Text muted size="sm" style={{ lineHeight: 22 }}>{char.personality}</Text>
-            </Section>
+            <Text style={{ lineHeight: 24, fontSize: 15, alignSelf: 'stretch', marginBottom: 28 }}>
+              {char.personality}
+            </Text>
           ) : null}
 
-          {/* Bối cảnh lịch sử */}
-          {char.contexts && char.contexts.length > 0 ? (
-            <Section title="Bối cảnh lịch sử">
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {char.contexts.map((ctx) => {
-                  const loading = creatingFor === ctx.contextId.id;
+          {/* ── Lịch sử trò chuyện ─────────────────────────── */}
+          {sessions.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <Clock size={16} color={ORANGE} />
+                <Heading size="md">Lịch sử trò chuyện</Heading>
+              </View>
+              <View style={{ gap: 10 }}>
+                {sessions.map((session) => {
+                  const title = session.sessionTitle ?? session.title ?? session.contextName ?? 'Cuộc trò chuyện';
+                  const isDeleting = deletingId === session.id;
                   return (
                     <TouchableOpacity
-                      key={ctx.contextId.id}
-                      onPress={() => void startChat(ctx.contextId.id, ctx.name)}
-                      activeOpacity={0.7}
-                      disabled={!!creatingFor}
+                      key={session.id}
+                      activeOpacity={0.75}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/chat/[sessionId]',
+                          params: {
+                            sessionId: session.id,
+                            characterId: session.characterId,
+                            contextId: session.contextId,
+                            characterName: char.name,
+                            characterImageUrl: getCharacterImageUri(char) ?? '',
+                            characterModelUrl: char.modelUrl ?? '',
+                            contextName: session.contextName ?? '',
+                          },
+                        })
+                      }
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 5,
-                        backgroundColor: SURFACE,
-                        borderRadius: 10,
-                        paddingHorizontal: 12,
-                        paddingVertical: 7,
+                        gap: 12,
+                        padding: 14,
+                        borderRadius: 14,
+                        backgroundColor: CARD,
                         borderWidth: 1,
-                        borderColor: loading ? ORANGE_BORDER_ACTIVE : ORANGE_BORDER_FAINT,
-                        opacity: creatingFor && !loading ? 0.5 : 1,
+                        borderColor: BORDER,
                       }}
                     >
-                      {loading
-                        ? <ActivityIndicator size="small" color={ORANGE} style={{ width: 11, height: 11 }} />
-                        : <MapPin size={11} color={ORANGE} />}
-                      <Text size="xs" className="text-history-text font-medium">
-                        {ctx.name}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: TEXT, fontSize: 14, fontWeight: '800' }} numberOfLines={1}>
+                          {title}
+                        </Text>
+                        <Text style={{ color: MUTED, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                          {[session.contextName, formatSessionDate(session.lastMessageAt)].filter(Boolean).join(' · ')}
+                        </Text>
+                        {session.lastMessage ? (
+                          <Text style={{ color: TEXT2, fontSize: 12, lineHeight: 17, marginTop: 5 }} numberOfLines={2}>
+                            {session.lastMessage}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Pressable
+                        hitSlop={10}
+                        disabled={isDeleting}
+                        onPress={(e) => { e.stopPropagation(); setPendingDelete(session); }}
+                        style={({ pressed }) => ({
+                          width: 34, height: 34, borderRadius: 10,
+                          alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: 'rgba(220,38,38,0.08)',
+                          opacity: pressed || isDeleting ? 0.6 : 1,
+                        })}
+                      >
+                        {isDeleting
+                          ? <ActivityIndicator size="small" color="#dc2626" />
+                          : <Trash2 size={15} color="#dc2626" />}
+                      </Pressable>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-            </Section>
+            </View>
           ) : null}
+
         </VStack>
       </ScrollView>
 
-      {/* ── Fixed CTA ─────────────────────────────────────────────── */}
+      {/* ── Sticky back button ─────────────────────────────── */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        paddingTop: insets.top,
+        pointerEvents: 'box-none',
+      }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ArrowLeft size={20} color="#1c1917" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Fixed CTA ─────────────────────────────────────── */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28,
@@ -344,6 +375,22 @@ export default function CharacterDetailScreen() {
           <ButtonText size="md">Chat với {char.name}</ButtonText>
         </Button>
       </View>
+
+      {/* ── Confirm delete modal ───────────────────────────── */}
+      <ConfirmModal
+        visible={!!pendingDelete}
+        title="Xoá cuộc trò chuyện?"
+        message="Cuộc trò chuyện này sẽ bị xoá vĩnh viễn và không thể khôi phục lại."
+        cancelText="Huỷ"
+        confirmText="Xoá"
+        variant="danger"
+        loading={deleteSession.isPending}
+        icon={<Trash2 size={22} color="#dc2626" />}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete && !deleteSession.isPending) deleteSession.mutate(pendingDelete.id);
+        }}
+      />
     </View>
   );
 }
