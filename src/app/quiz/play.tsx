@@ -5,7 +5,7 @@ import {
   ActivityIndicator, Animated, ScrollView,
   StyleSheet, TouchableOpacity, View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Text } from '@/components/ui/text';
@@ -39,6 +39,7 @@ export default function QuizPlayScreen() {
   const setAnswer  = useQuizStore((s) => s.setAnswer);
   const setElapsed = useQuizStore((s) => s.setElapsed);
 
+  const insets     = useSafeAreaInsets();
   const { mutateAsync: submitQuiz, isPending: submitting } = useSubmitQuiz();
 
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -85,7 +86,7 @@ export default function QuizPlayScreen() {
 
     try {
       await submitQuiz({ sessionId: snap.session.sessionId, answers });
-      router.replace('/quiz/result');
+      router.replace(`/quiz/result?sessionId=${snap.session.sessionId}`);
     } catch (e: any) {
       submittingRef.current = false;
       // When triggered by timeout: silently retry up to 3 times before showing error
@@ -184,7 +185,7 @@ export default function QuizPlayScreen() {
       {/* ── Question ───────────────────────────────────────────── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 110 + insets.bottom }}
       >
         <Text style={s.qCounter}>Câu {currentIdx + 1} / {totalQ}</Text>
 
@@ -215,7 +216,7 @@ export default function QuizPlayScreen() {
       </ScrollView>
 
       {/* ── Footer nav ─────────────────────────────────────────── */}
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
           onPress={() => setCurrentIdx((i) => Math.max(0, i - 1))}
           disabled={currentIdx === 0}

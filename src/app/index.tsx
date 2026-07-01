@@ -1,15 +1,12 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  BookOpen,
   ChevronRight,
   LogOut,
   Mail,
-  MapPin,
   MessageCircle,
   Trophy,
-  User,
-  Users,
+  User
 } from "lucide-react-native";
 import { useState } from "react";
 import {
@@ -21,7 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Badge, BadgeText } from "@/components/ui/badge";
+import { CharacterCard, ContextCard } from "@/components/cards";
 import { Heading } from "@/components/ui/heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -36,32 +33,12 @@ import {
   RED,
   TEXT,
   TEXT2,
-  TEXT_OVERLAY,
-  TEXT_OVERLAY_DARK
 } from "@/constants/palette";
 import { useAuthStore } from "@/features/auth/store";
 import { useCharacters } from "@/features/characters/hooks/use-characters";
-import {
-  ERA_COLORS,
-  ERA_LABELS,
-  getCharacterImageUri,
-  type Character,
-  type CharacterEra,
-} from "@/features/characters/types";
 import { useChatHistory } from "@/features/chat/hooks/use-chat-history";
 import { useHistoricalContexts } from "@/features/historical-contexts/hooks/use-historical-contexts";
-import {
-  formatContextYear,
-  type HistoricalContext,
-} from "@/features/historical-contexts/types";
 import { useQuizResults } from "@/features/quiz/hooks/use-quiz-results";
-
-const ERA_CARD_BG: Record<CharacterEra, string> = {
-  ANCIENT: "#1C0E06",
-  MEDIEVAL: "#120828",
-  MODERN: "#061A18",
-  CONTEMPORARY: "#071020",
-};
 
 function formatRelative(iso?: string) {
   if (!iso) return "";
@@ -81,229 +58,6 @@ function greeting(): string {
   if (h < 12) return "Chào buổi sáng";
   if (h < 18) return "Chào buổi chiều";
   return "Chào buổi tối";
-}
-
-// ─── Character portrait card (horizontal scroll) ──────────────────────────────
-function CharPortrait({
-  char,
-  onPress,
-}: {
-  char: Character;
-  onPress: () => void;
-}) {
-  const ec = char.era ? ERA_COLORS[char.era] : null;
-  const cardBg = char.era ? ERA_CARD_BG[char.era] : CARD;
-  const imageUri = getCharacterImageUri(char);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.82}
-      style={{ width: 100 }}
-    >
-      <View
-        style={{
-          width: 100,
-          height: 130,
-          borderRadius: 16,
-          backgroundColor: cardBg,
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.06)",
-        }}
-      >
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              borderRadius: 15,
-            }}
-            contentFit="cover"
-          />
-        ) : (
-          <View
-            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-          >
-            <Text
-              style={{
-                fontSize: 44,
-                fontWeight: "900",
-                color: ec?.glow ?? TEXT,
-                opacity: char.era ? 0.18 : 0.3,
-              }}
-            >
-              {char.name.charAt(0)}
-            </Text>
-          </View>
-        )}
-        {/* gradient */}
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 60,
-            borderBottomLeftRadius: 15,
-            borderBottomRightRadius: 15,
-          }}
-        >
-          <View style={{ flex: 1 }} />
-          <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY }} />
-          <View style={{ flex: 1, backgroundColor: TEXT_OVERLAY_DARK }} />
-        </View>
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: 8,
-            borderBottomLeftRadius: 15,
-            borderBottomRightRadius: 15,
-          }}
-        >
-          {char.era && ec ? (
-            <Badge
-              style={{
-                backgroundColor: ec.bg,
-                borderColor: `${ec.text}33`,
-                marginBottom: 2,
-                alignSelf: "flex-start",
-                paddingVertical: 1,
-                paddingHorizontal: 4,
-              }}
-            >
-              <BadgeText style={{ color: ec.text, fontSize: 8 }}>
-                {ERA_LABELS[char.era]}
-              </BadgeText>
-            </Badge>
-          ) : null}
-          <Text
-            style={{
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: "700",
-              lineHeight: 14,
-            }}
-            numberOfLines={2}
-          >
-            {char.name}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Context mini-row ─────────────────────────────────────────────────────────
-function ContextRow({
-  ctx,
-  onPress,
-}: {
-  ctx: HistoricalContext;
-  onPress: () => void;
-}) {
-  const ec = ERA_COLORS[ctx.era] ?? ERA_COLORS.ANCIENT;
-  const cardBg = ERA_CARD_BG[ctx.era] ?? "#1C0E06";
-  const imgUri = (ctx as any).imageUrl ?? ctx.image;
-  const yearTxt = formatContextYear(ctx);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      style={{
-        flexDirection: "row",
-        backgroundColor: CARD,
-        borderRadius: 16,
-        padding: 10,
-        gap: 8,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: BORDER,
-        alignItems: "center",
-      }}
-    >
-      <View
-        style={{
-          width: 50,
-          height: 56,
-          borderRadius: 10,
-          backgroundColor: cardBg,
-          overflow: "hidden",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-          />
-        ) : (
-          <Text
-            style={{
-              fontSize: 22,
-              fontWeight: "900",
-              color: ec.glow,
-              opacity: 0.65,
-            }}
-          >
-            {ctx.name.charAt(0)}
-          </Text>
-        )}
-      </View>
-
-      <View style={{ flex: 1, justifyContent: "center", gap: 2 }}>
-        <Badge
-          style={{
-            backgroundColor: ec.bg,
-            borderColor: `${ec.text}30`,
-            alignSelf: "flex-start",
-            paddingVertical: 1,
-            paddingHorizontal: 4,
-          }}
-        >
-          <BadgeText style={{ color: ec.text, fontSize: 8 }}>
-            {ERA_LABELS[ctx.era]}
-          </BadgeText>
-        </Badge>
-        <Text
-          style={{
-            color: TEXT,
-            fontSize: 13,
-            fontWeight: "700",
-            lineHeight: 17,
-          }}
-          numberOfLines={1}
-        >
-          {ctx.name}
-        </Text>
-        {(yearTxt ?? ctx.location) ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            {ctx.location ? <MapPin size={9} color={TEXT2} /> : null}
-            <Text
-              style={{ color: TEXT2, fontSize: 10 }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {[yearTxt, ctx.location].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={{ justifyContent: "center" }}>
-        <ChevronRight size={14} color={MUTED} />
-      </View>
-    </TouchableOpacity>
-  );
 }
 
 // ─── Skeleton loaders ─────────────────────────────────────────────────────────
@@ -463,90 +217,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Quick access ────────────────────────────────────────── */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
-            paddingHorizontal: 20,
-            marginBottom: 24,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => router.push("/characters")}
-            activeOpacity={0.8}
-            style={{
-              flex: 1,
-              backgroundColor: CARD,
-              borderRadius: 16,
-              padding: 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-              borderWidth: 1,
-              borderColor: BORDER,
-            }}
-          >
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: ORANGE_TINT,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Users size={18} color={ORANGE} strokeWidth={1.75} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: TEXT, fontSize: 13, fontWeight: "700" }}>
-                Nhân vật
-              </Text>
-              <Text style={{ color: TEXT2, fontSize: 10, marginTop: 1 }}>
-                Danh sách nhân vật
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push("/context")}
-            activeOpacity={0.8}
-            style={{
-              flex: 1,
-              backgroundColor: CARD,
-              borderRadius: 16,
-              padding: 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-              borderWidth: 1,
-              borderColor: BORDER,
-            }}
-          >
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: "rgba(79,70,229,0.15)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <BookOpen size={18} color="#4F46E5" strokeWidth={1.75} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: TEXT, fontSize: 13, fontWeight: "700" }}>
-                Bối cảnh
-              </Text>
-              <Text style={{ color: TEXT2, fontSize: 10, marginTop: 1 }}>
-                Sự kiện lịch sử
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
         {/* ── Characters (Featured) [3rd position] ────────────────── */}
         <View style={{ marginBottom: 24 }}>
           <View
@@ -581,9 +251,10 @@ export default function HomeScreen() {
               contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
             >
               {characters.map((char, idx) => (
-                <CharPortrait
+                <CharacterCard
                   key={char.id ?? `char-${idx}`}
                   char={char}
+                  size="sm"
                   onPress={() =>
                     router.push({
                       pathname: "/characters/[id]",
@@ -743,9 +414,10 @@ export default function HomeScreen() {
             <CtxSkeletons />
           ) : (
             contexts.map((ctx, idx) => (
-              <ContextRow
+              <ContextCard
                 key={ctx.id ?? `ctx-${idx}`}
                 ctx={ctx}
+                variant="compact"
                 onPress={() =>
                   router.push({
                     pathname: "/context/[id]",

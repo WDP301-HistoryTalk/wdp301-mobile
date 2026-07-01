@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { useRef, useState } from 'react';
@@ -7,24 +6,22 @@ import {
   FlatList,
   Pressable,
   ScrollView,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ContextCard } from '@/components/cards';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT, TEXT2 } from '@/constants/palette';
-import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
+import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
+import { ERA_COLORS } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import {
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-  formatContextYear,
   type ContextEra,
-  type HistoricalContext,
 } from '@/features/historical-contexts/types';
 
 type EraFilter = ContextEra | 'ALL';
@@ -37,93 +34,7 @@ const ERA_FILTER: { key: EraFilter; label: string }[] = [
   { key: 'CONTEMPORARY', label: 'Đương đại' },
 ];
 
-const ERA_CARD_BG: Record<ContextEra, string> = {
-  ANCIENT: '#1C0E06',
-  MEDIEVAL: '#120828',
-  MODERN: '#061A18',
-  CONTEMPORARY: '#071020',
-};
-
-// ─── Context card ─────────────────────────────────────────────────────────────
-function ContextCard({ item, onPress }: { item: HistoricalContext; onPress: () => void }) {
-  const ec = ERA_COLORS[item.era] ?? ERA_COLORS.ANCIENT;
-  const cardBg = ERA_CARD_BG[item.era] ?? '#1C0E06';
-  const yearText = formatContextYear(item);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      style={{
-        flex: 1,
-        backgroundColor: CARD,
-        borderWidth: 1,
-        borderColor: BORDER,
-        borderRadius: 18,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Thumbnail */}
-      <View
-        style={{
-          width: '100%',
-          aspectRatio: 4 / 3,
-          backgroundColor: cardBg,
-        }}
-      >
-        {((item as any).imageUrl ?? item.image) ? (
-          <Image
-            source={{ uri: (item as any).imageUrl ?? item.image }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 36, fontWeight: '900', color: ec.glow, opacity: 0.65 }}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Body */}
-      <View style={{ padding: 10, gap: 4, flex: 1 }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: ec.text }}>
-          {ERA_LABELS[item.era]}
-        </Text>
-        {item.category ? (
-          <View
-            style={{
-              alignSelf: 'flex-start',
-              backgroundColor: `${CATEGORY_COLORS[item.category]}18`,
-              borderRadius: 99,
-              paddingHorizontal: 7,
-              paddingVertical: 2,
-            }}
-          >
-            <Text style={{ fontSize: 9, fontWeight: '700', color: CATEGORY_COLORS[item.category] }}>
-              {CATEGORY_LABELS[item.category]}
-            </Text>
-          </View>
-        ) : null}
-
-        <Heading size="xs" numberOfLines={2} style={{ lineHeight: 18 }}>
-          {item.name}
-        </Heading>
-
-        {(yearText ?? item.location) ? (
-          <Text size="xs" muted numberOfLines={1}>
-            {[yearText, item.location].filter(Boolean).join(' · ')}
-          </Text>
-        ) : null}
-
-        <Text numberOfLines={2} style={{ fontSize: 10, color: TEXT2, lineHeight: 15 }}>
-          {item.description}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
+// ContextCard is imported from @/components/cards
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonList() {
@@ -206,24 +117,42 @@ function ListHeader({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 18 }}
       >
-        {ERA_FILTER.map(({ key, label }) => (
-          <Pressable
-            key={key}
-            onPress={() => onEraChange(key)}
-            style={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 99,
-              backgroundColor: era === key ? ORANGE : SURFACE,
-              borderWidth: 1,
-              borderColor: era === key ? 'transparent' : BORDER,
-            }}
-          >
-            <Text size="xs" bold style={{ color: era === key ? '#fff' : MUTED }}>
-              {label}
-            </Text>
-          </Pressable>
-        ))}
+        {ERA_FILTER.map(({ key, label }) => {
+          const isActive = era === key;
+          const activeEraColor = (key !== 'ALL' && isActive && key in ERA_COLORS)
+            ? ERA_COLORS[key as ContextEra]
+            : null;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => onEraChange(key)}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 99,
+                backgroundColor: isActive
+                  ? (activeEraColor ? activeEraColor.bg : ORANGE)
+                  : SURFACE,
+                borderWidth: 1,
+                borderColor: isActive
+                  ? (activeEraColor ? `${activeEraColor.text}55` : 'transparent')
+                  : BORDER,
+              }}
+            >
+              <Text
+                size="xs"
+                bold
+                style={{
+                  color: isActive
+                    ? (activeEraColor ? activeEraColor.text : '#fff')
+                    : MUTED,
+                }}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -282,11 +211,12 @@ export default function ExploreScreen() {
         data={isLoading ? [] : contexts}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        columnWrapperStyle={{ gap: 10, paddingHorizontal: 20 }}
+        columnWrapperStyle={styles.columnWrapper}
         renderItem={({ item }) => (
           <View style={{ flex: 1 }}>
             <ContextCard
-              item={item}
+              ctx={item}
+              variant="full"
               onPress={() => router.push({ pathname: '/context/[id]', params: { id: item.id } })}
             />
           </View>
@@ -307,3 +237,11 @@ export default function ExploreScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  columnWrapper: {
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+});

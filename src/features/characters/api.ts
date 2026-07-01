@@ -73,4 +73,9 @@ export const characterApi = {
 
   getContexts: async (id: string) =>
     (await apiClient<ApiCharacterContext[]>(`/characters/${id}/contexts`)).map(normalizeContext),
+
+  getByContextId: async (contextId: string) => {
+    const list = await apiClient<ApiCharacter[]>(`/characters/context/${contextId}`);
+    return list.map(normalizeCharacter);
+  },
 };

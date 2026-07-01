@@ -28,12 +28,10 @@ import {
   TEXT,
 } from "@/constants/palette";
 import { BrandColors, Colors } from "@/constants/theme";
-import { ERA_COLORS } from "@/features/characters/types";
+import { useCharactersByContext } from "@/features/characters/hooks/use-characters-by-context";
+import { ERA_COLORS, getCharacterImageUri, type Character } from "@/features/characters/types";
 import { useHistoricalContext } from "@/features/historical-contexts/hooks/use-historical-context";
-import {
-  formatContextYear,
-  type ContextCharacter,
-} from "@/features/historical-contexts/types";
+import { formatContextYear } from "@/features/historical-contexts/types";
 
 const ERA_HERO_BG: Record<string, string> = {
   ANCIENT: "#2C1810",
@@ -46,11 +44,11 @@ function CharacterChip({
   char,
   onPress,
 }: {
-  char: ContextCharacter;
+  char: Character;
   onPress: () => void;
 }) {
   const initial = char.name.charAt(0).toUpperCase();
-  const imageUri = char.imageUrl ?? char.image;
+  const imageUri = getCharacterImageUri(char);
 
   return (
     <TouchableOpacity
@@ -314,6 +312,7 @@ export default function ContextDetailScreen() {
     isLoading,
     isError,
   } = useHistoricalContext(resolvedId ?? "");
+  const { data: relatedCharacters = [] } = useCharactersByContext(resolvedId ?? "");
   const [skippedIntroId, setSkippedIntroId] = useState<string | null>(null);
   const [manualVideoId, setManualVideoId] = useState<string | null>(null);
 
@@ -482,14 +481,17 @@ export default function ContextDetailScreen() {
           ) : null}
 
           {/* Related characters */}
-          {ctx.characterIds && ctx.characterIds.length > 0 ? (
+          {relatedCharacters.length > 0 ? (
             <View style={{ width: "100%", marginBottom: 28 }}>
+              <Heading size="sm" style={{ marginBottom: 12 }}>
+                Nhân vật liên quan
+              </Heading>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: 12, paddingVertical: 4 }}
               >
-                {ctx.characterIds.map((char) => (
+                {relatedCharacters.map((char) => (
                   <CharacterChip
                     key={char.id}
                     char={char}
@@ -716,7 +718,7 @@ const videoCardStyles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 20,
