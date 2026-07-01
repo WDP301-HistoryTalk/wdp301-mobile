@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, ChevronRight, RotateCcw, XCircle, Zap } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, ORANGE_BORDER_STRONG, ORANGE_TINT, ORANGE_TINT_FAINT, RED, TEXT, TEXT2, TEXT_TINT_FAINT } from '@/constants/palette';
@@ -52,9 +52,6 @@ function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number;
       {/* Correct */}
       <View style={ss.scoreCardWrapper}>
         <View style={[ss.scoreCard, ss.scoreCardCorrect]}>
-          <View style={ss.scoreIconContainer}>
-            <CheckCircle2 size={20} color={GREEN} strokeWidth={2.5} />
-          </View>
           <Text style={[ss.scoreNum, { color: GREEN }]}>{correct}</Text>
           <Text style={ss.scoreCardLabel}>Đúng</Text>
         </View>
@@ -63,9 +60,6 @@ function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number;
       {/* Wrong */}
       <View style={ss.scoreCardWrapper}>
         <View style={[ss.scoreCard, ss.scoreCardWrong]}>
-          <View style={ss.scoreIconContainer}>
-            <XCircle size={20} color={RED} strokeWidth={2.5} />
-          </View>
           <Text style={[ss.scoreNum, { color: RED }]}>{wrong}</Text>
           <Text style={ss.scoreCardLabel}>Sai</Text>
         </View>
@@ -74,9 +68,6 @@ function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number;
       {/* Score */}
       <View style={ss.scoreCardWrapper}>
         <View style={[ss.scoreCard, ss.scoreCardScore]}>
-          <View style={ss.scoreIconContainer}>
-            <Zap size={20} color={ORANGE} strokeWidth={2.5} />
-          </View>
           <Text style={[ss.scoreNum, { color: ORANGE }]}>{score.toFixed(1)}</Text>
           <Text style={ss.scoreCardLabel}>Điểm</Text>
         </View>
@@ -88,6 +79,7 @@ function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number;
 export default function QuizResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const finishedStore = useQuizStore((s) => s.finished);
   const clearAll = useQuizStore((s) => s.clearAll);
 
@@ -153,24 +145,42 @@ export default function QuizResultScreen() {
   }
 
   const { result, questions, userAnswers, quizTitle } = finished;
-  const correctCount = result.correctAnswers.length;
-  const wrongCount = result.wrongAnswers.length;
+  const correctCount = Array.isArray(result.correctAnswers)
+    ? result.correctAnswers.length
+    : typeof result.correctAnswers === 'number'
+      ? result.correctAnswers
+      : questions.filter((q) => userAnswers[q.questionId] === q.correctAnswer).length;
+
+  const wrongCount = Array.isArray(result.wrongAnswers)
+    ? result.wrongAnswers.length
+    : typeof result.wrongAnswers === 'number'
+      ? result.wrongAnswers
+      : questions.length - correctCount;
+
+  const totalQuestions = result.totalQuestions || questions.length || 1;
+  const percentage = typeof result.percentage === 'number'
+    ? result.percentage
+    : Math.round((correctCount / totalQuestions) * 100);
+
+  const score = typeof result.score === 'number'
+    ? result.score
+    : (correctCount / totalQuestions) * 10;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}>
         {/* ── Hero ────────────────────────────────────────────────── */}
         <View style={ss.hero}>
           <Text style={ss.quizTitle} numberOfLines={2}>
             {quizTitle}
           </Text>
 
-          <ScoreRing percentage={result.percentage} />
+          <ScoreRing percentage={percentage} />
 
-          <ScoreStats correct={correctCount} wrong={wrongCount} score={result.score} />
+          <ScoreStats correct={correctCount} wrong={wrongCount} score={score} />
 
           {/* Performance badge */}
-          {result.percentage >= 70 && (
+          {percentage >= 70 && (
             <View style={ss.performanceBadge}>
               <Zap size={14} color={GREEN} strokeWidth={2} />
               <Text style={ss.performanceBadgeText}>Kết quả xuất sắc!</Text>
@@ -275,7 +285,7 @@ export default function QuizResultScreen() {
       </ScrollView>
 
       {/* ── Action buttons ──────────────────────────────────────────── */}
-      <View style={ss.actions}>
+      <View style={[ss.actions, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
           onPress={retry}
           activeOpacity={0.7}
@@ -332,6 +342,9 @@ const ss = StyleSheet.create({
     fontSize: 42,
     fontWeight: '900',
     letterSpacing: -1,
+    lineHeight: 48,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   ringLabel: {
     color: MUTED,
@@ -355,10 +368,13 @@ const ss = StyleSheet.create({
     flex: 1,
   },
   scoreCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'center',
+    paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1.5,
+    gap: 4,
   },
   scoreCardCorrect: {
     borderColor: 'rgba(74, 140, 98, 0.4)',
@@ -372,18 +388,14 @@ const ss = StyleSheet.create({
     borderColor: ORANGE_BORDER_STRONG,
     backgroundColor: ORANGE_TINT_FAINT,
   },
-  scoreIconContainer: {
-    marginBottom: 8,
-  },
   scoreNum: {
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 2,
   },
   scoreCardLabel: {
     color: MUTED,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   performanceBadge: {
