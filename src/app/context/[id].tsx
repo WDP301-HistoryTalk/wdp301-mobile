@@ -718,7 +718,7 @@ const videoCardStyles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 20,
