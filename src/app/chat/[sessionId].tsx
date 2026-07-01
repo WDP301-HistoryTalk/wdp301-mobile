@@ -1033,7 +1033,7 @@ export default function ChatScreen() {
             contentContainerStyle={{
               gap: 8,
               paddingHorizontal: 16,
-              paddingVertical: 10,
+              alignItems: 'center',
             }}
           >
             {suggestions.map((q, i) => (
@@ -1454,6 +1454,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   suggestionChip: {
+    alignSelf: 'center',
     backgroundColor: CARD,
     borderRadius: 16,
     borderWidth: 1,
