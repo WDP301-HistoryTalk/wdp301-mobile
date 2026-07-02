@@ -45,7 +45,8 @@
           "microphonePermission": "Cho phep HistoryTalk su dung micro de nhap noi dung bang giong noi",
           "speechRecognitionPermission": "Cho phep HistoryTalk nhan dang giong noi thanh van ban"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

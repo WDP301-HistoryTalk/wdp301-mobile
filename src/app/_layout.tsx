@@ -15,7 +15,7 @@ import { useAuthStore } from '@/features/auth/store';
 import { queryClient } from '@/lib/query-client';
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts(FontAssets);
+  useFonts(FontAssets);
   const { isLoading, isAuthenticated, initialize } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function RootLayout() {
   }, [isAuthenticated, inAuthGroup, isLoading, router]);
 
   // Chờ load session từ SecureStore
-  if (!fontsLoaded || isLoading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: BG }}>
         <ActivityIndicator size="large" color={ORANGE} />

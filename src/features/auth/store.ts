@@ -10,6 +10,19 @@ const KEYS = {
   USER: 'auth_user',
 } as const;
 
+// expo-secure-store's getItemAsync() can hang indefinitely on Android
+// (https://github.com/expo/expo/issues/6179, #13978) instead of rejecting.
+// Bound it so a stuck native call can't freeze the app on startup.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('SecureStore timed out')), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -32,11 +45,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const [accessToken, refreshToken, userJson] = await Promise.all([
-        SecureStore.getItemAsync(KEYS.ACCESS_TOKEN),
-        SecureStore.getItemAsync(KEYS.REFRESH_TOKEN),
-        SecureStore.getItemAsync(KEYS.USER),
-      ]);
+      const [accessToken, refreshToken, userJson] = await withTimeout(
+        Promise.all([
+          SecureStore.getItemAsync(KEYS.ACCESS_TOKEN),
+          SecureStore.getItemAsync(KEYS.REFRESH_TOKEN),
+          SecureStore.getItemAsync(KEYS.USER),
+        ]),
+        8000,
+      );
 
       if (accessToken && refreshToken && userJson) {
         try {

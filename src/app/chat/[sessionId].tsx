@@ -15,6 +15,7 @@ import {
   Trash2,
   UserRound,
   Video,
+  Volume2,
 } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -58,6 +59,7 @@ import { useCreateSession } from "@/features/chat/hooks/use-create-session";
 import { useSendMessage } from "@/features/chat/hooks/use-send-message";
 import { useSessionMessages } from "@/features/chat/hooks/use-session-messages";
 import type { ChatMessage, ChatMessageType } from "@/features/chat/types";
+import { speakWithAzure, stopAzureSpeech } from "@/lib/azure-speech";
 
 const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
 
@@ -265,6 +267,24 @@ function MessageBubble({
   characterImageUrl?: string;
 }) {
   const isUser = message.role === "USER";
+  const [speaking, setSpeaking] = useState(false);
+
+  const handleSpeak = useCallback(async () => {
+    if (!message.content || speaking) return;
+    setSpeaking(true);
+    try {
+      const player = await speakWithAzure(message.content);
+      player.addListener("playbackStatusUpdate", (status) => {
+        if (status.didJustFinish) setSpeaking(false);
+      });
+    } catch (e: any) {
+      setSpeaking(false);
+      Alert.alert(
+        "Khong the phat am thanh",
+        e?.message ?? "Da xay ra loi khi doc tin nhan.",
+      );
+    }
+  }, [message.content, speaking]);
 
   if (isUser) {
     return (
@@ -289,13 +309,25 @@ function MessageBubble({
           <Text style={s.aiAvatarText}>{initial}</Text>
         )}
       </View>
-      <View style={[s.aiBubble, { maxWidth: "80%" }]}>
+      <TouchableOpacity
+        style={[s.aiBubble, { maxWidth: "80%" }]}
+        activeOpacity={0.7}
+        disabled={!message.content}
+        onPress={handleSpeak}
+      >
         {message.content ? (
-          <Text style={s.aiText}>{message.content}</Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+            <Text style={[s.aiText, { flexShrink: 1 }]}>{message.content}</Text>
+            <Volume2
+              size={14}
+              color={speaking ? ORANGE : MUTED}
+              style={{ marginTop: 2, flexShrink: 0 }}
+            />
+          </View>
         ) : (
           <TypingDots />
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -415,6 +447,7 @@ export default function ChatScreen() {
   useEffect(
     () => () => {
       void Speech.stop();
+      stopAzureSpeech();
       recognitionRef.current?.stop();
       void nativeVoiceRef.current?.destroy();
       nativeVoiceRef.current?.removeAllListeners();
