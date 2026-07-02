@@ -28,6 +28,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   TextInput,
   TouchableOpacity,
   View,
@@ -389,6 +390,7 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callElapsed, setCallElapsed] = useState(0);
   const [callMuted, setCallMuted] = useState(false);
@@ -439,10 +441,6 @@ export default function ChatScreen() {
     return () => clearTimeout(id);
   }, [messages]);
 
-  useEffect(() => {
-    if (messages.length === 0) return;
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [messages.length, isTyping]);
 
   useEffect(
     () => () => {
@@ -518,7 +516,6 @@ export default function ChatScreen() {
                     : m,
                 ),
               );
-              listRef.current?.scrollToEnd({ animated: false });
             },
           );
 
@@ -531,8 +528,7 @@ export default function ChatScreen() {
               setMessages((prev) => prev.filter((m) => m.id !== assistantId));
           }
 
-          if (streamed)
-            Speech.speak(streamed, { language: "vi-VN", rate: 0.95 });
+          if (streamed && autoSpeak) void speakWithAzure(streamed);
         } else {
           const result = await sendMessage({ sessionId, content, messageType });
           setMessages((prev) => {
@@ -546,11 +542,8 @@ export default function ChatScreen() {
             ];
           });
           setSuggestions(result.suggestedQuestions ?? []);
-          if (result.assistantMessage.content) {
-            Speech.speak(result.assistantMessage.content, {
-              language: "vi-VN",
-              rate: 0.95,
-            });
+          if (result.assistantMessage.content && autoSpeak) {
+            void speakWithAzure(result.assistantMessage.content);
           }
         }
       } catch (e: any) {
@@ -572,7 +565,7 @@ export default function ChatScreen() {
         setIsTyping(false);
       }
     },
-    [input, isTyping, router, sending, sendMessage, sessionId],
+    [input, isTyping, router, sending, sendMessage, sessionId, autoSpeak],
   );
 
   async function handleStartCall(mode: "2D" | "3D") {
@@ -910,6 +903,21 @@ export default function ChatScreen() {
                 </View>
               </TouchableOpacity>
 
+              <View style={s.menuItem}>
+                <View style={s.menuIcon}>
+                  <Volume2 size={16} color={ORANGE} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.menuLabel}>Tự động đọc tin nhắn mới</Text>
+                </View>
+                <Switch
+                  value={autoSpeak}
+                  onValueChange={setAutoSpeak}
+                  trackColor={{ true: ORANGE, false: BORDER }}
+                  thumbColor="#fff"
+                />
+              </View>
+
               <View style={s.menuDivider} />
 
               <TouchableOpacity
@@ -1030,15 +1038,22 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={timelineItems}
+            inverted
+            data={timelineItems.slice().reverse()}
             keyExtractor={(item) =>
               item.type === "message" ? item.message.id : item.id
             }
             contentContainerStyle={s.messageList}
             showsVerticalScrollIndicator={false}
-            onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             ListEmptyComponent={
-              <View style={{ alignItems: "center", marginTop: 40, gap: 10 }}>
+              <View
+                style={{
+                  alignItems: "center",
+                  marginTop: 40,
+                  gap: 10,
+                  transform: [{ scaleY: -1 }],
+                }}
+              >
                 <Text style={{ color: MUTED, fontSize: 14 }}>
                   Bat dau Cuộc trò chuyện...
                 </Text>
@@ -1387,8 +1402,8 @@ const s = StyleSheet.create({
   },
   messageList: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 16,
     gap: 12,
   },
   userRow: {
