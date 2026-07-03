@@ -1,3 +1,4 @@
+import VoiceNative from "@react-native-voice/voice";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
@@ -8,7 +9,6 @@ import {
   History,
   MessageCircle,
   Mic,
-  MicOff,
   Phone,
   PhoneOff,
   Send,
@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   NativeModules,
@@ -123,6 +124,7 @@ type NativeVoiceLike = {
   isAvailable: () => Promise<0 | 1>;
   onSpeechResults?: (event: NativeVoiceResultsEvent) => void;
   onSpeechPartialResults?: (event: NativeVoiceResultsEvent) => void;
+  onSpeechVolumeChanged?: (event: { value?: number }) => void;
   onSpeechEnd?: (event?: unknown) => void;
   onSpeechError?: (event: NativeVoiceErrorEvent) => void;
 };
@@ -141,6 +143,13 @@ function getWebSpeechRecognition(): SpeechRecognitionConstructor | null {
 function getMessageTime(message: ChatMessage) {
   const time = new Date(message.createdAt).getTime();
   return Number.isNaN(time) ? 0 : time;
+}
+
+// Web hien thi content trong <p> (HTML gop moi khoang trang/xuong dong thanh 1
+// space). RN <Text> thi giu nguyen \n thanh dong moi, gay khoang cach le ra
+// khong co tren web. Chuan hoa de mobile khop web.
+function normalizeMessageText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }
 
 function groupTimelineMessages(messages: ChatMessage[]): ChatTimelineItem[] {
@@ -291,7 +300,7 @@ function MessageBubble({
     return (
       <View style={s.userRow}>
         <View style={s.userBubble}>
-          <Text className="text-white" style={s.userText}>{message.content}</Text>
+          <Text className="text-white" style={s.userText}>{normalizeMessageText(message.content)}</Text>
         </View>
       </View>
     );
@@ -318,7 +327,7 @@ function MessageBubble({
       >
         {message.content ? (
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-            <Text style={[s.aiText, { flexShrink: 1 }]}>{message.content}</Text>
+            <Text style={[s.aiText, { flexShrink: 1 }]}>{normalizeMessageText(message.content)}</Text>
             <Volume2
               size={14}
               color={speaking ? ORANGE : MUTED}
@@ -393,12 +402,18 @@ export default function ChatScreen() {
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callElapsed, setCallElapsed] = useState(0);
-  const [callMuted, setCallMuted] = useState(false);
 
   const listRef = useRef<FlatList<ChatTimelineItem>>(null);
   const inputRef = useRef<TextInput>(null);
+  const micScale = useRef(new Animated.Value(1)).current;
+  const inputMicScale = useRef(new Animated.Value(1)).current;
+  const callTranscriptRef = useRef("");
+  const [isCallListening, setIsCallListening] = useState(false);
+  const [isCallProcessing, setIsCallProcessing] = useState(false);
+
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const nativeVoiceRef = useRef<NativeVoiceLike | null>(null);
+  const shouldSendOnStopRef = useRef(false);
   const resolvedCharacterImageUrl =
     characterImageUrl ||
     (character ? (getCharacterImageUri(character) ?? "") : "");
@@ -596,7 +611,6 @@ export default function ChatScreen() {
         return next;
       });
       setSuggestions(result.suggestedQuestions ?? []);
-      setCallMuted(false);
       setActiveCall({ mode, startedAt: Date.now() });
     } catch (e: any) {
       Alert.alert("Loi", e?.message ?? `Khong the bat dau call ${mode}.`);
@@ -604,8 +618,8 @@ export default function ChatScreen() {
   }
 
   function endActiveCall() {
+    if (isCallListening) void stopCallListeningAndSend();
     setActiveCall(null);
-    setCallMuted(false);
   }
 
   async function handleNewSession() {
@@ -700,6 +714,7 @@ export default function ChatScreen() {
 
   async function startVoiceCapture() {
     if (sending || isTyping) return;
+    shouldSendOnStopRef.current = false;
 
     if (Platform.OS === "web") {
       const Recognition = getWebSpeechRecognition();
@@ -715,16 +730,24 @@ export default function ChatScreen() {
       recognition.lang = "vi-VN";
       recognition.continuous = true;
       recognition.interimResults = true;
+      let lastWebTranscript = "";
       recognition.onresult = (event) => {
         let transcript = "";
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
           transcript += event.results[i][0]?.transcript ?? "";
         }
-        if (transcript.trim()) setInput(transcript.trim());
+        if (transcript.trim()) {
+          lastWebTranscript = transcript.trim();
+          setInput(lastWebTranscript);
+        }
       };
       recognition.onend = () => {
         setIsListening(false);
         recognitionRef.current = null;
+        if (shouldSendOnStopRef.current) {
+          shouldSendOnStopRef.current = false;
+          if (lastWebTranscript) void handleSend(lastWebTranscript);
+        }
       };
       recognition.onerror = () => {
         setIsListening(false);
@@ -744,7 +767,7 @@ export default function ChatScreen() {
     }
 
     try {
-      if (!NativeModules.Voice) {
+      if (!NativeModules.RCTVoice) {
         Alert.alert(
           "Can build lai app",
           "Thu vien STT native chua co trong app dang chay. Hay chay development build/native build sau khi cai @react-native-voice/voice; Expo Go se khong dung duoc tinh nang nay.",
@@ -752,13 +775,16 @@ export default function ChatScreen() {
         return;
       }
 
-      const voiceModule = await import("@react-native-voice/voice");
-      const Voice = voiceModule.default as unknown as NativeVoiceLike;
+      const Voice = VoiceNative as unknown as NativeVoiceLike;
       const available = await Voice.isAvailable();
       if (!available) {
         Alert.alert("Chua co STT", "Thiet bi nay chua co dich vu nhan dang giong noi.");
         return;
       }
+
+      // @react-native-voice/voice chi gan lai native event listener o lan
+      // Voice.start() dau tien; destroy() de buoc no dang ky lai voi handler moi nhat.
+      await Voice.destroy().catch(() => {});
 
       Voice.onSpeechPartialResults = (event) => {
         const transcript = event.value?.[0]?.trim();
@@ -767,12 +793,29 @@ export default function ChatScreen() {
       Voice.onSpeechResults = (event) => {
         const transcript = event.value?.[0]?.trim();
         if (transcript) setInput(transcript);
+        if (shouldSendOnStopRef.current) {
+          shouldSendOnStopRef.current = false;
+          if (transcript) void handleSend(transcript);
+        }
+      };
+      Voice.onSpeechVolumeChanged = (event) => {
+        if (event.value == null) return;
+        // value ~ -2 (im lang) .. 10 (rat to) tren Android -> chuan hoa ve 0..1
+        const level = Math.max(0, Math.min(1, event.value / 10));
+        Animated.spring(inputMicScale, {
+          toValue: 1 + level * 0.4,
+          speed: 20,
+          bounciness: 6,
+          useNativeDriver: true,
+        }).start();
       };
       Voice.onSpeechEnd = () => {
         setIsListening(false);
+        Animated.spring(inputMicScale, { toValue: 1, useNativeDriver: true }).start();
       };
       Voice.onSpeechError = (event) => {
         setIsListening(false);
+        Animated.spring(inputMicScale, { toValue: 1, useNativeDriver: true }).start();
         const rawError = event.error;
         const message = typeof rawError === "string" ? rawError : rawError?.message;
         if (message) Alert.alert("Loi nhan dang giong noi", message);
@@ -792,7 +835,10 @@ export default function ChatScreen() {
     }
   }
 
-  function stopVoiceCapture() {
+  function stopVoiceCapture(shouldSend = false) {
+    Animated.spring(inputMicScale, { toValue: 1, useNativeDriver: true }).start();
+    shouldSendOnStopRef.current = shouldSend;
+
     if (Platform.OS === "web") {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
@@ -804,6 +850,100 @@ export default function ChatScreen() {
     void nativeVoiceRef.current?.stop();
     setIsListening(false);
     inputRef.current?.focus();
+  }
+
+  // ── Voice call: giu nut de noi, tha ra de gui (giong web) ──
+  async function sendCallMessage(content: string) {
+    setIsCallProcessing(true);
+    try {
+      const result = await sendMessage({ sessionId, content, messageType: "VOICE" });
+      setMessages((prev) => {
+        const next = [...prev, result.userMessage];
+        if (result.assistantMessage?.content) next.push(result.assistantMessage);
+        return next;
+      });
+      setSuggestions(result.suggestedQuestions ?? []);
+      if (result.assistantMessage?.content) {
+        await speakWithAzure(result.assistantMessage.content);
+      }
+    } catch (e: any) {
+      Alert.alert("Loi", e?.message ?? "Khong the gui tin nhan.");
+    } finally {
+      setIsCallProcessing(false);
+    }
+  }
+
+  async function startCallListening() {
+    if (!activeCall || isCallProcessing) return;
+    try {
+      if (!NativeModules.RCTVoice) {
+        Alert.alert(
+          "Can build lai app",
+          "Thu vien STT native chua co trong app dang chay. Hay chay development build/native build sau khi cai @react-native-voice/voice; Expo Go se khong dung duoc tinh nang nay.",
+        );
+        return;
+      }
+
+      const Voice = VoiceNative as unknown as NativeVoiceLike;
+      const available = await Voice.isAvailable();
+      if (!available) {
+        Alert.alert("Chua co STT", "Thiet bi nay chua co dich vu nhan dang giong noi.");
+        return;
+      }
+
+      // @react-native-voice/voice chi gan lai native event listener o lan
+      // Voice.start() dau tien; destroy() de buoc no dang ky lai voi handler moi nhat.
+      await Voice.destroy().catch(() => {});
+
+      callTranscriptRef.current = "";
+      Voice.onSpeechPartialResults = (event) => {
+        const t = event.value?.[0]?.trim();
+        if (t) callTranscriptRef.current = t;
+      };
+      Voice.onSpeechResults = (event) => {
+        const t = event.value?.[0]?.trim();
+        if (t) callTranscriptRef.current = t;
+      };
+      Voice.onSpeechVolumeChanged = (event) => {
+        if (event.value == null) return;
+        const level = Math.max(0, Math.min(1, event.value / 10));
+        Animated.spring(micScale, {
+          toValue: 1 + level * 0.35,
+          speed: 20,
+          bounciness: 6,
+          useNativeDriver: true,
+        }).start();
+      };
+      Voice.onSpeechEnd = () => {};
+      Voice.onSpeechError = () => {};
+
+      nativeVoiceRef.current?.removeAllListeners();
+      nativeVoiceRef.current = Voice;
+      await Voice.start("vi-VN");
+      setIsCallListening(true);
+    } catch (e: any) {
+      setIsCallListening(false);
+      Alert.alert(
+        "Khong the bat micro",
+        e?.message ??
+        "Can chay bang development build/native build sau khi cai @react-native-voice/voice.",
+      );
+    }
+  }
+
+  async function stopCallListeningAndSend() {
+    if (!isCallListening) return;
+    setIsCallListening(false);
+    Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
+
+    try {
+      await nativeVoiceRef.current?.stop();
+    } catch {
+      // ignore
+    }
+
+    const transcript = callTranscriptRef.current.trim();
+    if (transcript) await sendCallMessage(transcript);
   }
 
   return (
@@ -977,20 +1117,29 @@ export default function ChatScreen() {
               </View>
 
               <View style={s.callControls}>
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  style={[
-                    s.callControlBtn,
-                    callMuted && s.callControlBtnActive,
-                  ]}
-                  onPress={() => setCallMuted((muted) => !muted)}
-                >
-                  {callMuted ? (
-                    <MicOff size={20} color="#fff" strokeWidth={2} />
-                  ) : (
-                    <Mic size={20} color="#fff" strokeWidth={2} />
-                  )}
-                </TouchableOpacity>
+                <Animated.View style={{ transform: [{ scale: micScale }] }}>
+                  <Pressable
+                    disabled={isCallProcessing}
+                    onPress={() => {
+                      if (isCallListening) {
+                        void stopCallListeningAndSend();
+                      } else {
+                        void startCallListening();
+                      }
+                    }}
+                    style={[
+                      s.callControlBtn,
+                      isCallListening && s.callControlBtnActive,
+                      isCallProcessing && { opacity: 0.5 },
+                    ]}
+                  >
+                    {isCallProcessing ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Mic size={20} color="#fff" strokeWidth={2} />
+                    )}
+                  </Pressable>
+                </Animated.View>
                 <TouchableOpacity
                   activeOpacity={0.75}
                   style={s.callEndBtn}
@@ -1111,23 +1260,30 @@ export default function ChatScreen() {
             maxLength={1000}
             returnKeyType="default"
           />
-          <Pressable
-            onPressIn={() => void startVoiceCapture()}
-            onPressOut={stopVoiceCapture}
-            disabled={sending || isTyping}
-            style={({ pressed }) => [
-              s.voiceBtn,
-              isListening && s.voiceBtnActive,
-              (sending || isTyping) && { opacity: 0.4 },
-              pressed && { opacity: 0.7 },
-            ]}
-          >
-            <Mic
-              size={18}
-              color={isListening ? "#fff" : ORANGE}
-              strokeWidth={2}
-            />
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: inputMicScale }] }}>
+            <Pressable
+              onPress={() => {
+                if (isListening) {
+                  stopVoiceCapture(true);
+                } else {
+                  void startVoiceCapture();
+                }
+              }}
+              disabled={sending || isTyping}
+              style={({ pressed }) => [
+                s.voiceBtn,
+                isListening && s.voiceBtnActive,
+                (sending || isTyping) && { opacity: 0.4 },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Mic
+                size={18}
+                color={isListening ? "#fff" : ORANGE}
+                strokeWidth={2}
+              />
+            </Pressable>
+          </Animated.View>
           <Pressable
             onPress={() => void handleSend()}
             disabled={!input.trim() || sending || isTyping}

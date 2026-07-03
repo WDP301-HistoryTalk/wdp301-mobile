@@ -39,3 +39,26 @@ if (fs.existsSync(foojayTargetPath)) {
 } else {
   console.log('@react-native/gradle-plugin/settings.gradle.kts not found. Run npm install first.');
 }
+
+// @react-native-voice/voice's dist/index.js reads NativeModules.Voice at import time,
+// but the Android native module actually registers itself as "RCTVoice" (see
+// VoiceModule.java#getName()). Without this, every method call the library makes
+// (isSpeechAvailable, startSpeech, ...) throws "Cannot read property of null".
+const voiceIndexPath = path.join(__dirname, '../node_modules/@react-native-voice/voice/dist/index.js');
+
+if (fs.existsSync(voiceIndexPath)) {
+  let content = fs.readFileSync(voiceIndexPath, 'utf8');
+  if (content.includes('const Voice = react_native_1.NativeModules.Voice;')) {
+    console.log('Patching @react-native-voice/voice/dist/index.js: falling back to NativeModules.RCTVoice');
+    content = content.replace(
+      'const Voice = react_native_1.NativeModules.Voice;',
+      'const Voice = react_native_1.NativeModules.Voice ?? react_native_1.NativeModules.RCTVoice;'
+    );
+    fs.writeFileSync(voiceIndexPath, content, 'utf8');
+    console.log('Successfully patched!');
+  } else {
+    console.log('@react-native-voice/voice/dist/index.js is already patched or has a different shape.');
+  }
+} else {
+  console.log('@react-native-voice/voice/dist/index.js not found. Run npm install first.');
+}
