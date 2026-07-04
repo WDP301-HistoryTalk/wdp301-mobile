@@ -180,7 +180,7 @@ export default function CharactersScreen() {
     timerRef.current = setTimeout(() => setDebounced(text), 400);
   };
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch, isRefetching } =
     useCharacters({
       search: debouncedSearch || undefined,
       era:    era === 'ALL' ? undefined : era,
@@ -239,6 +239,8 @@ export default function CharactersScreen() {
         onEndReachedThreshold={0.4}
         contentContainerStyle={{ paddingBottom: 130 }}
         showsVerticalScrollIndicator={false}
+        refreshing={isRefetching}
+        onRefresh={() => void refetch()}
       />
     </SafeAreaView>
   );

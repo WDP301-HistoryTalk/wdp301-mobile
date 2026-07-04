@@ -5,7 +5,7 @@ import {
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View,
+  ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -53,10 +53,19 @@ const RESULT_LABEL: Record<OrderStatus, { label: string; color: string; icon: an
 
 export default function PaymentScreen() {
   const router = useRouter();
-  const { data: profile } = useMe();
-  const { data: tiers, isLoading } = useTiers();
+  const { data: profile, refetch: refetchMe } = useMe();
+  const { data: tiers, isLoading, refetch: refetchTiers } = useTiers();
   const createOrder = useCreateOrder();
   const orderStatus = useOrderStatus();
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchMe(), refetchTiers()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const [loadingTierId, setLoadingTierId] = useState<string | null>(null);
   const [resultStatus, setResultStatus] = useState<OrderStatus | null>(null);
@@ -91,7 +100,13 @@ export default function PaymentScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 60 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={ORANGE} />
+        }
+      >
         {resultStatus && (
           <View style={[s.resultBanner, { borderColor: RESULT_LABEL[resultStatus].color + '55' }]}>
             {(() => {

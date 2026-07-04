@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock, Play, Star, Timer, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator, Alert, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet,
   Switch, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,7 +50,7 @@ export default function QuizDetailScreen() {
   const resolvedId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
 
-  const { data: quiz, isLoading, isError } = useQuiz(resolvedId ?? '');
+  const { data: quiz, isLoading, isError, refetch, isRefetching } = useQuiz(resolvedId ?? '');
   const { mutateAsync: startQuiz, isPending } = useStartQuiz();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -113,7 +113,13 @@ export default function QuizDetailScreen() {
       )}
 
       {quiz && (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={ORANGE} />
+          }
+        >
           {ec && (
             <Text style={{ color: ec.text, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>{eraLabel}</Text>
           )}

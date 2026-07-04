@@ -54,7 +54,7 @@ export default function ChatHistoryScreen() {
   const characterId = Array.isArray(params.characterId) ? params.characterId[0] : params.characterId;
   const characterName = Array.isArray(params.characterName) ? params.characterName[0] : params.characterName;
 
-  const { data: allSessions, isLoading, isError } = useChatHistory();
+  const { data: allSessions, isLoading, isError, refetch, isRefetching } = useChatHistory();
   const sessions = characterId
     ? (allSessions ?? []).filter((sess) => sess.characterId === characterId)
     : allSessions;
@@ -113,6 +113,8 @@ export default function ChatHistoryScreen() {
               }
             />
           )}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
         />
       )}
     </SafeAreaView>

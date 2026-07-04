@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   Linking,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -311,10 +312,20 @@ export default function ContextDetailScreen() {
     data: ctx,
     isLoading,
     isError,
+    refetch: refetchCtx,
   } = useHistoricalContext(resolvedId ?? "");
-  const { data: relatedCharacters = [] } = useCharactersByContext(resolvedId ?? "");
+  const { data: relatedCharacters = [], refetch: refetchCharacters } = useCharactersByContext(resolvedId ?? "");
   const [skippedIntroId, setSkippedIntroId] = useState<string | null>(null);
   const [manualVideoId, setManualVideoId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchCtx(), refetchCharacters()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -377,8 +388,10 @@ export default function ContextDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        bounces={false}
         contentContainerStyle={{ paddingBottom: 60 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={ORANGE} />
+        }
       >
         {/* ── Hero image ─────────────────────────────────────── */}
         <View style={{ height: 360, width: "100%", backgroundColor: heroBg }}>

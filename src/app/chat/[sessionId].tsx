@@ -152,6 +152,38 @@ function normalizeMessageText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+// Chi marker "bat dau call" (content = CALL_2D:.../CALL_3D:...) duoc gop thanh
+// the "Cuoc goi voice"; hoi-dap that su trong luc call van hien nhu tin nhan
+// binh thuong (voi style rieng cho VOICE, xem MessageBubble).
+function isCallStartMarker(message: ChatMessage): boolean {
+  return (
+    message.messageType === "VOICE" &&
+    (message.content.startsWith("CALL_2D:") ||
+      message.content.startsWith("CALL_3D:"))
+  );
+}
+
+// Nhan vat khong con tu chao truoc khi bat dau call nua (xem handleStartCall).
+// Nhung neu backend dang chay ban code cu (chua deploy fix bo qua AI cho tin
+// nhan marker), no van sinh + luu 1 assistantMessage chao hoi ngay sau marker
+// trong DB — se "hien lai" moi khi tai lai lich su tin nhan tu server du FE da
+// khong hien no ngay luc goi. Loc bo cap marker+reply do o day de dong bo du
+// backend co deploy fix hay chua.
+function stripCallGreetingReplies(messages: ChatMessage[]): ChatMessage[] {
+  const result: ChatMessage[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    if (isCallStartMarker(message)) {
+      result.push(message);
+      const next = messages[i + 1];
+      if (next?.role === "ASSISTANT") i++; // bo qua loi chao ngay sau marker
+      continue;
+    }
+    result.push(message);
+  }
+  return result;
+}
+
 function groupTimelineMessages(messages: ChatMessage[]): ChatTimelineItem[] {
   const items: ChatTimelineItem[] = [];
   let activeVoiceCall: Extract<
@@ -160,7 +192,7 @@ function groupTimelineMessages(messages: ChatMessage[]): ChatTimelineItem[] {
   > | null = null;
 
   for (const message of messages) {
-    if (message.messageType !== "VOICE") {
+    if (!isCallStartMarker(message)) {
       items.push({ type: "message", message });
       continue;
     }
@@ -237,6 +269,72 @@ function TypingDots() {
   );
 }
 
+// Vien song lan toa quanh call stage khi nhan vat dang noi (khong lam anh nhay)
+function SpeakingRipple({ active }: { active: boolean }) {
+  const ring1 = useRef(new Animated.Value(0)).current;
+  const ring2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!active) {
+      ring1.setValue(0);
+      ring2.setValue(0);
+      return;
+    }
+
+    const makeLoop = (value: Animated.Value) =>
+      Animated.loop(
+        Animated.timing(value, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+      );
+
+    const loop1 = makeLoop(ring1);
+    const loop2 = makeLoop(ring2);
+    loop1.start();
+    const delay = setTimeout(() => loop2.start(), 800);
+
+    return () => {
+      clearTimeout(delay);
+      loop1.stop();
+      loop2.stop();
+    };
+  }, [active, ring1, ring2]);
+
+  if (!active) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {[ring1, ring2].map((ring, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: 18,
+              borderWidth: 2.5,
+              borderColor: ORANGE,
+              opacity: ring.interpolate({
+                inputRange: [0, 0.15, 1],
+                outputRange: [0, 0.6, 0],
+              }),
+              transform: [
+                {
+                  scale: ring.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.94, 1.04],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 // Keep voice call card
 function VoiceCallCard({
   item,
@@ -277,6 +375,7 @@ function MessageBubble({
   characterImageUrl?: string;
 }) {
   const isUser = message.role === "USER";
+  const isVoice = message.messageType === "VOICE";
   const [speaking, setSpeaking] = useState(false);
 
   const handleSpeak = useCallback(async () => {
@@ -299,7 +398,13 @@ function MessageBubble({
   if (isUser) {
     return (
       <View style={s.userRow}>
-        <View style={s.userBubble}>
+        <View style={[s.userBubble, isVoice && s.userBubbleVoice]}>
+          {isVoice && (
+            <View style={s.voiceBadgeRow}>
+              <Mic size={11} color="rgba(255,255,255,0.85)" strokeWidth={2.4} />
+              <Text style={s.voiceBadgeTextUser}>Giọng nói</Text>
+            </View>
+          )}
           <Text className="text-white" style={s.userText}>{normalizeMessageText(message.content)}</Text>
         </View>
       </View>
@@ -320,20 +425,28 @@ function MessageBubble({
         )}
       </View>
       <TouchableOpacity
-        style={[s.aiBubble, { maxWidth: "80%" }]}
+        style={[s.aiBubble, isVoice && s.aiBubbleVoice, { maxWidth: "80%" }]}
         activeOpacity={0.7}
         disabled={!message.content}
         onPress={handleSpeak}
       >
         {message.content ? (
-          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-            <Text style={[s.aiText, { flexShrink: 1 }]}>{normalizeMessageText(message.content)}</Text>
-            <Volume2
-              size={14}
-              color={speaking ? ORANGE : MUTED}
-              style={{ marginTop: 2, flexShrink: 0 }}
-            />
-          </View>
+          <>
+            {isVoice && (
+              <View style={s.voiceBadgeRow}>
+                <Mic size={11} color={ORANGE} strokeWidth={2.4} />
+                <Text style={s.voiceBadgeTextAi}>Giọng nói</Text>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+              <Text style={[s.aiText, { flexShrink: 1 }]}>{normalizeMessageText(message.content)}</Text>
+              <Volume2
+                size={14}
+                color={speaking ? ORANGE : MUTED}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+            </View>
+          </>
         ) : (
           <TypingDots />
         )}
@@ -402,6 +515,7 @@ export default function ChatScreen() {
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callElapsed, setCallElapsed] = useState(0);
+  const callConnectedAtRef = useRef<number | null>(null);
 
   const listRef = useRef<FlatList<ChatTimelineItem>>(null);
   const inputRef = useRef<TextInput>(null);
@@ -410,6 +524,33 @@ export default function ChatScreen() {
   const callTranscriptRef = useRef("");
   const [isCallListening, setIsCallListening] = useState(false);
   const [isCallProcessing, setIsCallProcessing] = useState(false);
+  const [isCharacterSpeaking, setIsCharacterSpeaking] = useState(false);
+  const [isCallConnecting, setIsCallConnecting] = useState(false);
+  const startingCallRef = useRef(false);
+
+  // Refs mirroring state ma cac callback cua @react-native-voice/voice can
+  // doc gia tri moi nhat (cac callback duoc gan 1 lan khi Voice.start(), nen
+  // doc thang tu state co the bi stale qua nhieu vong lang nghe -> gui -> noi).
+  const activeCallRef = useRef<ActiveCall | null>(null);
+  const isCallListeningRef = useRef(false);
+  const isCharacterSpeakingRef = useRef(false);
+  const isCallProcessingRef = useRef(false);
+  const isCallConnectingRef = useRef(false);
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
+  useEffect(() => {
+    isCallListeningRef.current = isCallListening;
+  }, [isCallListening]);
+  useEffect(() => {
+    isCharacterSpeakingRef.current = isCharacterSpeaking;
+  }, [isCharacterSpeaking]);
+  useEffect(() => {
+    isCallProcessingRef.current = isCallProcessing;
+  }, [isCallProcessing]);
+  useEffect(() => {
+    isCallConnectingRef.current = isCallConnecting;
+  }, [isCallConnecting]);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const nativeVoiceRef = useRef<NativeVoiceLike | null>(null);
@@ -442,7 +583,7 @@ export default function ChatScreen() {
         }
       }
 
-      setMessages(initialMessages);
+      setMessages(stripCallGreetingReplies(initialMessages));
       setSuggestions(initialSuggestions);
     }, 0);
     return () => clearTimeout(id);
@@ -468,25 +609,34 @@ export default function ChatScreen() {
     [],
   );
 
+  // Chi bat dau dem gio khi cuoc goi thuc su da ket noi (khong con "Dang ket
+  // noi..."), khong tinh tu luc bam nut. callConnectedAtRef giu moc thoi gian
+  // "vua ket noi xong" on dinh qua cac lan re-render trong cung 1 cuoc goi.
   useEffect(() => {
-    if (!activeCall) {
+    if (!activeCall || isCallConnecting) {
       const resetId = setTimeout(() => setCallElapsed(0), 0);
+      callConnectedAtRef.current = null;
       return () => clearTimeout(resetId);
     }
+
+    if (callConnectedAtRef.current === null) {
+      callConnectedAtRef.current = Date.now();
+    }
+    const connectedAt = callConnectedAtRef.current;
 
     const resetId = setTimeout(() => {
       setCallElapsed(0);
     }, 0);
 
     const intervalId = setInterval(() => {
-      setCallElapsed(Math.floor((Date.now() - activeCall.startedAt) / 1000));
+      setCallElapsed(Math.floor((Date.now() - connectedAt) / 1000));
     }, 1000);
 
     return () => {
       clearTimeout(resetId);
       clearInterval(intervalId);
     };
-  }, [activeCall]);
+  }, [activeCall, isCallConnecting]);
 
   const handleSend = useCallback(
     async (text?: string, messageType: ChatMessageType = "TEXT") => {
@@ -536,7 +686,7 @@ export default function ChatScreen() {
 
           try {
             const synced = await chatApi.getMessages(sessionId);
-            setMessages(synced.messages);
+            setMessages(stripCallGreetingReplies(synced.messages));
             setSuggestions(synced.suggestedQuestions ?? []);
           } catch {
             if (!streamed)
@@ -550,14 +700,12 @@ export default function ChatScreen() {
             const withoutOptimistic = prev.filter(
               (m) => m.id !== optimisticUser.id,
             );
-            return [
-              ...withoutOptimistic,
-              result.userMessage,
-              result.assistantMessage,
-            ];
+            const next = [...withoutOptimistic, result.userMessage];
+            if (result.assistantMessage) next.push(result.assistantMessage);
+            return next;
           });
           setSuggestions(result.suggestedQuestions ?? []);
-          if (result.assistantMessage.content && autoSpeak) {
+          if (result.assistantMessage?.content && autoSpeak) {
             void speakWithAzure(result.assistantMessage.content);
           }
         }
@@ -584,7 +732,8 @@ export default function ChatScreen() {
   );
 
   async function handleStartCall(mode: "2D" | "3D") {
-    if (sending || isTyping) return;
+    if (sending || isTyping || startingCallRef.current || activeCallRef.current)
+      return;
     if (mode === "3D" && !resolvedCharacterModelUrl) {
       Alert.alert(
         "Chua co model 3D",
@@ -592,6 +741,13 @@ export default function ChatScreen() {
       );
       return;
     }
+
+    startingCallRef.current = true;
+    // Hien giao dien call + trang thai "dang ket noi" ngay lap tuc, khong
+    // doi den khi backend tra loi xong moi hien (tranh nguoi dung tuong
+    // chua bam duoc va bam lai nhieu lan gay goi trung request).
+    setIsCallConnecting(true);
+    setActiveCall({ mode, startedAt: Date.now() });
 
     const content =
       mode === "2D"
@@ -604,21 +760,32 @@ export default function ChatScreen() {
         content,
         messageType: "VOICE",
       });
-      setMessages((prev) => {
-        const next = [...prev, result.userMessage];
-        if (result.assistantMessage?.content)
-          next.push(result.assistantMessage);
-        return next;
-      });
-      setSuggestions(result.suggestedQuestions ?? []);
-      setActiveCall({ mode, startedAt: Date.now() });
+      // Nhan vat khong tu chao truoc nua — nguoi dung la nguoi noi truoc, giong
+      // web (mo call chi la thao tac UI cuc bo, khong co luot AI nao tu dong).
+      // Co tinh BO QUA assistantMessage backend tra ve (neu co) thay vi chi
+      // dua vao viec backend co con sinh loi chao hay khong — production co
+      // the dang chay ban chat.service.ts cu (chua deploy fix), nen khong the
+      // chi trong cay vao "backend se khong tra ve assistantMessage nua".
+      setMessages((prev) => [...prev, result.userMessage]);
+      setSuggestions([]);
+      setIsCallConnecting(false);
     } catch (e: any) {
+      setActiveCall(null);
+      setIsCallConnecting(false);
       Alert.alert("Loi", e?.message ?? `Khong the bat dau call ${mode}.`);
+    } finally {
+      startingCallRef.current = false;
     }
   }
 
   function endActiveCall() {
-    if (isCallListening) void stopCallListeningAndSend();
+    activeCallRef.current = null;
+    void nativeVoiceRef.current?.stop().catch(() => {});
+    void stopAzureSpeech();
+    setIsCallListening(false);
+    setIsCallProcessing(false);
+    setIsCharacterSpeaking(false);
+    setIsCallConnecting(false);
     setActiveCall(null);
   }
 
@@ -852,7 +1019,29 @@ export default function ChatScreen() {
     inputRef.current?.focus();
   }
 
-  // ── Voice call: giu nut de noi, tha ra de gui (giong web) ──
+  // ── Voice call: nghe lien tuc, ngat cau thi tu gui, tra loi xong lai nghe tiep ──
+  async function speakCallText(text: string, clearConnecting = false) {
+    // clearConnecting va setIsCharacterSpeaking(true) phai nam trong cung 1 tick
+    // dong bo (khong co await xen giua) de React batch chung vao 1 lan render.
+    // Neu tach rieng (goi setIsCallConnecting(false) truoc do o noi khac) se co
+    // 1 khung hinh isCallConnecting=false & isCharacterSpeaking=false lot qua,
+    // khien effect tu-dong-nghe hieu nham la ranh va bat mic nghe de trong luc
+    // nhan vat chuan bi noi (mic "song" nham lan, roi khi nhan vat noi that thi
+    // lai khong nghe duoc nua).
+    if (clearConnecting) setIsCallConnecting(false);
+    setIsCharacterSpeaking(true);
+    try {
+      const player = await speakWithAzure(text);
+      await new Promise<void>((resolve) => {
+        player.addListener("playbackStatusUpdate", (status) => {
+          if (status.didJustFinish) resolve();
+        });
+      });
+    } finally {
+      setIsCharacterSpeaking(false);
+    }
+  }
+
   async function sendCallMessage(content: string) {
     setIsCallProcessing(true);
     try {
@@ -864,7 +1053,7 @@ export default function ChatScreen() {
       });
       setSuggestions(result.suggestedQuestions ?? []);
       if (result.assistantMessage?.content) {
-        await speakWithAzure(result.assistantMessage.content);
+        await speakCallText(result.assistantMessage.content);
       }
     } catch (e: any) {
       Alert.alert("Loi", e?.message ?? "Khong the gui tin nhan.");
@@ -874,7 +1063,15 @@ export default function ChatScreen() {
   }
 
   async function startCallListening() {
-    if (!activeCall || isCallProcessing) return;
+    if (
+      !activeCallRef.current ||
+      isCallListeningRef.current ||
+      isCharacterSpeakingRef.current ||
+      isCallProcessingRef.current ||
+      isCallConnectingRef.current
+    ) {
+      return;
+    }
     try {
       if (!NativeModules.RCTVoice) {
         Alert.alert(
@@ -903,8 +1100,13 @@ export default function ChatScreen() {
       Voice.onSpeechResults = (event) => {
         const t = event.value?.[0]?.trim();
         if (t) callTranscriptRef.current = t;
+        void finishCallListening();
       };
       Voice.onSpeechVolumeChanged = (event) => {
+        // Native STT co the con ban vai su kien volume-changed du tra ve trong
+        // luc dang teardown (sau khi da goi stop()) — bo qua neu ta khong con
+        // thuc su o trang thai dang nghe, tranh mic hien "nay" du nhan vat dang noi.
+        if (!isCallListeningRef.current) return;
         if (event.value == null) return;
         const level = Math.max(0, Math.min(1, event.value / 10));
         Animated.spring(micScale, {
@@ -915,14 +1117,33 @@ export default function ChatScreen() {
         }).start();
       };
       Voice.onSpeechEnd = () => {};
-      Voice.onSpeechError = () => {};
+      // No match / timeout (vd im lang khi bam nham mic) -> dung ghi am nhu
+      // binh thuong, finishCallListening() se khong gui gi vi transcript rong.
+      Voice.onSpeechError = () => {
+        void finishCallListening();
+      };
 
-      nativeVoiceRef.current?.removeAllListeners();
       nativeVoiceRef.current = Voice;
       await Voice.start("vi-VN");
+
+      // Voice.start() la async — trong luc cho, trang thai co the da doi (vd
+      // nhan vat bat dau noi do 1 luot xu ly khac vua xong rat nhanh). Neu het
+      // dieu kien de nghe nua thi dung ngay, khong danh dau isCallListening,
+      // tranh de lai 1 phien STT "mo côi" (native van dang nghe that nhung app
+      // lai tuong chua nghe -> phai tat/bat mic thu cong moi het ket dinh).
+      if (
+        !activeCallRef.current ||
+        isCharacterSpeakingRef.current ||
+        isCallProcessingRef.current ||
+        isCallConnectingRef.current
+      ) {
+        await Voice.stop().catch(() => {});
+        return;
+      }
       setIsCallListening(true);
     } catch (e: any) {
       setIsCallListening(false);
+      // Loi that su (vd: khong co quyen mic) -> bao 1 lan, khong tu dong lap lai vo han.
       Alert.alert(
         "Khong the bat micro",
         e?.message ??
@@ -931,8 +1152,11 @@ export default function ChatScreen() {
     }
   }
 
-  async function stopCallListeningAndSend() {
-    if (!isCallListening) return;
+  // Bam mic de noi (giong het nut mic o thanh nhap text): bam 1 lan de bat
+  // dau ghi, bam lan nua (hoac de STT tu phat hien het cau) de dung va gui.
+  // Khong tu dong nghe lai — nguoi dung chu dong bam moi khi muon noi tiep.
+  async function finishCallListening() {
+    if (!isCallListeningRef.current) return;
     setIsCallListening(false);
     Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
 
@@ -943,7 +1167,13 @@ export default function ChatScreen() {
     }
 
     const transcript = callTranscriptRef.current.trim();
-    if (transcript) await sendCallMessage(transcript);
+    callTranscriptRef.current = "";
+    // Bo qua transcript qua ngan (1 ky tu) — thuong la nhieu/ao giac cua STT
+    // luc im lang (hay gap tren emulator khong co mic that), khong phai loi
+    // nguoi dung noi that su. Nguoi dung noi that se luon ra tu/cau dai hon.
+    if (transcript.length >= 2) {
+      await sendCallMessage(transcript);
+    }
   }
 
   return (
@@ -1106,34 +1336,42 @@ export default function ChatScreen() {
               )}
 
               <View style={s.callShade} />
+              <SpeakingRipple active={isCharacterSpeaking} />
               <View style={s.callInfo}>
                 <Text style={s.callModeLabel}>
                   {activeCall.mode === "2D" ? "Call 2D" : "Call 3D"}
                 </Text>
                 <Text style={s.callName}>{characterName}</Text>
-                <Text style={s.callTimer}>
-                  {formatCallDuration(callElapsed)}
-                </Text>
+                {isCallConnecting ? (
+                  <View style={s.callConnectingRow}>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text style={s.callConnectingText}>Đang kết nối...</Text>
+                  </View>
+                ) : (
+                  <Text style={s.callTimer}>
+                    {formatCallDuration(callElapsed)}
+                  </Text>
+                )}
               </View>
 
               <View style={s.callControls}>
                 <Animated.View style={{ transform: [{ scale: micScale }] }}>
                   <Pressable
-                    disabled={isCallProcessing}
-                    onPress={() => {
-                      if (isCallListening) {
-                        void stopCallListeningAndSend();
-                      } else {
-                        void startCallListening();
-                      }
-                    }}
+                    disabled={isCallConnecting || isCallProcessing || isCharacterSpeaking}
+                    onPress={() =>
+                      isCallListening
+                        ? void finishCallListening()
+                        : void startCallListening()
+                    }
                     style={[
                       s.callControlBtn,
                       isCallListening && s.callControlBtnActive,
-                      isCallProcessing && { opacity: 0.5 },
+                      (isCallConnecting || isCallProcessing || isCharacterSpeaking) && {
+                        opacity: 0.5,
+                      },
                     ]}
                   >
-                    {isCallProcessing ? (
+                    {isCallConnecting || isCallProcessing ? (
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
                       <Mic size={20} color="#fff" strokeWidth={2} />
@@ -1498,6 +1736,17 @@ const s = StyleSheet.create({
     fontWeight: "700",
     marginTop: 6,
   },
+  callConnectingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  callConnectingText: {
+    color: "rgba(255,255,255,0.76)",
+    fontSize: 15,
+    fontWeight: "700",
+  },
   callControls: {
     position: "absolute",
     left: 0,
@@ -1574,6 +1823,31 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
   },
+  userBubbleVoice: {
+    backgroundColor: "#8a4a1f",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  voiceBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
+  voiceBadgeTextUser: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.85)",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  voiceBadgeTextAi: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: ORANGE,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
   userText: {
     color: "#fff",
     fontSize: 14,
@@ -1606,6 +1880,10 @@ const s = StyleSheet.create({
     borderColor: BORDER,
     paddingHorizontal: 16,
     paddingVertical: 11,
+  },
+  aiBubbleVoice: {
+    backgroundColor: ORANGE_TINT_MUTED,
+    borderColor: ORANGE_BORDER,
   },
   aiText: {
     color: TEXT,
@@ -1659,6 +1937,7 @@ const s = StyleSheet.create({
   },
   suggestionChip: {
     alignSelf: 'center',
+    maxWidth: 240,
     backgroundColor: CARD,
     borderRadius: 16,
     borderWidth: 1,
@@ -1673,7 +1952,7 @@ const s = StyleSheet.create({
   },
   inputBar: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 10,
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -1700,7 +1979,7 @@ const s = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: CARD,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: ORANGE_BORDER,
     alignItems: "center",
     justifyContent: "center",
@@ -1715,6 +1994,8 @@ const s = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: ORANGE,
+    borderWidth: 1.5,
+    borderColor: ORANGE,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,

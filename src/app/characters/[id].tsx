@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -81,7 +82,7 @@ export default function CharacterDetailScreen() {
   const insets      = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { data: char, isLoading, isError } = useCharacter(resolvedId ?? '');
+  const { data: char, isLoading, isError, refetch: refetchChar } = useCharacter(resolvedId ?? '');
   const { mutateAsync: createSession }     = useCreateSession();
 
   const [activeTab, setActiveTab]         = useState<ActiveTab>('info');
@@ -90,7 +91,7 @@ export default function CharacterDetailScreen() {
   const [pendingDelete, setPendingDelete] = useState<ChatSession | null>(null);
   const [deletingId, setDeletingId]       = useState<string | undefined>();
 
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+  const { data: sessions = [], isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
     queryKey: ['character-sessions', resolvedId],
     queryFn: async () => {
       if (!char?.contexts?.length) return [];
@@ -103,6 +104,16 @@ export default function CharacterDetailScreen() {
     },
     enabled: !!resolvedId && !!char,
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchChar(), refetchSessions()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const filteredSessions = sessions.filter((s) => {
     const q = searchQuery.trim().toLowerCase();
@@ -184,9 +195,11 @@ export default function CharacterDetailScreen() {
     <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        bounces={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={ORANGE} />
+        }
       >
         {/* ── Hero image ─────────────────────────────────────── */}
         <View style={{ height: 360, width: '100%', backgroundColor: heroBg }}>

@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Search, Star } from "lucide-react-native";
+import { History, Search, Star } from "lucide-react-native";
 
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { useMemo, useState } from "react";
@@ -146,7 +146,7 @@ export default function QuizListScreen() {
   const [era, setEra] = useState<EraFilter>("ALL");
   const [level, setLevel] = useState<LevelFilter>("ALL");
 
-  const { data: quizzes, isLoading, isError } = useQuizzes(query || undefined);
+  const { data: quizzes, isLoading, isError, refetch, isRefetching } = useQuizzes(query || undefined);
 
   const filtered = useMemo(() => {
     if (!quizzes) return [];
@@ -165,12 +165,28 @@ export default function QuizListScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top"]}>
       {/* header */}
       <View
-        style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 16,
+        }}
       >
-        <Heading size="3xl">Bộ câu hỏi</Heading>
-        <Text size="sm" muted className="mt-1">
-          Kiểm tra kiến thức lịch sử qua các bộ câu hỏi
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Heading size="3xl">Bộ câu hỏi</Heading>
+          <Text size="sm" muted className="mt-1">
+            Kiểm tra kiến thức lịch sử qua các bộ câu hỏi
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push("/quiz/history")}
+          activeOpacity={0.7}
+          style={s.historyIconBtn}
+        >
+          <History size={19} color={TEXT} strokeWidth={2} />
+        </TouchableOpacity>
       </View>
 
       {/* search */}
@@ -287,6 +303,8 @@ export default function QuizListScreen() {
               }
             />
           )}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
         />
       )}
     </SafeAreaView>
@@ -294,6 +312,15 @@ export default function QuizListScreen() {
 }
 
 const s = StyleSheet.create({
+  historyIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: CARD,
+    marginTop: 2,
+  },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",

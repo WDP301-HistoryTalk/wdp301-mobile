@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -111,21 +112,34 @@ export default function HomeScreen() {
   const initial = user?.userName?.charAt(0).toUpperCase() ?? "U";
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const { data: charData, isLoading: charLoading } = useCharacters({});
-  const { data: ctxData, isLoading: ctxLoading } = useHistoricalContexts({});
-  const { data: chatDataHistory } = useChatHistory();
-  const { data: quizResultsData } = useQuizResults(0, 3);
+  const { data: charData, isLoading: charLoading, refetch: refetchChars } = useCharacters({});
+  const { data: ctxData, isLoading: ctxLoading, refetch: refetchCtx } = useHistoricalContexts({});
+  const { data: chatDataHistory, refetch: refetchChat } = useChatHistory();
+  const { data: quizResultsData, refetch: refetchQuiz } = useQuizResults(0, 3);
 
   const characters = charData?.pages[0]?.content?.slice(0, 8) ?? [];
   const contexts = ctxData?.pages[0]?.content?.slice(0, 4) ?? [];
   const recentChats = chatDataHistory?.slice(0, 3) ?? [];
   const recentQuizzes = quizResultsData?.content ?? [];
 
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchChars(), refetchCtx(), refetchChat(), refetchQuiz()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={ORANGE} />
+        }
       >
         {/* ── Header ──────────────────────────────────────────────── */}
         <View

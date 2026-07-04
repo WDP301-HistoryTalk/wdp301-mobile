@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, ChevronRight, RotateCcw, XCircle, Zap } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -83,7 +83,7 @@ export default function QuizResultScreen() {
   const finishedStore = useQuizStore((s) => s.finished);
   const clearAll = useQuizStore((s) => s.clearAll);
 
-  const { data: detailData, isLoading } = useQuery({
+  const { data: detailData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['quiz-result-detail', sessionId],
     queryFn: () => quizApi.getMyResultBySession(sessionId!),
     enabled: !!sessionId,
@@ -168,7 +168,15 @@ export default function QuizResultScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}
+        refreshControl={
+          sessionId ? (
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={ORANGE} />
+          ) : undefined
+        }
+      >
         {/* ── Hero ────────────────────────────────────────────────── */}
         <View style={ss.hero}>
           <Text style={ss.quizTitle} numberOfLines={2}>

@@ -44,7 +44,7 @@ function formatDate(iso?: string | null) {
 export default function PaymentHistoryScreen() {
   const router = useRouter();
   const [page, setPage] = useState(0);
-  const { data, isLoading, isFetching } = useMyOrders(page, 10);
+  const { data, isLoading, isFetching, refetch, isRefetching } = useMyOrders(page, 10);
   const cancelOrder = useCancelOrder();
 
   function confirmCancel(order: OrderHistoryItem) {
@@ -124,6 +124,8 @@ export default function PaymentHistoryScreen() {
           keyExtractor={(item) => item.orderId}
           renderItem={renderItem}
           contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: 40 }}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 60, gap: 10 }}>
               <ReceiptText size={36} color={MUTED} />

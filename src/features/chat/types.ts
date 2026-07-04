@@ -46,7 +46,7 @@ export interface CreateSessionResponse {
 
 export interface SendMessageResponse {
   userMessage: ChatMessage;
-  assistantMessage: ChatMessage;
+  assistantMessage?: ChatMessage;
   suggestedQuestions: string[];
   remainingTokens?: number;
   promptTokens?: number;

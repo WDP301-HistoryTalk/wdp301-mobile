@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import {
   AlertCircle, ArrowLeft, Calendar, CheckCircle2, ChevronDown, ChevronUp, Crown,
-  Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, User, UserCircle, X,
+  Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, Trophy, User, UserCircle, X,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View,
+  Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -149,8 +149,17 @@ export default function ProfileScreen() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
 
-  const { data: profile, isLoading, isError } = useMe();
-  const { data: tiers } = useTiers();
+  const { data: profile, isLoading, isError, refetch: refetchMe } = useMe();
+  const { data: tiers, refetch: refetchTiers } = useTiers();
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchMe(), refetchTiers()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
   const { mutateAsync: updateMe, isPending: saving }         = useUpdateMe();
   const { mutateAsync: changePwd, isPending: changingPwd }   = useChangePassword();
 
@@ -249,7 +258,13 @@ export default function ProfileScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={ORANGE} />
+          }
+        >
 
           {isLoading && <ProfileSkeleton />}
 
@@ -347,6 +362,14 @@ export default function ProfileScreen() {
                   >
                     <Receipt size={16} color={TEXT2} strokeWidth={1.75} />
                     <Text style={{ color: TEXT2, fontWeight: '600', fontSize: 14 }}>Lịch sử thanh toán</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push('/quiz/history')}
+                    activeOpacity={0.8}
+                    style={s.historyBtn}
+                  >
+                    <Trophy size={16} color={TEXT2} strokeWidth={1.75} />
+                    <Text style={{ color: TEXT2, fontWeight: '600', fontSize: 14 }}>Lịch sử làm quiz</Text>
                   </TouchableOpacity>
                 </View>
               </View>
