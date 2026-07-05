@@ -28,7 +28,12 @@ export default function AppTabs() {
 
   // Hide the tab bar entirely while an active quiz session is running, so the
   // only way out is the in-screen "Thoát" confirm — no escaping via a tab tap.
-  const hideTabBar = pathname === "/quiz/play";
+  // Same treatment inside a chat conversation (/chat/<sessionId>): free up
+  // vertical space for the message list + input bar. The /chat list and
+  // /chat/history screens keep the bar.
+  const hideTabBar =
+    pathname === "/quiz/play" ||
+    (pathname.startsWith("/chat/") && pathname !== "/chat/history");
   const hideProgress = useSharedValue(hideTabBar ? 1 : 0);
   const [barHeight, setBarHeight] = useState(0);
 

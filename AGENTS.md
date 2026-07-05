@@ -2,6 +2,32 @@
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any code.
 
+# Folder structure (routes are declarative, screens are portable)
+
+```
+src/
+├── app/          # expo-router routes ONLY — thin re-exports, no screen logic
+│   ├── _layout.tsx      # providers + auth gate + <Slot/>
+│   ├── (auth)/          # unauthenticated group: login, register (Stack)
+│   └── (app)/           # authenticated group: all main screens (AppTabs)
+├── screens/      # screen implementations, grouped by domain (auth, home, chat, quiz, ...)
+├── features/     # data layer per domain: api.ts, hooks/, types.ts, store.ts, schemas.ts
+├── components/   # shared UI (components/ui = gluestack design system, cards/, ...)
+├── providers/    # app-providers.tsx (Gluestack+Query+Theme), use-protected-route.ts
+├── hooks/        # app-wide hooks (use-theme, use-color-scheme)
+├── lib/          # infra: api-client, query-client, secure-storage, azure-speech
+└── constants/    # palette, theme
+```
+
+Rules:
+- A route file in `src/app/` must contain only `export { default } from '@/screens/...'`
+  (layouts `_layout.tsx` are the exception). Screen logic lives in `src/screens/`.
+- Route groups `(auth)`/`(app)` do NOT affect URLs — `/chat/[sessionId]` stays the same.
+  The auth redirect logic lives in `src/providers/use-protected-route.ts`.
+- Server state goes in `src/features/<domain>/` (TanStack Query hooks over `api.ts`),
+  never fetched directly inside screens.
+- All imports use the `@/` alias; never deep-relative (`../../`).
+
 # Android emulator: corrupted JS bundle loads (this machine)
 
 On this dev machine, the Android emulator's default host route (`10.0.2.2`,
