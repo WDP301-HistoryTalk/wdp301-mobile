@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
@@ -66,7 +66,7 @@ function getCharacterLabel(session: ChatSession) {
   return (
     session.characterName ??
     session.characterTitle ??
-    "Dang tai thong tin nhan vat..."
+    "Đang tải thông tin nhân vật..."
   );
 }
 
@@ -78,9 +78,9 @@ function getDeleteErrorMessage(error: unknown) {
   const message =
     error instanceof Error
       ? error.message
-      : "Khong the xoa cuoc tro chuyen. Vui long thu lai sau.";
+      : "Không thể xóa cuộc trò chuyện. Vui lòng thử lại sau.";
   if (message.toLowerCase().includes("unexpected token")) {
-    return "May chu tra ve du lieu khong dung dinh dang khi xoa. Vui long thu lai.";
+    return "Máy chủ trả về dữ liệu không đúng định dạng khi xóa. Vui lòng thử lại.";
   }
   return message;
 }
@@ -97,7 +97,7 @@ function normalizeHistory(
       const contextId = item.contextId ?? "unknown";
       grouped.set(contextId, {
         contextId,
-        contextName: item.contextName ?? "Khac",
+        contextName: item.contextName ?? "Khác",
         sessions: item.sessions,
       });
       continue;
@@ -108,7 +108,7 @@ function normalizeHistory(
     const contextId = item.contextId ?? "unknown";
     const current = grouped.get(contextId) ?? {
       contextId,
-      contextName: item.contextName ?? "Khac",
+      contextName: item.contextName ?? "Khác",
       sessions: [],
     };
 
@@ -172,7 +172,7 @@ function SessionRow({
   onDelete: (session: ChatSession) => void;
 }) {
   const router = useRouter();
-  const title = item.sessionTitle ?? item.title ?? item.contextName ?? "Cuoc tro chuyen";
+  const title = item.sessionTitle ?? item.title ?? item.contextName ?? "Cuộc trò chuyện";
 
   return (
     <TouchableOpacity
@@ -215,10 +215,8 @@ function SessionRow({
           event.stopPropagation();
           onDelete(item);
         }}
-        style={({ pressed }) => [
-          s.deleteBtn,
-          pressed || deleting ? s.deleteBtnPressed : null,
-        ]}
+        style={[s.deleteBtn, deleting ? s.deleteBtnPressed : null]}
+        accessibilityLabel="Xóa cuộc trò chuyện"
       >
         {deleting ? (
           <ActivityIndicator size="small" color="#dc2626" />
@@ -262,7 +260,7 @@ function CharacterGroup({
             {item.characterName}
           </Text>
           <Text style={s.characterMeta}>
-            {item.sessions.length} cuoc tro chuyen
+            {item.sessions.length} cuộc trò chuyện
           </Text>
         </View>
         {expanded ? (
@@ -362,8 +360,8 @@ export default function ChatHistoryScreen() {
           <ArrowLeft size={20} color={TEXT} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>Lich su tro chuyen</Text>
-          <Text style={s.subtitle}>Xem lai cac cuoc tro chuyen da tao</Text>
+          <Text style={s.title}>Lịch sử trò chuyện</Text>
+          <Text style={s.subtitle}>Xem lại các cuộc trò chuyện đã tạo</Text>
         </View>
         <Pressable onPress={() => router.push("/characters")} style={s.newBtn}>
           <Plus size={18} color="#fff" />
@@ -396,7 +394,7 @@ export default function ChatHistoryScreen() {
           ListEmptyComponent={
             <View style={s.center}>
               <Text style={s.emptyTitle}>
-                {isError ? "Khong the tai lich su" : "Chua co cuoc tro chuyen"}
+                {isError ? "Không thể tải lịch sử" : "Chưa có cuộc trò chuyện"}
               </Text>
               <Text style={s.emptyText}>
                 {isError
@@ -410,10 +408,10 @@ export default function ChatHistoryScreen() {
 
       <ConfirmModal
         visible={!!pendingDelete}
-        title="Xoa cuoc tro chuyen?"
-        message="Cuoc tro chuyen nay se bi xoa vinh vien va khong the khoi phuc lai. Ban co chac chan muon tiep tuc?"
-        cancelText="Huy"
-        confirmText="Xoa"
+        title="Xóa cuộc trò chuyện?"
+        message="Cuộc trò chuyện này sẽ bị xóa vĩnh viễn và không thể khôi phục lại. Bạn có chắc chắn muốn tiếp tục?"
+        cancelText="Hủy"
+        confirmText="Xóa"
         variant="danger"
         loading={deleteSession.isPending}
         icon={<Trash2 size={22} color="#dc2626" />}
@@ -429,7 +427,7 @@ export default function ChatHistoryScreen() {
 
       <ConfirmModal
         visible={!!errorMessage}
-        title="Khong the xoa"
+        title="Không thể xóa"
         message={errorMessage ?? ""}
         confirmText="Dong"
         onConfirm={() => setErrorMessage(null)}

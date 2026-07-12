@@ -32,7 +32,7 @@ import { BrandColors, Colors } from "@/constants/theme";
 import { useCharactersByContext } from "@/features/characters/hooks/use-characters-by-context";
 import { ERA_COLORS, getCharacterImageUri, type Character } from "@/features/characters/types";
 import { useHistoricalContext } from "@/features/historical-contexts/hooks/use-historical-context";
-import { formatContextYear } from "@/features/historical-contexts/types";
+import { formatContextYear, getContextImageUri } from "@/features/historical-contexts/types";
 
 const ERA_HERO_BG: Record<string, string> = {
   ANCIENT: "#2C1810",
@@ -368,7 +368,7 @@ export default function ContextDetailScreen() {
   const ec = ERA_COLORS[ctx.era];
   const heroBg = ERA_HERO_BG[ctx.era] ?? CARD;
   const yearText = formatContextYear(ctx);
-  const imageUri = (ctx as any).imageUrl ?? ctx.image;
+  const imageUri = getContextImageUri(ctx);
   const videoUri = ctx.videoUrl?.trim();
 
   const hasSkippedIntro = skippedIntroId === resolvedId;

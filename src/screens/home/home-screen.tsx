@@ -410,7 +410,7 @@ export default function HomeScreen() {
               marginBottom: 12,
             }}
           >
-            <Heading size="md" className="text-history-text">
+            <Heading size="md" className="flex-1 text-history-text" numberOfLines={1}>
               Bối cảnh lịch sử
             </Heading>
             <TouchableOpacity

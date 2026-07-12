@@ -1,33 +1,21 @@
-import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useAuthStore } from '@/features/auth/store';
 
 /**
- * Điều hướng dựa trên trạng thái auth:
- * - Chưa đăng nhập mà đứng ngoài nhóm (auth) → đẩy về /login
- * - Đã đăng nhập mà còn trong nhóm (auth) → đẩy về trang chủ
+ * Khởi tạo session từ SecureStore khi app mở.
+ * Việc chuyển hướng theo trạng thái auth KHÔNG nằm ở đây nữa mà được khai báo
+ * bằng <Redirect> trong layout của từng nhóm:
+ * - (app)/_layout.tsx  — chưa đăng nhập → về /login
+ * - (auth)/_layout.tsx — đã đăng nhập  → về trang chủ
+ * Cách khai báo này không phụ thuộc việc navigator đã mount hay chưa.
  */
 export function useProtectedRoute() {
   const { isLoading, isAuthenticated, initialize } = useAuthStore();
-  const segments = useSegments();
-  const router = useRouter();
 
   useEffect(() => {
     void initialize();
   }, [initialize]);
 
-  const inAuthGroup = segments[0] === '(auth)';
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/');
-    }
-  }, [isAuthenticated, inAuthGroup, isLoading, router]);
-
-  return { isLoading, isAuthenticated, inAuthGroup };
+  return { isLoading, isAuthenticated };
 }

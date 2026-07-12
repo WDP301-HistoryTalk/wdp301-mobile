@@ -2,8 +2,8 @@ import { ReactNode } from "react";
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
@@ -38,8 +38,8 @@ export function ConfirmModal({
   visible,
   title,
   message,
-  confirmText = "Dong y",
-  cancelText = "Huy",
+  confirmText = "Đồng ý",
+  cancelText = "Hủy",
   loading = false,
   variant = "default",
   icon,
@@ -68,24 +68,23 @@ export function ConfirmModal({
           {children}
           <View style={s.actions}>
             {onCancel ? (
-              <Pressable
+              <TouchableOpacity
                 disabled={loading}
                 onPress={onCancel}
-                style={({ pressed }) => [
-                  s.cancelBtn,
-                  pressed ? s.pressed : null,
-                ]}
+                activeOpacity={0.7}
+                style={s.cancelBtn}
               >
                 <Text style={s.cancelText}>{cancelText}</Text>
-              </Pressable>
+              </TouchableOpacity>
             ) : null}
-            <Pressable
+            <TouchableOpacity
               disabled={loading}
               onPress={onConfirm}
-              style={({ pressed }) => [
+              activeOpacity={0.7}
+              style={[
                 s.confirmBtn,
                 { backgroundColor: accent },
-                pressed || loading ? s.pressed : null,
+                loading ? s.pressed : null,
                 !onCancel ? s.fullWidth : null,
               ]}
             >
@@ -94,7 +93,7 @@ export function ConfirmModal({
               ) : (
                 <Text style={s.confirmText}>{confirmText}</Text>
               )}
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

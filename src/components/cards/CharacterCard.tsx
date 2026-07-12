@@ -62,9 +62,7 @@ function SmallCard({
 }: {
   char: Character;
   onPress: () => void;
-  ec: ReturnType<typeof ERA_COLORS[CharacterEra]['bg']> extends string
-    ? { bg: string; text: string; glow: string; avatarBg: string }
-    : null;
+  ec: (typeof ERA_COLORS)[CharacterEra] | null;
   cardBg: string;
   imageUri?: string;
 }) {
@@ -197,7 +195,7 @@ const smStyles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.06)',
   },
   placeholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -244,7 +242,7 @@ const lgStyles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.07)',
   },
   placeholderWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 60,

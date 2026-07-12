@@ -38,7 +38,7 @@ function readTokenFromPayload(data: string): string {
   try {
     const parsed = JSON.parse(data);
     if (parsed && parsed.success === false) {
-      throw new Error(parsed.message ?? "Yeu cau that bai");
+      throw new Error(parsed.message ?? "Yêu cầu thất bại");
     }
     if (typeof parsed === "string") return parsed;
     if (typeof parsed.content === "string") return parsed.content;
@@ -116,7 +116,7 @@ export const chatApi = {
         throw new Error(parsed.message ?? raw);
       } catch (error) {
         if (error instanceof Error && error.message !== raw) throw error;
-        throw new Error(raw || "Khong the gui tin nhan streaming");
+        throw new Error(raw || "Không thể gửi tin nhắn");
       }
     }
 

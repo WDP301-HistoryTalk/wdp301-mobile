@@ -2,9 +2,11 @@ import VoiceNative from "@react-native-voice/voice";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Box,
+  Coins,
   Ellipsis,
   History,
   MessageCircle,
@@ -54,6 +56,7 @@ import {
   TEXT,
   TEXT2,
 } from "@/constants/palette";
+import { useMe } from "@/features/auth/hooks/use-me";
 import { useCharacter } from "@/features/characters/hooks/use-character";
 import { getCharacterImageUri } from "@/features/characters/types";
 import { chatApi } from "@/features/chat/api";
@@ -102,6 +105,24 @@ type NativeVoiceLike = {
   onSpeechEnd?: (event?: unknown) => void;
   onSpeechError?: (event: NativeVoiceErrorEvent) => void;
 };
+
+const LOW_TOKEN_THRESHOLD = 1000;
+
+// Tin nhắn AI dài hơn ngưỡng này sẽ được thu gọn kèm nút "Xem thêm"
+const COLLAPSE_THRESHOLD = 550;
+
+function formatClock(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(Math.max(0, n));
+}
 
 function getMessageTime(message: ChatMessage) {
   const time = new Date(message.createdAt).getTime();
@@ -371,6 +392,13 @@ function MessageBubble({
   const isUser = message.role === "USER";
   const isVoice = message.messageType === "VOICE";
   const [speaking, setSpeaking] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const clock = formatClock(message.createdAt);
+
+  const fullText = normalizeMessageText(message.content);
+  const isLong = !isUser && fullText.length > COLLAPSE_THRESHOLD;
+  const displayText =
+    !isLong || expanded ? fullText : `${fullText.slice(0, COLLAPSE_THRESHOLD).trimEnd()}…`;
 
   const handleSpeak = useCallback(async () => {
     if (!message.content || speaking) return;
@@ -383,68 +411,84 @@ function MessageBubble({
     } catch (e: any) {
       setSpeaking(false);
       Alert.alert(
-        "Khong the phat am thanh",
-        e?.message ?? "Da xay ra loi khi doc tin nhan.",
+        "Không thể phát âm thanh",
+        e?.message ?? "Đã xảy ra lỗi khi đọc tin nhắn.",
       );
     }
   }, [message.content, speaking]);
 
   if (isUser) {
     return (
-      <View style={s.userRow}>
-        <View style={[s.userBubble, isVoice && s.userBubbleVoice]}>
-          {isVoice && (
-            <View style={s.voiceBadgeRow}>
-              <Mic size={11} color="rgba(255,255,255,0.85)" strokeWidth={2.4} />
-              <Text style={s.voiceBadgeTextUser}>Giọng nói</Text>
-            </View>
-          )}
-          <Text className="text-white" style={s.userText}>{normalizeMessageText(message.content)}</Text>
+      <View>
+        <View style={s.userRow}>
+          <View style={[s.userBubble, isVoice && s.userBubbleVoice]}>
+            {isVoice && (
+              <View style={s.voiceBadgeRow}>
+                <Mic size={11} color="rgba(255,255,255,0.85)" strokeWidth={2.4} />
+                <Text style={s.voiceBadgeTextUser}>Giọng nói</Text>
+              </View>
+            )}
+            <Text className="text-white" style={s.userText}>{fullText}</Text>
+          </View>
         </View>
+        {clock ? <Text style={[s.msgTime, { textAlign: "right" }]}>{clock}</Text> : null}
       </View>
     );
   }
 
   return (
-    <View style={s.aiRow}>
-      <View style={s.aiAvatar}>
-        {characterImageUrl ? (
-          <Image
-            source={{ uri: characterImageUrl }}
-            style={s.avatarImage}
-            contentFit="cover"
-          />
-        ) : (
-          <Text style={s.aiAvatarText}>{initial}</Text>
-        )}
-      </View>
-      <TouchableOpacity
-        style={[s.aiBubble, isVoice && s.aiBubbleVoice, { maxWidth: "80%" }]}
-        activeOpacity={0.7}
-        disabled={!message.content}
-        onPress={handleSpeak}
-      >
-        {message.content ? (
-          <>
-            {isVoice && (
-              <View style={s.voiceBadgeRow}>
-                <Mic size={11} color={ORANGE} strokeWidth={2.4} />
-                <Text style={s.voiceBadgeTextAi}>Giọng nói</Text>
+    <View>
+      <View style={s.aiRow}>
+        <View style={s.aiAvatar}>
+          {characterImageUrl ? (
+            <Image
+              source={{ uri: characterImageUrl }}
+              style={s.avatarImage}
+              contentFit="cover"
+            />
+          ) : (
+            <Text style={s.aiAvatarText}>{initial}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[s.aiBubble, isVoice && s.aiBubbleVoice, { maxWidth: "80%" }]}
+          activeOpacity={0.7}
+          disabled={!message.content}
+          onPress={handleSpeak}
+          accessibilityLabel="Nghe đọc tin nhắn"
+        >
+          {message.content ? (
+            <>
+              {isVoice && (
+                <View style={s.voiceBadgeRow}>
+                  <Mic size={11} color={ORANGE} strokeWidth={2.4} />
+                  <Text style={s.voiceBadgeTextAi}>Giọng nói</Text>
+                </View>
+              )}
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+                <Text style={[s.aiText, { flexShrink: 1 }]}>{displayText}</Text>
+                <Volume2
+                  size={14}
+                  color={speaking ? ORANGE : MUTED}
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                />
               </View>
-            )}
-            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-              <Text style={[s.aiText, { flexShrink: 1 }]}>{normalizeMessageText(message.content)}</Text>
-              <Volume2
-                size={14}
-                color={speaking ? ORANGE : MUTED}
-                style={{ marginTop: 2, flexShrink: 0 }}
-              />
-            </View>
-          </>
-        ) : (
-          <TypingDots />
-        )}
-      </TouchableOpacity>
+              {isLong && (
+                <TouchableOpacity
+                  onPress={() => setExpanded((v) => !v)}
+                  hitSlop={8}
+                  accessibilityLabel={expanded ? "Thu gọn tin nhắn" : "Xem toàn bộ tin nhắn"}
+                >
+                  <Text style={s.expandToggle}>{expanded ? "Thu gọn ▲" : "Xem thêm ▼"}</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <TypingDots />
+          )}
+        </TouchableOpacity>
+      </View>
+      {clock ? <Text style={[s.msgTime, { marginLeft: 38 }]}>{clock}</Text> : null}
     </View>
   );
 }
@@ -474,7 +518,7 @@ export default function ChatScreen() {
     : (params.contextId ?? "");
   const characterName = Array.isArray(params.characterName)
     ? params.characterName[0]
-    : (params.characterName ?? "Nhan vat");
+    : (params.characterName ?? "Nhân vật");
   const characterImageUrl = Array.isArray(params.characterImageUrl)
     ? params.characterImageUrl[0]
     : (params.characterImageUrl ?? "");
@@ -498,6 +542,11 @@ export default function ChatScreen() {
   const { mutateAsync: sendMessage, isPending: sending } = useSendMessage();
   const { mutateAsync: createSession, isPending: creatingSession } =
     useCreateSession();
+  const queryClient = useQueryClient();
+  const { data: me } = useMe();
+  // Admin chat không bị trừ token nên chỉ hiện số dư cho CUSTOMER
+  const isCustomer = me?.role === "CUSTOMER";
+  const tokenBalance = me?.token ?? null;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [timelineItems, setTimelineItems] = useState<ChatTimelineItem[]>([]);
@@ -685,28 +734,34 @@ export default function ChatScreen() {
             (m) => m.id !== optimisticUser.id && !m.id.startsWith("stream-"),
           ),
         );
-        const message = e?.message ?? "Khong the gui tin nhan. Thu lai?";
+        const message = e?.message ?? "Không thể gửi tin nhắn.";
         if (message.toLowerCase().includes("token")) {
-          Alert.alert("Het token", message, [
-            { text: "De sau", style: "cancel" },
-            { text: "Nap them", onPress: () => router.push("/payment") },
+          Alert.alert("Hết token", message, [
+            { text: "Để sau", style: "cancel" },
+            { text: "Nạp thêm", onPress: () => router.push("/payment") },
           ]);
         } else {
-          Alert.alert("Loi", message);
+          // Giữ lại nội dung vừa gõ để gửi lại được, không bắt gõ lại từ đầu
+          Alert.alert("Lỗi gửi tin nhắn", message, [
+            { text: "Để sau", style: "cancel", onPress: () => setInput(content) },
+            { text: "Thử lại", onPress: () => void handleSend(content, messageType) },
+          ]);
         }
       } finally {
         setIsTyping(false);
+        // Đồng bộ lại số token còn lại hiển thị trên header
+        void queryClient.invalidateQueries({ queryKey: ["me"] });
       }
     },
-    [input, isTyping, router, sending, sendMessage, sessionId, autoSpeak],
+    [input, isTyping, router, sending, sendMessage, sessionId, autoSpeak, queryClient],
   );
 
   function handleStartCall(mode: "2D" | "3D") {
     if (activeCallRef.current) return;
     if (mode === "3D" && !resolvedCharacterModelUrl) {
       Alert.alert(
-        "Chua co model 3D",
-        "Nhan vat nay chua co modelUrl de call 3D.",
+        "Chưa có model 3D",
+        "Nhân vật này chưa có model 3D để gọi.",
       );
       return;
     }
@@ -737,8 +792,8 @@ export default function ChatScreen() {
   async function handleNewSession() {
     if (!characterId || !contextId || creatingSession) {
       Alert.alert(
-        "Chua du thong tin",
-        "Hay tao Cuộc trò chuyện moi tu trang nhan vat.",
+        "Chưa đủ thông tin",
+        "Hãy tạo cuộc trò chuyện mới từ trang nhân vật.",
       );
       return;
     }
@@ -766,18 +821,18 @@ export default function ChatScreen() {
         },
       });
     } catch (e: any) {
-      Alert.alert("Loi", e?.message ?? "Khong the tao Cuộc trò chuyện moi.");
+      Alert.alert("Lỗi", e?.message ?? "Không thể tạo cuộc trò chuyện mới.");
     }
   }
 
   function handleDeleteSession() {
     Alert.alert(
-      "Xoa Cuộc trò chuyện?",
-      "Cuộc trò chuyện se duoc dua vao thung rac.",
+      "Xóa cuộc trò chuyện?",
+      "Cuộc trò chuyện sẽ được đưa vào thùng rác.",
       [
-        { text: "Huy", style: "cancel" },
+        { text: "Hủy", style: "cancel" },
         {
-          text: "Xoa",
+          text: "Xóa",
           style: "destructive",
           onPress: async () => {
             try {
@@ -882,7 +937,7 @@ export default function ChatScreen() {
         await speakCallText(result.assistantMessage.content);
       }
     } catch (e: any) {
-      Alert.alert("Loi", e?.message ?? "Khong the gui tin nhan.");
+      Alert.alert("Lỗi", e?.message ?? "Không thể gửi tin nhắn.");
     } finally {
       setIsCallProcessing(false);
     }
@@ -900,8 +955,8 @@ export default function ChatScreen() {
     try {
       if (!NativeModules.RCTVoice) {
         Alert.alert(
-          "Can build lai app",
-          "Thu vien STT native chua co trong app dang chay. Hay chay development build/native build sau khi cai @react-native-voice/voice; Expo Go se khong dung duoc tinh nang nay.",
+          "Cần build lại app",
+          "Thư viện nhận dạng giọng nói chưa có trong bản app đang chạy. Hãy chạy development build/native build sau khi cài @react-native-voice/voice; Expo Go không dùng được tính năng này.",
         );
         return;
       }
@@ -909,7 +964,7 @@ export default function ChatScreen() {
       const Voice = VoiceNative as unknown as NativeVoiceLike;
       const available = await Voice.isAvailable();
       if (!available) {
-        Alert.alert("Chua co STT", "Thiet bi nay chua co dich vu nhan dang giong noi.");
+        Alert.alert("Chưa có nhận dạng giọng nói", "Thiết bị này chưa có dịch vụ nhận dạng giọng nói.");
         return;
       }
 
@@ -969,9 +1024,9 @@ export default function ChatScreen() {
       setIsCallListening(false);
       // Loi that su (vd: khong co quyen mic) -> bao 1 lan, khong tu dong lap lai vo han.
       Alert.alert(
-        "Khong the bat micro",
+        "Không thể bật micro",
         e?.message ??
-        "Can chay bang development build/native build sau khi cai @react-native-voice/voice.",
+        "Cần chạy bằng development build/native build sau khi cài @react-native-voice/voice.",
       );
     }
   }
@@ -1014,6 +1069,7 @@ export default function ChatScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
             style={s.headerBtn}
+            accessibilityLabel="Quay lại"
           >
             <ArrowLeft size={20} color={TEXT} strokeWidth={2} />
           </TouchableOpacity>
@@ -1028,6 +1084,13 @@ export default function ChatScreen() {
               </Text>
             ) : null}
           </View>
+
+          {isCustomer && tokenBalance != null ? (
+            <View style={s.tokenPill} accessibilityLabel={`Còn ${tokenBalance} token`}>
+              <Coins size={12} color={ORANGE} strokeWidth={2} />
+              <Text style={s.tokenPillText}>{formatTokens(tokenBalance)}</Text>
+            </View>
+          ) : null}
 
           <View style={s.headerAvatar}>
             {resolvedCharacterImageUrl ? (
@@ -1045,6 +1108,7 @@ export default function ChatScreen() {
             onPress={handleMenu}
             activeOpacity={0.7}
             style={[s.headerBtn, { marginLeft: 8 }]}
+            accessibilityLabel="Mở menu cuộc trò chuyện"
           >
             <Ellipsis size={20} color={MUTED} strokeWidth={2} />
           </TouchableOpacity>
@@ -1305,6 +1369,23 @@ export default function ChatScreen() {
           </ScrollView>
         )}
 
+        {isCustomer && tokenBalance != null && tokenBalance <= LOW_TOKEN_THRESHOLD ? (
+          <View style={s.tokenBanner}>
+            <Text style={s.tokenBannerText} numberOfLines={1}>
+              {tokenBalance <= 0
+                ? "Bạn đã hết token chat."
+                : `Sắp hết token (còn ${formatTokens(tokenBalance)}).`}
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/payment")}
+              activeOpacity={0.8}
+              style={s.tokenBannerBtn}
+            >
+              <Text style={s.tokenBannerBtnText}>Nạp thêm</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <View style={s.inputBar}>
           <TextInput
             ref={inputRef}
@@ -1325,6 +1406,7 @@ export default function ChatScreen() {
               s.sendBtn,
               (!input.trim() || sending || isTyping) && { opacity: 0.4 },
             ]}
+            accessibilityLabel="Gửi tin nhắn"
           >
             <Send size={18} color="#fff" strokeWidth={2} />
           </TouchableOpacity>
@@ -1792,5 +1874,63 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  msgTime: {
+    color: MUTED,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  expandToggle: {
+    color: ORANGE,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 6,
+  },
+  tokenPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: ORANGE_TINT_MUTED,
+    borderWidth: 1,
+    borderColor: ORANGE_BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  tokenPillText: {
+    color: ORANGE,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  tokenBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: ORANGE_TINT_MUTED,
+    borderWidth: 1,
+    borderColor: ORANGE_BORDER,
+    borderRadius: 12,
+  },
+  tokenBannerText: {
+    flex: 1,
+    color: TEXT,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  tokenBannerBtn: {
+    backgroundColor: ORANGE,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tokenBannerBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

@@ -144,9 +144,11 @@ export default function LoginScreen() {
           </View>
 
           {/* Forgot password */}
-          <TouchableOpacity className="self-end mb-8">
-            <Text className="text-primary-500 text-sm font-medium">Quên mật khẩu?</Text>
-          </TouchableOpacity>
+          <Link href="/(auth)/forgot-password" asChild>
+            <TouchableOpacity className="self-end mb-8">
+              <Text className="text-primary-500 text-sm font-medium">Quên mật khẩu?</Text>
+            </TouchableOpacity>
+          </Link>
 
           {/* Submit */}
           <TouchableOpacity

@@ -25,6 +25,8 @@ export interface HistoricalContext {
   isBC?: boolean;
   period?: string;
   location?: string;
+  /** Tên field backend trả về là `imageUrl`; giữ `image` cho dữ liệu cũ. */
+  imageUrl?: string;
   image?: string;
   videoUrl?: string;
   characterIds: ContextCharacter[];
@@ -62,6 +64,13 @@ export const CATEGORY_COLORS: Record<ContextCategory, string> = {
   RELIGION: '#10B981',
   OTHER:    '#6B7280',
 };
+
+/** Ảnh đại diện của bối cảnh — ưu tiên `imageUrl` (tên field backend hiện tại). */
+export function getContextImageUri(
+  ctx: Pick<HistoricalContext, 'imageUrl' | 'image'>,
+): string | undefined {
+  return ctx.imageUrl ?? ctx.image;
+}
 
 /** Formats year display from a HistoricalContext */
 export function formatContextYear(ctx: Pick<HistoricalContext, 'yearLabel' | 'year' | 'startYear' | 'endYear' | 'isBC'>): string | null {

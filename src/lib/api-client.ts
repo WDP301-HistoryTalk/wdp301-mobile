@@ -15,7 +15,7 @@ async function parseJsonResponse(res: Response, path: string) {
     return JSON.parse(raw);
   } catch {
     const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 120);
-    throw new Error(`API tra ve du lieu khong phai JSON (${res.status}) tai ${BASE_URL}${path}: ${preview}`);
+    throw new Error(`API trả về dữ liệu không phải JSON (${res.status}) tại ${BASE_URL}${path}: ${preview}`);
   }
 }
 

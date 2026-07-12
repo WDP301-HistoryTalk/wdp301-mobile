@@ -11,7 +11,7 @@ import { useProtectedRoute } from '@/providers/use-protected-route';
 
 export default function RootLayout() {
   useFonts(FontAssets);
-  const { isLoading, isAuthenticated, inAuthGroup } = useProtectedRoute();
+  const { isLoading } = useProtectedRoute();
 
   // Chờ load session từ SecureStore
   if (isLoading) {
@@ -22,11 +22,9 @@ export default function RootLayout() {
     );
   }
 
-  // Chặn render giao diện chính khi chưa auth và đang chuyển hướng
-  if (!isAuthenticated && !inAuthGroup) {
-    return null;
-  }
-
+  // Luôn render <Slot/> sau khi load xong: việc chặn/chuyển hướng theo auth
+  // nằm ở layout của từng nhóm ((app)/(auth)) bằng <Redirect>. Nếu return
+  // null ở đây thì navigator không bao giờ mount và app kẹt màn hình đen.
   return (
     <AppProviders>
       <Slot />

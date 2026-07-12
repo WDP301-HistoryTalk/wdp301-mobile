@@ -19,7 +19,7 @@ function escapeSsml(text: string): string {
 
 async function synthesizeSpeech(text: string): Promise<ArrayBuffer> {
   if (!AZURE_SPEECH_KEY || !AZURE_SPEECH_REGION) {
-    throw new Error('Chua cau hinh Azure Speech (thieu key hoac region).');
+    throw new Error('Chưa cấu hình Azure Speech (thiếu key hoặc region).');
   }
 
   const ssml = `<speak version="1.0" xml:lang="vi-VN"><voice name="${AZURE_SPEECH_VOICE}">${escapeSsml(text)}</voice></speak>`;

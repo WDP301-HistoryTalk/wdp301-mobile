@@ -244,12 +244,12 @@ export default function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
       {/* header bar */}
       <View style={s.headerBar}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.backBtn} accessibilityLabel="Quay lại">
           <ArrowLeft size={20} color={TEXT} strokeWidth={2} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Hồ sơ cá nhân</Text>
         {editing ? (
-          <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.7} style={s.backBtn}>
+          <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.7} style={s.backBtn} accessibilityLabel="Hủy chỉnh sửa">
             <X size={20} color={MUTED} strokeWidth={2} />
           </TouchableOpacity>
         ) : (
@@ -297,7 +297,7 @@ export default function ProfileScreen() {
               {/* ── Token & join date stats ──────────────────────── */}
               <View style={s.statsRow}>
                 <View style={[s.statCard, { borderRightWidth: 1, borderRightColor: BORDER }]}>
-                  <Text style={s.statValue}>{profile.token ?? 0}</Text>
+                  <Text style={s.statValue}>{(profile.token ?? 0).toLocaleString('vi-VN')}</Text>
                   <Text style={s.statLabel}>Token còn lại</Text>
                 </View>
                 <View style={s.statCard}>

@@ -11,6 +11,7 @@ import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
   formatContextYear,
+  getContextImageUri,
   type HistoricalContext,
 } from '@/features/historical-contexts/types';
 import { ERA_CARD_BG } from './CharacterCard';
@@ -36,7 +37,7 @@ export function ContextCard({ ctx, onPress, variant = 'full' }: ContextCardProps
 function CompactRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => void }) {
   const ec = ERA_COLORS[ctx.era] ?? ERA_COLORS.ANCIENT;
   const cardBg = ERA_CARD_BG[ctx.era] ?? '#1C0E06';
-  const imgUri = (ctx as any).imageUrl ?? ctx.image;
+  const imgUri = getContextImageUri(ctx);
   const yearTxt = formatContextYear(ctx);
 
   return (
@@ -91,7 +92,7 @@ function CompactRow({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => v
 function FullCard({ ctx, onPress }: { ctx: HistoricalContext; onPress: () => void }) {
   const ec = ERA_COLORS[ctx.era] ?? ERA_COLORS.ANCIENT;
   const cardBg = ERA_CARD_BG[ctx.era] ?? '#1C0E06';
-  const imgUri = (ctx as any).imageUrl ?? ctx.image;
+  const imgUri = getContextImageUri(ctx);
   const yearText = formatContextYear(ctx);
 
   return (
