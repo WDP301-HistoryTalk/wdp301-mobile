@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import { GitCommitHorizontal, LayoutGrid, Search } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ContextCard } from '@/components/cards';
+import { ContextTimeline } from './context-timeline';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -25,6 +26,7 @@ import {
 } from '@/features/historical-contexts/types';
 
 type EraFilter = ContextEra | 'ALL';
+type ViewMode = 'grid' | 'timeline';
 
 const ERA_FILTER: { key: EraFilter; label: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
@@ -68,21 +70,57 @@ function SkeletonList() {
 function ListHeader({
   search,
   era,
+  view,
   onSearchChange,
   onEraChange,
+  onViewChange,
 }: {
   search: string;
   era: EraFilter;
+  view: ViewMode;
   onSearchChange: (v: string) => void;
   onEraChange: (v: EraFilter) => void;
+  onViewChange: (v: ViewMode) => void;
 }) {
   return (
     <View>
-      <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
-        <Heading size="3xl">Bối cảnh lịch sử</Heading>
-        <Text size="sm" muted className="mt-1">
-          Khám phá các sự kiện và giai đoạn lịch sử nổi bật
-        </Text>
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 16,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <Heading size="3xl">Bối cảnh lịch sử</Heading>
+          <Text size="sm" muted className="mt-1">
+            Khám phá các sự kiện và giai đoạn lịch sử nổi bật
+          </Text>
+        </View>
+
+        {/* Chuyển chế độ xem: lưới ⇄ dòng thời gian (giống trang Events bên web) */}
+        <View style={viewToggleStyles.wrap}>
+          <TouchableOpacity
+            onPress={() => onViewChange('grid')}
+            activeOpacity={0.7}
+            style={[viewToggleStyles.btn, view === 'grid' && viewToggleStyles.btnActive]}
+            accessibilityLabel="Xem dạng lưới"
+          >
+            <LayoutGrid size={15} color={view === 'grid' ? '#fff' : MUTED} strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onViewChange('timeline')}
+            activeOpacity={0.7}
+            style={[viewToggleStyles.btn, view === 'timeline' && viewToggleStyles.btnActive]}
+            accessibilityLabel="Xem dạng dòng thời gian"
+          >
+            <GitCommitHorizontal size={15} color={view === 'timeline' ? '#fff' : MUTED} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View
@@ -181,6 +219,8 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebounced] = useState('');
   const [era, setEra] = useState<EraFilter>('ALL');
+  // Mặc định xem theo dòng thời gian (giống trang Events bên web)
+  const [view, setView] = useState<ViewMode>('timeline');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = (text: string) => {
@@ -203,39 +243,56 @@ export default function ExploreScreen() {
       <ListHeader
         search={search}
         era={era}
+        view={view}
         onSearchChange={handleSearchChange}
         onEraChange={(v) => setEra(v)}
+        onViewChange={(v) => setView(v)}
       />
-      <FlatList
-        style={{ flex: 1 }}
-        data={isLoading ? [] : contexts}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        renderItem={({ item }) => (
-          <View style={{ flex: 1 }}>
-            <ContextCard
-              ctx={item}
-              variant="full"
-              onPress={() => router.push({ pathname: '/context/[id]', params: { id: item.id } })}
-            />
-          </View>
-        )}
-        ListEmptyComponent={isLoading ? LoadingState : isError ? ErrorState : EmptyState}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
-          ) : null
-        }
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-        }}
-        onEndReachedThreshold={0.4}
-        contentContainerStyle={{ paddingBottom: 130 }}
-        showsVerticalScrollIndicator={false}
-        refreshing={isRefetching}
-        onRefresh={() => void refetch()}
-      />
+      {view === 'timeline' ? (
+        isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState />
+        ) : (
+          <ContextTimeline
+            contexts={contexts}
+            onNearEnd={() => {
+              if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+            }}
+          />
+        )
+      ) : (
+        <FlatList
+          style={{ flex: 1 }}
+          data={isLoading ? [] : contexts}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          renderItem={({ item }) => (
+            <View style={{ flex: 1 }}>
+              <ContextCard
+                ctx={item}
+                variant="full"
+                onPress={() => router.push({ pathname: '/context/[id]', params: { id: item.id } })}
+              />
+            </View>
+          )}
+          ListEmptyComponent={isLoading ? LoadingState : isError ? ErrorState : EmptyState}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
+            ) : null
+          }
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+          }}
+          onEndReachedThreshold={0.4}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          showsVerticalScrollIndicator={false}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -245,5 +302,29 @@ const styles = StyleSheet.create({
   columnWrapper: {
     gap: 10,
     paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+});
+
+const viewToggleStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    padding: 3,
+    gap: 2,
+    marginTop: 4,
+  },
+  btn: {
+    width: 32,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnActive: {
+    backgroundColor: ORANGE,
   },
 });

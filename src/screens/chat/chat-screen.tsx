@@ -1308,7 +1308,10 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            inverted
+            // Chỉ đảo chiều khi có tin nhắn: khi list rỗng mà vẫn inverted,
+            // ListEmptyComponent bị dính transform lật của list (Android lật
+            // cả 2 trục) → chữ hiển thị soi gương.
+            inverted={timelineItems.length > 0}
             data={timelineItems.slice().reverse()}
             keyExtractor={(item) =>
               item.type === "message" ? item.message.id : item.id
@@ -1321,11 +1324,10 @@ export default function ChatScreen() {
                   alignItems: "center",
                   marginTop: 40,
                   gap: 10,
-                  transform: [{ scaleY: -1 }],
                 }}
               >
                 <Text style={{ color: MUTED, fontSize: 14 }}>
-                  Bat dau Cuộc trò chuyện...
+                  Bắt đầu cuộc trò chuyện...
                 </Text>
               </View>
             }
