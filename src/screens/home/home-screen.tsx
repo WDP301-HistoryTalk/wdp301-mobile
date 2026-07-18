@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CharacterCard, ContextCard } from "@/components/cards";
+import { DailyQuestsCard } from "@/components/daily-quests-card";
 import { Heading } from "@/components/ui/heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -230,6 +231,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── Nhiệm vụ hằng ngày + streak ─────────────────────────── */}
+        <DailyQuestsCard />
 
         {/* ── Characters (Featured) [3rd position] ────────────────── */}
         <View style={{ marginBottom: 24 }}>

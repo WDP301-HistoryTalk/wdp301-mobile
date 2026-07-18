@@ -14,6 +14,8 @@ export function useSubmitQuiz() {
       finishQuiz(result);
       void queryClient.invalidateQueries({ queryKey: ['quizzes'] });
       void queryClient.invalidateQueries({ queryKey: ['quiz'] });
+      // Nộp quiz xong → tiến độ nhiệm vụ ngày đổi ngay
+      void queryClient.invalidateQueries({ queryKey: ['gamification', 'today'] });
     },
   });
 }
