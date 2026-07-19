@@ -5,6 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
+import { ScreenBackdrop } from "@/components/screen-backdrop";
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
 
@@ -51,6 +52,7 @@ export default function AppTabs() {
   return (
     <View style={styles.root}>
       <View style={styles.content}>
+        <ScreenBackdrop />
         <Slot />
       </View>
 
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     overflow: "hidden",
+    position: "relative",
   },
   bar: {
     alignItems: "center",

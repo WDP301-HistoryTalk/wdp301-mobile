@@ -134,7 +134,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}

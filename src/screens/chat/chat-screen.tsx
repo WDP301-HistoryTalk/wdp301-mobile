@@ -5,19 +5,16 @@ import * as Speech from "expo-speech";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  Box,
   Coins,
   Ellipsis,
   History,
   MessageCircle,
   Mic,
-  MicOff,
   Phone,
   PhoneOff,
   Send,
   Trash2,
   UserRound,
-  Video,
   Volume2,
 } from "lucide-react-native";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,7 +49,6 @@ import {
   ORANGE_BORDER_SOFT,
   ORANGE_TINT_MUTED,
   ORANGE_TINT_SOLID,
-  ORANGE_TINT_STRONG,
   SURFACE,
   TEXT,
   TEXT2,
@@ -83,7 +79,6 @@ type ChatTimelineItem =
   };
 
 type ActiveCall = {
-  mode: "2D" | "3D";
   startedAt: number;
 };
 
@@ -594,9 +589,6 @@ export default function ChatScreen() {
   const [isCallListening, setIsCallListening] = useState(false);
   const [isCallProcessing, setIsCallProcessing] = useState(false);
   const [isCharacterSpeaking, setIsCharacterSpeaking] = useState(false);
-  // Mic mac dinh luon bat khi vao call — bam mic la mute/unmute, khong phai
-  // bat/tat tung luot noi (xem effect tu dong nghe lai ben duoi).
-  const [isMicMuted, setIsMicMuted] = useState(false);
 
   // Refs mirroring state ma cac callback cua @react-native-voice/voice can
   // doc gia tri moi nhat (cac callback duoc gan 1 lan khi Voice.start(), nen
@@ -605,9 +597,7 @@ export default function ChatScreen() {
   const isCallListeningRef = useRef(false);
   const isCharacterSpeakingRef = useRef(false);
   const isCallProcessingRef = useRef(false);
-  const isMicMutedRef = useRef(false);
-  // Chan goi Voice.start() chong lan trong luc dang khoi dong (xem effect tu
-  // dong nghe lai — nhieu dep doi cung doi dieu kien co the fire gan nhau).
+  // Chan goi Voice.start() chong lan trong luc dang khoi dong.
   const startingListenRef = useRef(false);
   useEffect(() => {
     activeCallRef.current = activeCall;
@@ -621,9 +611,6 @@ export default function ChatScreen() {
   useEffect(() => {
     isCallProcessingRef.current = isCallProcessing;
   }, [isCallProcessing]);
-  useEffect(() => {
-    isMicMutedRef.current = isMicMuted;
-  }, [isMicMuted]);
 
   const nativeVoiceRef = useRef<NativeVoiceLike | null>(null);
   const resolvedCharacterImageUrl =
@@ -796,15 +783,8 @@ export default function ChatScreen() {
     [input, isTyping, router, sending, sendMessage, sessionId, autoSpeak, queryClient],
   );
 
-  function handleStartCall(mode: "2D" | "3D") {
+  function handleStartCall() {
     if (activeCallRef.current) return;
-    if (mode === "3D" && !resolvedCharacterModelUrl) {
-      Alert.alert(
-        "Chưa có model 3D",
-        "Nhân vật này chưa có model 3D để gọi.",
-      );
-      return;
-    }
 
     // Giong web: mo call chi la thao tac UI cuc bo — khong goi backend, khong
     // co trang thai "dang ket noi". Bam la vao call ngay, mic dung duoc lien.
@@ -816,9 +796,8 @@ export default function ChatScreen() {
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
-    setIsMicMuted(false);
-    setActiveCall({ mode, startedAt: Date.now() });
-    // Mic tu bat nghe ngay (xem effect auto-listen) — khong can bam mic truoc.
+    setActiveCall({ startedAt: Date.now() });
+    // Bam mic de bat dau noi luot dau tien (giong web) — khong tu nghe ngay.
   }
 
   function endActiveCall() {
@@ -832,7 +811,6 @@ export default function ChatScreen() {
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
-    setIsMicMuted(false);
     setActiveCall(null);
   }
 
@@ -996,7 +974,6 @@ export default function ChatScreen() {
       isCallListeningRef.current ||
       isCharacterSpeakingRef.current ||
       isCallProcessingRef.current ||
-      isMicMutedRef.current ||
       startingListenRef.current
     ) {
       return;
@@ -1080,9 +1057,8 @@ export default function ChatScreen() {
       }, LISTEN_TIMEOUT_MS);
     } catch (e: any) {
       setIsCallListening(false);
-      // Loi that su (vd: khong co quyen mic) -> tu mute de khong lap lai vo han
-      // (mic mac dinh luon nghe nen se thu lai ngay neu khong chan o day).
-      setIsMicMuted(true);
+      // Loi that su (vd: khong co quyen mic) -> bao 1 lan, khong tu dong lap lai
+      // (mic gio chi bat khi nguoi dung chu dong bam).
       Alert.alert(
         "Không thể bật micro",
         e?.message ??
@@ -1093,35 +1069,9 @@ export default function ChatScreen() {
     }
   }
 
-  // Bam nut mic de mute — dung STT ngay lap tuc va bo transcript dang ghi
-  // (khac finishCallListening: khong gui gi ca, vi nguoi dung chu dong im lang).
-  async function cancelListening() {
-    if (listenTimeoutRef.current) {
-      clearTimeout(listenTimeoutRef.current);
-      listenTimeoutRef.current = null;
-    }
-    setIsCallListening(false);
-    Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
-    callTranscriptRef.current = "";
-    try {
-      await nativeVoiceRef.current?.stop();
-    } catch {
-      // ignore
-    }
-  }
-
-  function toggleMic() {
-    if (isMicMuted) {
-      setIsMicMuted(false); // effect tu dong nghe lai ben duoi
-    } else {
-      setIsMicMuted(true);
-      if (isCallListeningRef.current) void cancelListening();
-    }
-  }
-
-  // STT tu ket thuc 1 luot nghe (nguoi dung dut cau, im lang qua lau, hoac
-  // loi) -> gui neu co transcript. Mic van mac dinh luon nghe nen effect ben
-  // duoi se tu bat lai ngay sau do (tru khi dang mute).
+  // Bam mic de noi (giong web: bam de bat dau nghe, bam lan nua hoac de STT tu
+  // phat hien het cau de dung va gui). Sau khi gui, mic tat va cho response —
+  // khong tu nghe lai, nguoi dung chu dong bam moi khi muon noi luot tiep theo.
   async function finishCallListening() {
     if (!isCallListeningRef.current) return;
     if (listenTimeoutRef.current) {
@@ -1146,22 +1096,6 @@ export default function ChatScreen() {
       await sendCallMessage(transcript);
     }
   }
-
-  // Mic mac dinh luon nghe trong call: tu bat lai moi khi co dieu kien thuan
-  // loi (vua vao call, nhan vat vua noi xong, vua xu ly xong, vua unmute) —
-  // nguoi dung chi can bam mic de mute/unmute, khong phai bam de noi tung luot.
-  // startCallListening() chi doc gia tri qua ref (xem cac *Ref o tren) va tu
-  // guard re-entry (startingListenRef) nen an toan khi goi tu effect; cac
-  // setState ben trong no chay sau await (Voice.isAvailable/start), khong
-  // dong bo trong luot render cua effect nay.
-  /* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!activeCall || isMicMuted || isCallProcessing || isCharacterSpeaking || isCallListening) {
-      return;
-    }
-    void startCallListening();
-  }, [activeCall, isMicMuted, isCallProcessing, isCharacterSpeaking, isCallListening]);
-  /* eslint-enable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 
   // Memo hoá: tránh cấp cho FlatList 1 mảng data mới ở mọi lần render (vd khi
   // gõ input) — trước đây `.slice().reverse()` chạy inline trong JSX nên luôn
@@ -1188,7 +1122,7 @@ export default function ChatScreen() {
   return (
     // Tab bar bi an trong man hoi thoai (xem app-tabs.tsx) nen phai tu chua
     // safe-area duoi — giong quiz-play.
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1222,7 +1156,19 @@ export default function ChatScreen() {
             </View>
           ) : null}
 
-          <View style={s.headerAvatar}>
+          {!activeCall ? (
+            <TouchableOpacity
+              onPress={handleStartCall}
+              activeOpacity={0.7}
+              disabled={sending || isTyping}
+              style={[s.headerBtn, { marginLeft: 8 }, (sending || isTyping) && { opacity: 0.4 }]}
+              accessibilityLabel="Gọi thoại"
+            >
+              <Phone size={18} color={ORANGE} strokeWidth={2} />
+            </TouchableOpacity>
+          ) : null}
+
+          <View style={[s.headerAvatar, { marginLeft: 8 }]}>
             {resolvedCharacterImageUrl ? (
               <Image
                 source={{ uri: resolvedCharacterImageUrl }}
@@ -1331,35 +1277,21 @@ export default function ChatScreen() {
         {activeCall ? (
           <View style={s.callOverlay}>
             <View style={s.callStage}>
-              {activeCall.mode === "2D" ? (
-                resolvedCharacterImageUrl ? (
-                  <Image
-                    source={{ uri: resolvedCharacterImageUrl }}
-                    style={s.callPortrait}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={s.callInitial}>
-                    <Text style={s.callInitialText}>{initial}</Text>
-                  </View>
-                )
+              {resolvedCharacterImageUrl ? (
+                <Image
+                  source={{ uri: resolvedCharacterImageUrl }}
+                  style={s.callPortrait}
+                  contentFit="cover"
+                />
               ) : (
-                <View style={s.callModelStage}>
-                  <View style={s.callModelBox}>
-                    <Box size={54} color="#fff" strokeWidth={1.7} />
-                  </View>
-                  <Text style={s.callModelTitle}>3D model ready</Text>
-                  <Text style={s.callModelUrl} numberOfLines={2}>
-                    {resolvedCharacterModelUrl}
-                  </Text>
+                <View style={s.callInitial}>
+                  <Text style={s.callInitialText}>{initial}</Text>
                 </View>
               )}
 
               <View style={s.callShade} />
               <View style={s.callInfo}>
-                <Text style={s.callModeLabel}>
-                  {activeCall.mode === "2D" ? "Call 2D" : "Call 3D"}
-                </Text>
+                <Text style={s.callModeLabel}>Call</Text>
                 <Text style={s.callName}>{characterName}</Text>
                 {isCharacterSpeaking ? (
                   <View style={s.speakingBadge}>
@@ -1376,18 +1308,21 @@ export default function ChatScreen() {
               <View style={s.callControls}>
                 <Animated.View style={{ transform: [{ scale: micScale }] }}>
                   <Pressable
-                    onPress={toggleMic}
-                    accessibilityLabel={isMicMuted ? "Bật mic" : "Tắt mic (mute)"}
+                    disabled={isCallProcessing || isCharacterSpeaking}
+                    onPress={() =>
+                      isCallListening
+                        ? void finishCallListening()
+                        : void startCallListening()
+                    }
+                    accessibilityLabel={isCallListening ? "Dừng nói và gửi" : "Bấm để nói"}
                     style={[
                       s.callControlBtn,
                       isCallListening && s.callControlBtnActive,
-                      isMicMuted && { opacity: 0.5 },
+                      (isCallProcessing || isCharacterSpeaking) && { opacity: 0.5 },
                     ]}
                   >
                     {isCallProcessing ? (
                       <ThreeDotsLoader color="#fff" size={6} />
-                    ) : isMicMuted ? (
-                      <MicOff size={20} color="#fff" strokeWidth={2} />
                     ) : (
                       <Mic size={20} color="#fff" strokeWidth={2} />
                     )}
@@ -1402,32 +1337,6 @@ export default function ChatScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        ) : null}
-
-        {!activeCall ? (
-          <View style={s.callActions}>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              style={s.callActionBtn}
-              onPress={() => handleStartCall("2D")}
-              disabled={sending || isTyping}
-            >
-              <Video size={15} color={ORANGE} strokeWidth={2} />
-              <Text style={s.callActionText}>Call 2D</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              style={[
-                s.callActionBtn,
-                !resolvedCharacterModelUrl && { opacity: 0.45 },
-              ]}
-              onPress={() => handleStartCall("3D")}
-              disabled={sending || isTyping || !resolvedCharacterModelUrl}
-            >
-              <Box size={15} color={ORANGE} strokeWidth={2} />
-              <Text style={s.callActionText}>Call 3D</Text>
-            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -1674,36 +1583,6 @@ const s = StyleSheet.create({
     fontSize: 120,
     fontWeight: "900",
   },
-  callModelStage: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    backgroundColor: "#111827",
-  },
-  callModelBox: {
-    width: 110,
-    height: 110,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ORANGE_TINT_STRONG,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
-  },
-  callModelTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "900",
-    marginTop: 18,
-  },
-  callModelUrl: {
-    color: "rgba(255,255,255,0.56)",
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 8,
-    textAlign: "center",
-  },
   callShade: {
     position: "absolute",
     left: 0,
@@ -1783,32 +1662,6 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#dc2626",
-  },
-  callActions: {
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: BG,
-  },
-  callActionBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ORANGE_TINT_STRONG,
-    backgroundColor: CARD,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 7,
-  },
-  callActionText: {
-    color: TEXT,
-    fontSize: 13,
-    fontWeight: "800",
   },
   messageList: {
     paddingHorizontal: 16,

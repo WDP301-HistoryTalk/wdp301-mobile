@@ -238,7 +238,7 @@ export default function ExploreScreen() {
   const contexts = data?.pages.flatMap((p) => p.content) ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={['top']}>
       {/* Fixed header — outside FlatList to avoid VirtualizedList key conflicts */}
       <ListHeader
         search={search}

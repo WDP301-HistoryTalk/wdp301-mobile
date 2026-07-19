@@ -162,7 +162,7 @@ export default function QuizListScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={["top"]}>
       {/* header */}
       <View
         style={{

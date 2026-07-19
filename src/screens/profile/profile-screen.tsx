@@ -241,7 +241,7 @@ export default function ProfileScreen() {
 
   // ── render ──────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={['top']}>
       {/* header bar */}
       <View style={s.headerBar}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.backBtn} accessibilityLabel="Quay lại">

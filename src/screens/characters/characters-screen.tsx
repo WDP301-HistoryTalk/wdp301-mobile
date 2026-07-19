@@ -189,7 +189,7 @@ export default function CharactersScreen() {
   const characters = data?.pages.flatMap((p) => p.content) ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={['top']}>
       <FlatList
         data={isLoading ? [] : characters}
         numColumns={2}
