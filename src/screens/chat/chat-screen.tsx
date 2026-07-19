@@ -11,6 +11,7 @@ import {
   History,
   MessageCircle,
   Mic,
+  MicOff,
   Phone,
   PhoneOff,
   Send,
@@ -19,7 +20,7 @@ import {
   Video,
   Volume2,
 } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -67,6 +68,9 @@ import type { ChatMessage, ChatMessageType } from "@/features/chat/types";
 import { speakWithAzure, stopAzureSpeech } from "@/lib/azure-speech";
 
 const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
+// Nghe qua lau ma STT khong tu ket thuc (vd im lang, khong co mic that) —
+// tu dong dung nghe va gui sau khoang thoi gian nay.
+const LISTEN_TIMEOUT_MS = 8000;
 
 type ChatTimelineItem =
   | { type: "message"; message: ChatMessage }
@@ -257,66 +261,82 @@ function TypingDots() {
   );
 }
 
-// Vien song lan toa quanh call stage khi nhan vat dang noi (khong lam anh nhay)
-function SpeakingRipple({ active }: { active: boolean }) {
-  const ring1 = useRef(new Animated.Value(0)).current;
-  const ring2 = useRef(new Animated.Value(0)).current;
+// 3 cham nhap nhay tuan tu — dung khi mic dang cho xu ly (isCallProcessing),
+// thay cho ActivityIndicator mac dinh (phong theo assets/images/3-dots-scale.svg).
+function ThreeDotsLoader({ color = "#fff", size = 6 }: { color?: string; size?: number }) {
+  const d1 = useRef(new Animated.Value(1)).current;
+  const d2 = useRef(new Animated.Value(1)).current;
+  const d3 = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (!active) {
-      ring1.setValue(0);
-      ring2.setValue(0);
-      return;
-    }
-
-    const makeLoop = (value: Animated.Value) =>
+    const dots = [d1, d2, d3];
+    const loops = dots.map((v, i) =>
       Animated.loop(
-        Animated.timing(value, {
-          toValue: 1,
-          duration: 1600,
-          useNativeDriver: true,
-        }),
-      );
-
-    const loop1 = makeLoop(ring1);
-    const loop2 = makeLoop(ring2);
-    loop1.start();
-    const delay = setTimeout(() => loop2.start(), 800);
-
-    return () => {
-      clearTimeout(delay);
-      loop1.stop();
-      loop2.stop();
-    };
-  }, [active, ring1, ring2]);
-
-  if (!active) return null;
+        Animated.sequence([
+          Animated.delay(i * 150),
+          Animated.timing(v, { toValue: 0.35, duration: 375, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 1, duration: 375, useNativeDriver: true }),
+          Animated.delay((2 - i) * 150),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [d1, d2, d3]);
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {[ring1, ring2].map((ring, i) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: size * 0.7 }}>
+      {[d1, d2, d3].map((v, i) => (
         <Animated.View
           key={i}
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              borderRadius: 18,
-              borderWidth: 2.5,
-              borderColor: ORANGE,
-              opacity: ring.interpolate({
-                inputRange: [0, 0.15, 1],
-                outputRange: [0, 0.6, 0],
-              }),
-              transform: [
-                {
-                  scale: ring.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.94, 1.04],
-                  }),
-                },
-              ],
-            },
-          ]}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: color,
+            transform: [{ scale: v }],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Vach am thanh (equalizer) — dung khi mic dang ghi am nguoi dung noi
+// (isCallListening), thay cho icon Mic tinh (phong theo assets/images/bars.svg).
+function VoiceBars({ color = "#fff", barWidth = 3, height = 18 }: { color?: string; barWidth?: number; height?: number }) {
+  const b1 = useRef(new Animated.Value(0.3)).current;
+  const b2 = useRef(new Animated.Value(0.3)).current;
+  const b3 = useRef(new Animated.Value(0.3)).current;
+  const b4 = useRef(new Animated.Value(0.3)).current;
+  const b5 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const bars = [b1, b2, b3, b4, b5];
+    const loops = bars.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(Math.abs(i - 2) * 90),
+          Animated.timing(v, { toValue: 1, duration: 260, useNativeDriver: false }),
+          Animated.timing(v, { toValue: 0.25, duration: 260, useNativeDriver: false }),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [b1, b2, b3, b4, b5]);
+
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, height }}>
+      {[b1, b2, b3, b4, b5].map((v, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            width: barWidth,
+            borderRadius: barWidth / 2,
+            backgroundColor: color,
+            height: v.interpolate({ inputRange: [0, 1], outputRange: [height * 0.3, height] }),
+          }}
         />
       ))}
     </View>
@@ -324,7 +344,10 @@ function SpeakingRipple({ active }: { active: boolean }) {
 }
 
 // Keep voice call card
-function VoiceCallCard({
+// Memo hoá: item.message các bubble khác giữ nguyên reference sau mỗi token
+// stream (xem handleSend > onToken), nên component này chỉ cần re-render khi
+// chính "item" của nó đổi — tránh re-render toàn bộ lịch sử chat mỗi token.
+const VoiceCallCard = memo(function VoiceCallCard({
   item,
 }: {
   item: Extract<ChatTimelineItem, { type: "voice-call" }>;
@@ -378,9 +401,12 @@ function VoiceCallCard({
       ) : null}
     </View>
   );
-}
+});
 
-function MessageBubble({
+// Memo hoá: message reference chỉ đổi khi chính tin nhắn đó đổi (xem
+// handleSend > onToken cập nhật đúng 1 phần tử trong mảng messages), nên các
+// bubble không liên quan không cần re-render mỗi lần 1 token mới stream về.
+const MessageBubble = memo(function MessageBubble({
   message,
   initial,
   characterImageUrl,
@@ -491,7 +517,7 @@ function MessageBubble({
       {clock ? <Text style={[s.msgTime, { marginLeft: 38 }]}>{clock}</Text> : null}
     </View>
   );
-}
+});
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -562,9 +588,15 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const micScale = useRef(new Animated.Value(1)).current;
   const callTranscriptRef = useRef("");
+  // Timeout an toan: neu STT khong tu ket thuc (vd im lang keo dai, khong co
+  // mic that tren emulator) thi tu dong dung nghe va gui sau LISTEN_TIMEOUT_MS.
+  const listenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isCallListening, setIsCallListening] = useState(false);
   const [isCallProcessing, setIsCallProcessing] = useState(false);
   const [isCharacterSpeaking, setIsCharacterSpeaking] = useState(false);
+  // Mic mac dinh luon bat khi vao call — bam mic la mute/unmute, khong phai
+  // bat/tat tung luot noi (xem effect tu dong nghe lai ben duoi).
+  const [isMicMuted, setIsMicMuted] = useState(false);
 
   // Refs mirroring state ma cac callback cua @react-native-voice/voice can
   // doc gia tri moi nhat (cac callback duoc gan 1 lan khi Voice.start(), nen
@@ -573,6 +605,10 @@ export default function ChatScreen() {
   const isCallListeningRef = useRef(false);
   const isCharacterSpeakingRef = useRef(false);
   const isCallProcessingRef = useRef(false);
+  const isMicMutedRef = useRef(false);
+  // Chan goi Voice.start() chong lan trong luc dang khoi dong (xem effect tu
+  // dong nghe lai — nhieu dep doi cung doi dieu kien co the fire gan nhau).
+  const startingListenRef = useRef(false);
   useEffect(() => {
     activeCallRef.current = activeCall;
   }, [activeCall]);
@@ -585,6 +621,9 @@ export default function ChatScreen() {
   useEffect(() => {
     isCallProcessingRef.current = isCallProcessing;
   }, [isCallProcessing]);
+  useEffect(() => {
+    isMicMutedRef.current = isMicMuted;
+  }, [isMicMuted]);
 
   const nativeVoiceRef = useRef<NativeVoiceLike | null>(null);
   const resolvedCharacterImageUrl =
@@ -636,6 +675,7 @@ export default function ChatScreen() {
       stopAzureSpeech();
       void nativeVoiceRef.current?.destroy();
       nativeVoiceRef.current?.removeAllListeners();
+      if (listenTimeoutRef.current) clearTimeout(listenTimeoutRef.current);
     },
     [],
   );
@@ -776,16 +816,23 @@ export default function ChatScreen() {
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
+    setIsMicMuted(false);
     setActiveCall({ mode, startedAt: Date.now() });
+    // Mic tu bat nghe ngay (xem effect auto-listen) — khong can bam mic truoc.
   }
 
   function endActiveCall() {
     activeCallRef.current = null;
+    if (listenTimeoutRef.current) {
+      clearTimeout(listenTimeoutRef.current);
+      listenTimeoutRef.current = null;
+    }
     void nativeVoiceRef.current?.stop().catch(() => {});
     void stopAzureSpeech();
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
+    setIsMicMuted(false);
     setActiveCall(null);
   }
 
@@ -948,10 +995,13 @@ export default function ChatScreen() {
       !activeCallRef.current ||
       isCallListeningRef.current ||
       isCharacterSpeakingRef.current ||
-      isCallProcessingRef.current
+      isCallProcessingRef.current ||
+      isMicMutedRef.current ||
+      startingListenRef.current
     ) {
       return;
     }
+    startingListenRef.current = true;
     try {
       if (!NativeModules.RCTVoice) {
         Alert.alert(
@@ -1020,22 +1070,64 @@ export default function ChatScreen() {
         return;
       }
       setIsCallListening(true);
+
+      // An toan: neu STT khong tu bao ket qua (im lang keo dai, khong co mic
+      // that tren emulator...) thi tu dong dung nghe va gui sau 1 khoang thoi
+      // gian co dinh, tranh mic ket o trang thai "dang nghe" mai mai.
+      if (listenTimeoutRef.current) clearTimeout(listenTimeoutRef.current);
+      listenTimeoutRef.current = setTimeout(() => {
+        void finishCallListening();
+      }, LISTEN_TIMEOUT_MS);
     } catch (e: any) {
       setIsCallListening(false);
-      // Loi that su (vd: khong co quyen mic) -> bao 1 lan, khong tu dong lap lai vo han.
+      // Loi that su (vd: khong co quyen mic) -> tu mute de khong lap lai vo han
+      // (mic mac dinh luon nghe nen se thu lai ngay neu khong chan o day).
+      setIsMicMuted(true);
       Alert.alert(
         "Không thể bật micro",
         e?.message ??
         "Cần chạy bằng development build/native build sau khi cài @react-native-voice/voice.",
       );
+    } finally {
+      startingListenRef.current = false;
     }
   }
 
-  // Bam mic de noi (giong het nut mic o thanh nhap text): bam 1 lan de bat
-  // dau ghi, bam lan nua (hoac de STT tu phat hien het cau) de dung va gui.
-  // Khong tu dong nghe lai — nguoi dung chu dong bam moi khi muon noi tiep.
+  // Bam nut mic de mute — dung STT ngay lap tuc va bo transcript dang ghi
+  // (khac finishCallListening: khong gui gi ca, vi nguoi dung chu dong im lang).
+  async function cancelListening() {
+    if (listenTimeoutRef.current) {
+      clearTimeout(listenTimeoutRef.current);
+      listenTimeoutRef.current = null;
+    }
+    setIsCallListening(false);
+    Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
+    callTranscriptRef.current = "";
+    try {
+      await nativeVoiceRef.current?.stop();
+    } catch {
+      // ignore
+    }
+  }
+
+  function toggleMic() {
+    if (isMicMuted) {
+      setIsMicMuted(false); // effect tu dong nghe lai ben duoi
+    } else {
+      setIsMicMuted(true);
+      if (isCallListeningRef.current) void cancelListening();
+    }
+  }
+
+  // STT tu ket thuc 1 luot nghe (nguoi dung dut cau, im lang qua lau, hoac
+  // loi) -> gui neu co transcript. Mic van mac dinh luon nghe nen effect ben
+  // duoi se tu bat lai ngay sau do (tru khi dang mute).
   async function finishCallListening() {
     if (!isCallListeningRef.current) return;
+    if (listenTimeoutRef.current) {
+      clearTimeout(listenTimeoutRef.current);
+      listenTimeoutRef.current = null;
+    }
     setIsCallListening(false);
     Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
 
@@ -1054,6 +1146,44 @@ export default function ChatScreen() {
       await sendCallMessage(transcript);
     }
   }
+
+  // Mic mac dinh luon nghe trong call: tu bat lai moi khi co dieu kien thuan
+  // loi (vua vao call, nhan vat vua noi xong, vua xu ly xong, vua unmute) —
+  // nguoi dung chi can bam mic de mute/unmute, khong phai bam de noi tung luot.
+  // startCallListening() chi doc gia tri qua ref (xem cac *Ref o tren) va tu
+  // guard re-entry (startingListenRef) nen an toan khi goi tu effect; cac
+  // setState ben trong no chay sau await (Voice.isAvailable/start), khong
+  // dong bo trong luot render cua effect nay.
+  /* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!activeCall || isMicMuted || isCallProcessing || isCharacterSpeaking || isCallListening) {
+      return;
+    }
+    void startCallListening();
+  }, [activeCall, isMicMuted, isCallProcessing, isCharacterSpeaking, isCallListening]);
+  /* eslint-enable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
+
+  // Memo hoá: tránh cấp cho FlatList 1 mảng data mới ở mọi lần render (vd khi
+  // gõ input) — trước đây `.slice().reverse()` chạy inline trong JSX nên luôn
+  // tạo mảng mới, khiến FlatList nghĩ toàn bộ data đã đổi mỗi lần render.
+  const listData = useMemo(
+    () => timelineItems.slice().reverse(),
+    [timelineItems],
+  );
+
+  const renderTimelineItem = useCallback(
+    ({ item }: { item: ChatTimelineItem }) =>
+      item.type === "voice-call" ? (
+        <VoiceCallCard item={item} />
+      ) : (
+        <MessageBubble
+          message={item.message}
+          initial={initial}
+          characterImageUrl={resolvedCharacterImageUrl}
+        />
+      ),
+    [initial, resolvedCharacterImageUrl],
+  );
 
   return (
     // Tab bar bi an trong man hoi thoai (xem app-tabs.tsx) nen phai tu chua
@@ -1226,36 +1356,38 @@ export default function ChatScreen() {
               )}
 
               <View style={s.callShade} />
-              <SpeakingRipple active={isCharacterSpeaking} />
               <View style={s.callInfo}>
                 <Text style={s.callModeLabel}>
                   {activeCall.mode === "2D" ? "Call 2D" : "Call 3D"}
                 </Text>
                 <Text style={s.callName}>{characterName}</Text>
-                <Text style={s.callTimer}>
-                  {formatCallDuration(callElapsed)}
-                </Text>
+                {isCharacterSpeaking ? (
+                  <View style={s.speakingBadge}>
+                    <VoiceBars color="#fff" barWidth={3} height={14} />
+                    <Text style={s.speakingBadgeText}>Đang nói...</Text>
+                  </View>
+                ) : (
+                  <Text style={s.callTimer}>
+                    {formatCallDuration(callElapsed)}
+                  </Text>
+                )}
               </View>
 
               <View style={s.callControls}>
                 <Animated.View style={{ transform: [{ scale: micScale }] }}>
                   <Pressable
-                    disabled={isCallProcessing || isCharacterSpeaking}
-                    onPress={() =>
-                      isCallListening
-                        ? void finishCallListening()
-                        : void startCallListening()
-                    }
+                    onPress={toggleMic}
+                    accessibilityLabel={isMicMuted ? "Bật mic" : "Tắt mic (mute)"}
                     style={[
                       s.callControlBtn,
                       isCallListening && s.callControlBtnActive,
-                      (isCallProcessing || isCharacterSpeaking) && {
-                        opacity: 0.5,
-                      },
+                      isMicMuted && { opacity: 0.5 },
                     ]}
                   >
                     {isCallProcessing ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ThreeDotsLoader color="#fff" size={6} />
+                    ) : isMicMuted ? (
+                      <MicOff size={20} color="#fff" strokeWidth={2} />
                     ) : (
                       <Mic size={20} color="#fff" strokeWidth={2} />
                     )}
@@ -1312,7 +1444,7 @@ export default function ChatScreen() {
             // ListEmptyComponent bị dính transform lật của list (Android lật
             // cả 2 trục) → chữ hiển thị soi gương.
             inverted={timelineItems.length > 0}
-            data={timelineItems.slice().reverse()}
+            data={listData}
             keyExtractor={(item) =>
               item.type === "message" ? item.message.id : item.id
             }
@@ -1331,17 +1463,7 @@ export default function ChatScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item }) =>
-              item.type === "voice-call" ? (
-                <VoiceCallCard item={item} />
-              ) : (
-                <MessageBubble
-                  message={item.message}
-                  initial={initial}
-                  characterImageUrl={resolvedCharacterImageUrl}
-                />
-              )
-            }
+            renderItem={renderTimelineItem}
           />
         )}
 
@@ -1614,6 +1736,21 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginTop: 6,
+  },
+  speakingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 6,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  speakingBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
   callControls: {
     position: "absolute",
