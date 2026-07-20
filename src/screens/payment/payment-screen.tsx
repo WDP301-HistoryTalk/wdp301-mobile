@@ -89,7 +89,7 @@ export default function PaymentScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
       <View style={s.headerBar}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.iconBtn}>
           <ArrowLeft size={20} color={TEXT} strokeWidth={2} />

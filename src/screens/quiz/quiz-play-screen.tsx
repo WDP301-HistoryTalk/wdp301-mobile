@@ -137,7 +137,7 @@ export default function QuizPlayScreen() {
   // No active session guard
   if (!active) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <AlertCircle size={40} color={MUTED} strokeWidth={1.5} />
         <Text style={{ color: MUTED }}>Không có bài quiz đang chạy</Text>
         <TouchableOpacity onPress={() => router.replace('/quiz')} style={s.pill}>
@@ -154,7 +154,7 @@ export default function QuizPlayScreen() {
   const timerWarning = hasTimeLimit && timeLeft <= 60;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={s.header}>

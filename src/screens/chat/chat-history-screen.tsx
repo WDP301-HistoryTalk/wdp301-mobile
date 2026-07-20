@@ -354,7 +354,7 @@ export default function ChatHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={["top"]}>
       <View style={s.header}>
         <Pressable onPress={() => router.back()} style={s.headerBtn}>
           <ArrowLeft size={20} color={TEXT} />

@@ -159,7 +159,7 @@ export default function QuizResultScreen() {
 
   if (sessionId && isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={ORANGE} />
       </SafeAreaView>
     );
@@ -167,7 +167,7 @@ export default function QuizResultScreen() {
 
   if (!finished) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 20 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 20 }}>
         <View style={{ alignItems: 'center' }}>
           <XCircle size={48} color={MUTED} strokeWidth={1.5} style={{ marginBottom: 12 }} />
           <Text style={{ color: TEXT, fontSize: 18, fontWeight: '700', marginBottom: 4 }}>Không có kết quả</Text>
@@ -204,7 +204,7 @@ export default function QuizResultScreen() {
     : (correctCount / totalQuestions) * 10;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}

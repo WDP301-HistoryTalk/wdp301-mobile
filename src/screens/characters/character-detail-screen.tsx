@@ -167,7 +167,7 @@ export default function CharacterDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }}>
         <Spinner size="large" />
       </View>
     );
@@ -175,7 +175,7 @@ export default function CharacterDetailScreen() {
 
   if (isError || !char) {
     return (
-      <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
         <Heading size="md" className="mb-3 text-center">Không tìm thấy nhân vật</Heading>
         <TouchableOpacity onPress={() => router.back()}>
           <Text size="sm" className="text-primary-500 font-semibold">← Quay lại</Text>
@@ -192,7 +192,7 @@ export default function CharacterDetailScreen() {
   const dateRange = [bornDate, deathDate].filter(Boolean).join('  –  ');
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}

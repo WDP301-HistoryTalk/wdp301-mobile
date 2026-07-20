@@ -60,7 +60,7 @@ export default function ChatHistoryScreen() {
     : allSessions;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.backBtn}>
           <ArrowLeft size={20} color={TEXT} strokeWidth={2} />

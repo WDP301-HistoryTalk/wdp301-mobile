@@ -332,7 +332,7 @@ export default function ContextDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: BG,
+          backgroundColor: "transparent",
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -347,7 +347,7 @@ export default function ContextDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: BG,
+          backgroundColor: "transparent",
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 20,
@@ -381,7 +381,7 @@ export default function ContextDetailScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
+    <View style={{ flex: 1, backgroundColor: "transparent" }}>
       {shouldShowVideo ? (
         <IntroVideo source={videoUri} title={ctx.name} onClose={closeVideo} />
       ) : null}
