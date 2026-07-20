@@ -18,7 +18,6 @@ import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
-  BG,
   BORDER,
   MUTED,
   ORANGE,

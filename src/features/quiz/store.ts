@@ -13,6 +13,7 @@ interface FinishedQuiz {
   questions: QuizQuestion[];
   userAnswers: Record<string, number>;
   quizTitle: string;
+  quizId: string;
 }
 
 interface QuizStore {
@@ -52,6 +53,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
         questions: active.session.questions,
         userAnswers: active.userAnswers,
         quizTitle: active.session.title,
+        quizId: active.session.quizId,
       },
       active: null,
     });

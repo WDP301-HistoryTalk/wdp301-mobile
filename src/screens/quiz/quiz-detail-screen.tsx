@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Clock, Play, Star, Timer, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { ArrowLeft, Clock, Play, Star, Timer, User, Users } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet,
   Switch, TextInput, TouchableOpacity, View,
@@ -45,6 +45,26 @@ function StatRow({ icon: Icon, label, value, color }: {
   );
 }
 
+// Danh gia trung binh dang 5 sao — chi hien khi da co it nhat 1 luot danh gia.
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+      <View style={{ flexDirection: 'row', gap: 2 }}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Star
+            key={i}
+            size={16}
+            color={AMBER}
+            fill={i <= Math.round(rating) ? AMBER : 'transparent'}
+            strokeWidth={1.5}
+          />
+        ))}
+      </View>
+      <Text style={{ color: MUTED, fontSize: 13, fontWeight: '600' }}>{rating.toFixed(1)}/5</Text>
+    </View>
+  );
+}
+
 export default function QuizDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const resolvedId = Array.isArray(id) ? id[0] : id;
@@ -56,6 +76,14 @@ export default function QuizDetailScreen() {
 
   const [timeEnabled, setTimeEnabled] = useState(false);
   const [timeMins, setTimeMins] = useState('10');
+  // Gợi ý thời gian theo durationSeconds của quiz — chỉ set 1 lần khi data
+  // vừa tải xong, không ghi đè nếu người dùng đã tự gõ số phút khác.
+  const didSuggestTimeRef = useRef(false);
+  useEffect(() => {
+    if (didSuggestTimeRef.current || !quiz?.durationSeconds) return;
+    didSuggestTimeRef.current = true;
+    setTimeMins(String(Math.max(1, Math.round(quiz.durationSeconds / 60))));
+  }, [quiz?.durationSeconds]);
 
   const ec = quiz ? ERA_COLORS[quiz.era as keyof typeof ERA_COLORS] : undefined;
   const eraLabel = quiz ? (ERA_LABELS[quiz.era as keyof typeof ERA_LABELS] ?? quiz.era) : '';
@@ -128,6 +156,16 @@ export default function QuizDetailScreen() {
           {quiz.contextTitle ? (
             <Text style={ss.contextTitle}>{quiz.contextTitle}</Text>
           ) : null}
+          {quiz.grade || quiz.chapterTitle ? (
+            <Text style={ss.chapterLine}>
+              {quiz.grade ? `Lớp ${quiz.grade}` : ''}
+              {quiz.grade && quiz.chapterTitle ? ' · ' : ''}
+              {quiz.chapterNumber ? `Chương ${quiz.chapterNumber}: ` : ''}
+              {quiz.chapterTitle ?? ''}
+            </Text>
+          ) : null}
+
+          {quiz.rating ? <StarRating rating={quiz.rating} /> : null}
 
           {/* Stats */}
           <View style={ss.statsCard}>
@@ -144,6 +182,17 @@ export default function QuizDetailScreen() {
               value={`${quiz.playCount} lượt`}
               color="#60a5fa"
             />
+            {quiz.userPlayCount ? (
+              <>
+                <View style={ss.divider} />
+                <StatRow
+                  icon={User}
+                  label="Bạn đã làm"
+                  value={`${quiz.userPlayCount} lần`}
+                  color={ORANGE}
+                />
+              </>
+            ) : null}
           </View>
 
           {/* Time limit setting */}
@@ -154,7 +203,11 @@ export default function QuizDetailScreen() {
                 <View>
                   <Text style={{ color: TEXT, fontWeight: '700', fontSize: 15 }}>Giới hạn thời gian</Text>
                   <Text style={{ color: MUTED, fontSize: 12, marginTop: 1 }}>
-                    {timeEnabled ? 'Bài làm có đếm ngược' : 'Không giới hạn'}
+                    {timeEnabled
+                      ? 'Bài làm có đếm ngược'
+                      : quiz.durationSeconds
+                        ? `Không giới hạn · Gợi ý: ${Math.round(quiz.durationSeconds / 60)} phút`
+                        : 'Không giới hạn'}
                   </Text>
                 </View>
               </View>
@@ -226,7 +279,8 @@ const ss = StyleSheet.create({
   headerTitle: { color: TEXT, fontSize: 17, fontWeight: '700' },
 
   title: { color: TEXT, fontSize: 24, fontWeight: '800', lineHeight: 30, marginBottom: 6 },
-  contextTitle: { color: MUTED, fontSize: 13, marginBottom: 18 },
+  contextTitle: { color: MUTED, fontSize: 13, marginBottom: 6 },
+  chapterLine: { color: MUTED, fontSize: 13, marginBottom: 14 },
 
   statsCard: {
     backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,

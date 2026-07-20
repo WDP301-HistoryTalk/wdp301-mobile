@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import {
   AMBER,
-  BG,
   BORDER,
   CARD,
   FontSize,
@@ -122,6 +121,12 @@ function QuizCard({
         >
           {levelLabel}
         </Text>
+        {quiz.rating ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <Star size={11} color={AMBER} fill={AMBER} strokeWidth={0} />
+            <Text style={s.statText}>{quiz.rating.toFixed(1)}</Text>
+          </View>
+        ) : null}
         <Text style={s.statText}>· {quiz.playCount} lượt</Text>
       </View>
     </TouchableOpacity>

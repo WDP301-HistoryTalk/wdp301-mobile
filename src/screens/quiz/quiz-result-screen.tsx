@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle2, ChevronRight, RotateCcw, XCircle, Zap } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { CheckCircle2, ChevronRight, Minus, RotateCcw, TrendingDown, TrendingUp, XCircle, Zap } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, ORANGE_BORDER_STRONG, ORANGE_TINT, ORANGE_TINT_FAINT, RED, TEXT, TEXT2, TEXT_TINT_FAINT } from '@/constants/palette';
 import { quizApi } from '@/features/quiz/api';
+import { useStartQuiz } from '@/features/quiz/hooks/use-start-quiz';
 import { useQuizStore } from '@/features/quiz/store';
+import type { PreviousAttempt } from '@/features/quiz/types';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -76,12 +78,33 @@ function ScoreStats({ correct, wrong, score }: { correct: number; wrong: number;
   );
 }
 
+// So sanh % lan nay voi lan gan nhat truoc do cua cung quiz (chi co khi xem
+// ket qua qua sessionId — xem QuizResultScreen).
+function ComparisonBadge({ percentage, previous }: { percentage: number; previous: PreviousAttempt }) {
+  const delta = percentage - previous.percentage;
+  const Icon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
+  const color = delta > 0 ? GREEN : delta < 0 ? RED : MUTED;
+  const text =
+    delta === 0
+      ? `Bằng lần trước (${previous.percentage}%)`
+      : `${delta > 0 ? '+' : ''}${delta}% so với lần trước (${previous.percentage}%)`;
+
+  return (
+    <View style={[ss.comparisonBadge, { borderColor: `${color}55`, backgroundColor: `${color}14` }]}>
+      <Icon size={13} color={color} strokeWidth={2.25} />
+      <Text style={[ss.comparisonBadgeText, { color }]}>{text}</Text>
+    </View>
+  );
+}
+
 export default function QuizResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const finishedStore = useQuizStore((s) => s.finished);
   const clearAll = useQuizStore((s) => s.clearAll);
+  const { mutateAsync: startQuiz, isPending: retrying } = useStartQuiz();
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'wrong'>('all');
 
   const { data: detailData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['quiz-result-detail', sessionId],
@@ -92,6 +115,7 @@ export default function QuizResultScreen() {
   const finished = sessionId && detailData
     ? {
       quizTitle: detailData.quizTitle,
+      quizId: detailData.quizId,
       result: {
         resultId: detailData.sessionId,
         score: detailData.score,
@@ -115,9 +139,22 @@ export default function QuizResultScreen() {
     router.replace('/quiz');
   }
 
-  function retry() {
+  // Lam lai chinh quiz vua xong ngay lap tuc, khong bat quay ve danh sach roi
+  // tu bam vao lai (xem QuizStore.startQuiz — se dua ve man play voi phien moi).
+  async function retry() {
+    const quizId = finished?.quizId;
     clearAll();
-    router.replace('/quiz');
+    if (!quizId) {
+      router.replace('/quiz');
+      return;
+    }
+    try {
+      await startQuiz({ quizId });
+      router.replace('/quiz/play');
+    } catch (e: any) {
+      Alert.alert('Không thể bắt đầu lại', e?.message ?? 'Vui lòng thử lại từ danh sách quiz.');
+      router.replace('/quiz');
+    }
   }
 
   if (sessionId && isLoading) {
@@ -187,6 +224,10 @@ export default function QuizResultScreen() {
 
           <ScoreStats correct={correctCount} wrong={wrongCount} score={score} />
 
+          {detailData?.previousAttempt && (
+            <ComparisonBadge percentage={percentage} previous={detailData.previousAttempt} />
+          )}
+
           {/* Performance badge */}
           {percentage >= 70 && (
             <View style={ss.performanceBadge}>
@@ -203,10 +244,33 @@ export default function QuizResultScreen() {
             <Text style={ss.sectionSubtitle}>{correctCount}/{questions.length} câu đúng</Text>
           </View>
 
+          {wrongCount > 0 && (
+            <View style={ss.reviewFilterRow}>
+              <TouchableOpacity
+                onPress={() => setReviewFilter('all')}
+                style={[ss.reviewFilterChip, reviewFilter === 'all' && ss.reviewFilterChipActive]}
+              >
+                <Text style={[ss.reviewFilterText, reviewFilter === 'all' && ss.reviewFilterTextActive]}>
+                  Tất cả ({questions.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setReviewFilter('wrong')}
+                style={[ss.reviewFilterChip, reviewFilter === 'wrong' && ss.reviewFilterChipWrong]}
+              >
+                <Text style={[ss.reviewFilterText, reviewFilter === 'wrong' && { color: RED }]}>
+                  Câu sai ({wrongCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {questions.map((q, qi) => {
             const answerIdx = userAnswers[q.questionId];
             const isCorrect = answerIdx === q.correctAnswer;
             const wasAnswered = answerIdx !== undefined;
+
+            if (reviewFilter === 'wrong' && isCorrect) return null;
 
             return (
               <View key={q.questionId} style={ss.reviewCard}>
@@ -295,15 +359,23 @@ export default function QuizResultScreen() {
       {/* ── Action buttons ──────────────────────────────────────────── */}
       <View style={[ss.actions, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
-          onPress={retry}
+          onPress={() => void retry()}
+          disabled={retrying}
           activeOpacity={0.7}
-          style={[ss.actionSecondary]}
+          style={[ss.actionSecondary, retrying && { opacity: 0.6 }]}
         >
-          <RotateCcw size={18} color={ORANGE} strokeWidth={2} />
-          <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 15 }}>Làm lại</Text>
+          {retrying ? (
+            <ActivityIndicator color={ORANGE} size="small" />
+          ) : (
+            <>
+              <RotateCcw size={18} color={ORANGE} strokeWidth={2} />
+              <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 15 }}>Làm lại</Text>
+            </>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={goHome}
+          disabled={retrying}
           activeOpacity={0.85}
           style={ss.actionPrimary}
         >
@@ -424,11 +496,55 @@ const ss = StyleSheet.create({
     fontWeight: '700',
   },
 
+  comparisonBadge: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  comparisonBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginBottom: 16,
+  },
+  reviewFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  reviewFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+  },
+  reviewFilterChipActive: {
+    borderColor: ORANGE,
+    backgroundColor: ORANGE_TINT_FAINT,
+  },
+  reviewFilterChipWrong: {
+    borderColor: RED,
+    backgroundColor: 'rgba(154, 63, 67, 0.08)',
+  },
+  reviewFilterText: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reviewFilterTextActive: {
+    color: ORANGE,
   },
   sectionTitle: {
     color: TEXT,

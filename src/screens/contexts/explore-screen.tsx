@@ -18,7 +18,7 @@ import { ContextTimeline } from './context-timeline';
 import { Heading } from '@/components/ui/heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
+import { BORDER, CARD, MUTED, ORANGE, SURFACE, TEXT } from '@/constants/palette';
 import { ERA_COLORS } from '@/features/characters/types';
 import { useHistoricalContexts } from '@/features/historical-contexts/hooks/use-historical-contexts';
 import {

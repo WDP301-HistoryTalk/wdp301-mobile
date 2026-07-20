@@ -8,6 +8,7 @@ export interface QuizSummary {
   level: QuizLevel;
   era: QuizEra;
   playCount: number;
+  rating?: number;
   contextTitle?: string;
 }
 
@@ -18,6 +19,8 @@ export interface Quiz extends QuizSummary {
   grade?: QuizGrade;
   chapterNumber?: number;
   chapterTitle?: string;
+  /** So lan chinh nguoi dung hien tai da hoan thanh quiz nay (rieng, khac playCount toan he thong). */
+  userPlayCount?: number;
 }
 
 export interface QuizQuestion {
@@ -79,6 +82,12 @@ export interface QuizResultDetailQuestion extends QuizQuestion {
   correct: boolean;
 }
 
+export interface PreviousAttempt {
+  score: number;
+  percentage: number;
+  completedAt: string;
+}
+
 export interface QuizResultDetail {
   sessionId: string;
   quizId: string;
@@ -89,5 +98,6 @@ export interface QuizResultDetail {
   limitedTime: number;
   startedAt: string;
   completedAt: string;
+  previousAttempt?: PreviousAttempt | null;
   questions: QuizResultDetailQuestion[];
 }
