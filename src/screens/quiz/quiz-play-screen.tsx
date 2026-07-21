@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { AlertCircle } from 'lucide-react-native';
+import { AlertCircle, Bookmark, CheckCircle2, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Animated, ScrollView,
@@ -23,6 +23,7 @@ import {
   TEXT2,
 } from '@/constants/palette';
 import { useSubmitQuiz } from '@/features/quiz/hooks/use-submit-quiz';
+import { clearQuizProgress, loadQuizProgress, saveQuizProgress } from '@/features/quiz/progress-storage';
 import { useQuizStore } from '@/features/quiz/store';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
@@ -47,6 +48,17 @@ export default function QuizPlayScreen() {
   const [exitConfirmVisible,   setExitConfirmVisible]   = useState(false);
   const [submitConfirmVisible, setSubmitConfirmVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Cau nguoi dung tu danh dau de quay lai xem truoc khi nop bai (khong gui len server).
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(() => new Set());
+
+  function toggleFlag(questionId: string) {
+    setFlaggedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(questionId)) next.delete(questionId);
+      else next.add(questionId);
+      return next;
+    });
+  }
 
   // Track elapsed with a ref so the interval closure never goes stale
   const elapsedRef       = useRef(0);
@@ -86,6 +98,7 @@ export default function QuizPlayScreen() {
 
     try {
       await submitQuiz({ sessionId: snap.session.sessionId, answers });
+      await clearQuizProgress(snap.session.quizId);
       router.replace(`/quiz/result?sessionId=${snap.session.sessionId}`);
     } catch (e: any) {
       submittingRef.current = false;
@@ -126,6 +139,38 @@ export default function QuizPlayScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.session.sessionId]);
 
+  // Neu session hien tai la khoi phuc tu tien trinh da luu (QuizDetailScreen →
+  // restoreQuiz), lay lai flaggedIds/currentIdx tuong ung tu AsyncStorage.
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    void loadQuizProgress(active.session.quizId).then((saved) => {
+      if (cancelled || !saved || saved.session.sessionId !== active.session.sessionId) return;
+      setFlaggedIds(new Set(saved.flaggedIds));
+      setCurrentIdx(Math.min(saved.currentIdx, Math.max(active.session.questions.length - 1, 0)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.session.sessionId]);
+
+  // Tu dong luu tam tien trinh moi khi tra loi / danh dau / chuyen cau, de
+  // nguoi dung co the tiep tuc neu thoat giua chung (xem QuizDetailScreen).
+  useEffect(() => {
+    if (!active) return;
+    void saveQuizProgress({
+      session: active.session,
+      userAnswers,
+      elapsedSeconds: elapsedRef.current,
+      flaggedIds: Array.from(flaggedIds),
+      currentIdx,
+      practiceMode: active.practiceMode,
+      savedAt: Date.now(),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAnswers, flaggedIds, currentIdx]);
+
   function handleSubmitPress() {
     if (answeredCount < totalQ) {
       setSubmitConfirmVisible(true);
@@ -152,6 +197,9 @@ export default function QuizPlayScreen() {
   const isLast       = currentIdx === totalQ - 1;
   const hasTimeLimit = (active.session.limitedTime ?? 0) > 0;
   const timerWarning = hasTimeLimit && timeLeft <= 60;
+  // Che do luyen tap: lo dap an ngay khi da chon, khoa lai khong cho sua.
+  const revealed        = active.practiceMode && selected !== undefined;
+  const isAnswerCorrect = revealed && selected === question?.correctAnswer;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
@@ -173,6 +221,14 @@ export default function QuizPlayScreen() {
         </Text>
       </View>
 
+      {active.practiceMode && (
+        <View style={s.practiceBadgeWrap}>
+          <View style={s.practiceBadge}>
+            <Text style={s.practiceBadgeText}>Chế độ luyện tập</Text>
+          </View>
+        </View>
+      )}
+
       {/* Progress bar */}
       <View style={s.progressTrack}>
         <Animated.View
@@ -187,32 +243,86 @@ export default function QuizPlayScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: 110 + insets.bottom }}
       >
-        <Text style={s.qCounter}>Câu {currentIdx + 1} / {totalQ}</Text>
+        <View style={s.qCounterRow}>
+          <View style={{ width: 32 }} />
+          <Text style={[s.qCounter, { flex: 1, marginBottom: 0 }]}>Câu {currentIdx + 1} / {totalQ}</Text>
+          <TouchableOpacity
+            onPress={() => question && toggleFlag(question.questionId)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={s.flagBtn}
+          >
+            <Bookmark
+              size={18}
+              color={question && flaggedIds.has(question.questionId) ? ORANGE : MUTED}
+              fill={question && flaggedIds.has(question.questionId) ? ORANGE : 'transparent'}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
+        </View>
 
         <View style={s.questionCard}>
           <Text style={s.questionText}>{question?.content}</Text>
         </View>
 
+        {active.practiceMode && revealed && question && (
+          <View style={[s.feedbackBanner, isAnswerCorrect ? s.feedbackCorrect : s.feedbackWrong]}>
+            {isAnswerCorrect ? (
+              <CheckCircle2 size={18} color={GREEN} strokeWidth={2.25} />
+            ) : (
+              <XCircle size={18} color={RED} strokeWidth={2.25} />
+            )}
+            <Text style={[s.feedbackText, { color: isAnswerCorrect ? GREEN : RED }]}>
+              {isAnswerCorrect ? 'Chính xác!' : `Sai rồi — đáp án đúng là ${OPTION_LETTERS[question.correctAnswer]}`}
+            </Text>
+          </View>
+        )}
+
         <View style={{ gap: 10 }}>
           {question?.options.map((opt, i) => {
             const isSelected = selected === i;
+            const isCorrectOpt = i === question.correctAnswer;
+            const showCorrect = revealed && isCorrectOpt;
+            const showWrong = revealed && isSelected && !isCorrectOpt;
+            const highlighted = isSelected || showCorrect;
             return (
               <TouchableOpacity
                 key={i}
-                onPress={() => setAnswer(question.questionId, i)}
+                onPress={() => !revealed && setAnswer(question.questionId, i)}
+                disabled={revealed}
                 activeOpacity={0.75}
-                style={[s.optionBtn, isSelected && s.optionBtnSelected]}
+                style={[
+                  s.optionBtn,
+                  isSelected && s.optionBtnSelected,
+                  showCorrect && s.optionBtnCorrect,
+                  showWrong && s.optionBtnWrong,
+                ]}
               >
-                <View style={[s.optionLetter, isSelected && s.optionLetterSelected]}>
-                  <Text style={{ color: isSelected ? '#fff' : TEXT2, fontSize: 13, fontWeight: '800' }}>
+                <View
+                  style={[
+                    s.optionLetter,
+                    isSelected && s.optionLetterSelected,
+                    showCorrect && s.optionLetterCorrect,
+                    showWrong && s.optionLetterWrong,
+                  ]}
+                >
+                  <Text style={{ color: highlighted ? '#fff' : TEXT2, fontSize: 13, fontWeight: '800' }}>
                     {OPTION_LETTERS[i]}
                   </Text>
                 </View>
-                <Text style={[s.optionText, isSelected && { color: TEXT }]}>{opt}</Text>
+                <Text style={[s.optionText, highlighted && { color: TEXT }]}>{opt}</Text>
+                {showCorrect && <CheckCircle2 size={16} color={GREEN} strokeWidth={2.5} />}
+                {showWrong && <XCircle size={16} color={RED} strokeWidth={2.5} />}
               </TouchableOpacity>
             );
           })}
         </View>
+
+        {revealed && question?.explanation && (
+          <View style={s.explanationBox}>
+            <Text style={s.explanationLabel}>Giải thích</Text>
+            <Text style={s.explanationText}>{question.explanation}</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* ── Footer nav ─────────────────────────────────────────── */}
@@ -236,9 +346,11 @@ export default function QuizPlayScreen() {
           {questions.map((q, i) => {
             const isAns = userAnswers[q.questionId] !== undefined;
             const isCur = i === currentIdx;
+            const isFlagged = flaggedIds.has(q.questionId);
             return (
-              <TouchableOpacity key={i} onPress={() => setCurrentIdx(i)}>
+              <TouchableOpacity key={i} onPress={() => setCurrentIdx(i)} style={s.dotWrapper}>
                 <View style={[s.dot, isCur && s.dotActive, isAns && !isCur && s.dotAnswered]} />
+                {isFlagged && <View style={s.dotFlagMarker} />}
               </TouchableOpacity>
             );
           })}
@@ -323,7 +435,9 @@ const s = StyleSheet.create({
   progressTrack: { height: 3, backgroundColor: CARD },
   progressFill:  { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
 
+  qCounterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   qCounter:    { color: MUTED, fontSize: 12, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
+  flagBtn:     { width: 32, alignItems: 'flex-end', justifyContent: 'center' },
   questionCard: {
     backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER,
     padding: 22, marginBottom: 24,
@@ -336,12 +450,39 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
   },
   optionBtnSelected: { borderColor: ORANGE, backgroundColor: ORANGE_TINT_FAINT },
+  optionBtnCorrect: { borderColor: GREEN, backgroundColor: 'rgba(74, 140, 98, 0.08)' },
+  optionBtnWrong: { borderColor: RED, backgroundColor: 'rgba(154, 63, 67, 0.08)' },
   optionLetter: {
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: SURFACE, alignItems: 'center', justifyContent: 'center',
   },
   optionLetterSelected: { backgroundColor: ORANGE },
+  optionLetterCorrect: { backgroundColor: GREEN },
+  optionLetterWrong: { backgroundColor: RED },
   optionText: { flex: 1, color: TEXT2, fontSize: 14, fontWeight: '500', lineHeight: 20 },
+
+  practiceBadgeWrap: { alignItems: 'center', paddingBottom: 8 },
+  practiceBadge: {
+    paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: ORANGE_TINT_FAINT, borderWidth: 1, borderColor: ORANGE,
+  },
+  practiceBadgeText: { color: ORANGE, fontSize: 11, fontWeight: '800' },
+
+  feedbackBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12,
+    marginBottom: 16,
+  },
+  feedbackCorrect: { backgroundColor: 'rgba(74, 140, 98, 0.08)', borderColor: 'rgba(74, 140, 98, 0.35)' },
+  feedbackWrong:   { backgroundColor: 'rgba(154, 63, 67, 0.08)', borderColor: 'rgba(154, 63, 67, 0.35)' },
+  feedbackText: { fontSize: 13, fontWeight: '700', flex: 1 },
+
+  explanationBox: {
+    marginTop: 16, padding: 12, borderRadius: 12,
+    backgroundColor: CARD, borderLeftWidth: 4, borderLeftColor: ORANGE,
+  },
+  explanationLabel: { color: TEXT2, fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  explanationText: { color: TEXT2, fontSize: 13, lineHeight: 20 },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -359,11 +500,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 10,
     backgroundColor: ORANGE, borderRadius: 12,
   },
+  dotWrapper: { padding: 4, position: 'relative' },
   dot: {
     width: 7, height: 7, borderRadius: 4,
     backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
   },
   dotActive:   { backgroundColor: ORANGE, borderColor: ORANGE, width: 18 },
   dotAnswered: { backgroundColor: GREEN,  borderColor: GREEN },
+  dotFlagMarker: {
+    position: 'absolute', top: 0, right: 0,
+    width: 5, height: 5, borderRadius: 3,
+    backgroundColor: '#eab308', borderWidth: 1, borderColor: BG,
+  },
   pill: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: CARD, borderRadius: 12 },
 });

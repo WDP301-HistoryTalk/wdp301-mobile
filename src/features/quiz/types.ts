@@ -10,12 +10,16 @@ export interface QuizSummary {
   playCount: number;
   rating?: number;
   contextTitle?: string;
+  contextId?: string;
 }
 
 export interface Quiz extends QuizSummary {
   description?: string;
   durationSeconds?: number;
   rating?: number;
+  ratingCount?: number;
+  /** Danh gia (1-5) cua chinh nguoi dung hien tai cho quiz nay — null neu chua danh gia. */
+  myRating?: number | null;
   grade?: QuizGrade;
   chapterNumber?: number;
   chapterTitle?: string;
@@ -92,6 +96,7 @@ export interface QuizResultDetail {
   sessionId: string;
   quizId: string;
   quizTitle: string;
+  contextId?: string;
   score: number;
   totalQuestions: number;
   percentage: number;

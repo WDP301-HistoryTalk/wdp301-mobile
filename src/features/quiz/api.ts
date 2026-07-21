@@ -44,4 +44,19 @@ export const quizApi = {
 
   getMyResultBySession: (sessionId: string) =>
     apiClient<QuizResultDetail>(`/quizzes/results/me/${sessionId}`),
+
+  rate: (quizId: string, value: number) =>
+    apiClient<{ rating: number; ratingCount: number; myRating: number }>(`/quizzes/${quizId}/rating`, {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    }),
+
+  getMyRating: (quizId: string) =>
+    apiClient<{ myRating: number | null }>(`/quizzes/${quizId}/rating/me`),
+
+  reportQuestion: (questionId: string, reason?: string) =>
+    apiClient<{}>(`/quizzes/questions/${questionId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 };

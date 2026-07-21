@@ -1,13 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle2, ChevronRight, Minus, RotateCcw, TrendingDown, TrendingUp, XCircle, Zap } from 'lucide-react-native';
+import { CheckCircle2, ChevronRight, Flag, MessageCircle, Minus, RotateCcw, Star, TrendingDown, TrendingUp, XCircle, Zap } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
-import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, ORANGE_BORDER_STRONG, ORANGE_TINT, ORANGE_TINT_FAINT, RED, TEXT, TEXT2, TEXT_TINT_FAINT } from '@/constants/palette';
+import { BG, BORDER, CARD, GREEN, MUTED, ORANGE, ORANGE_BORDER_STRONG, ORANGE_TINT, ORANGE_TINT_FAINT, RED, SURFACE, TEXT, TEXT2, TEXT_TINT_FAINT } from '@/constants/palette';
+import { useCharactersByContext } from '@/features/characters/hooks/use-characters-by-context';
+import { getCharacterImageUri } from '@/features/characters/types';
 import { quizApi } from '@/features/quiz/api';
+import { useRateQuiz } from '@/features/quiz/hooks/use-rate-quiz';
+import { useReportQuestion } from '@/features/quiz/hooks/use-report-question';
 import { useStartQuiz } from '@/features/quiz/hooks/use-start-quiz';
 import { useQuizStore } from '@/features/quiz/store';
 import type { PreviousAttempt } from '@/features/quiz/types';
@@ -97,6 +102,99 @@ function ComparisonBadge({ percentage, previous }: { percentage: number; previou
   );
 }
 
+// Sau khi lam sai vai cau, goi y quay lai tro chuyen voi nhan vat cua chinh
+// boi canh do de on lai kien thuc (giong tinh nang da co san ben web).
+function RecommendCharacters({ contextId, wrongCount }: { contextId: string; wrongCount: number }) {
+  const router = useRouter();
+  const { data: characters } = useCharactersByContext(contextId);
+  const top = (characters ?? []).slice(0, 3);
+
+  if (top.length === 0) return null;
+
+  return (
+    <View style={ss.recommendSection}>
+      <Text style={ss.recommendTitle}>Ôn lại cùng nhân vật</Text>
+      <Text style={ss.recommendSubtitle}>
+        Có vẻ bạn đã trả lời chưa đúng {wrongCount} câu — hãy thử hỏi lại các nhân vật lịch sử để ôn lại kiến thức nhé!
+      </Text>
+      <View style={{ gap: 10 }}>
+        {top.map((character) => {
+          const imageUri = getCharacterImageUri(character);
+          return (
+            <TouchableOpacity
+              key={character.id}
+              activeOpacity={0.75}
+              style={ss.recommendCard}
+              onPress={() =>
+                router.push({ pathname: '/characters/[id]', params: { id: character.id } })
+              }
+            >
+              <View style={ss.recommendAvatar}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <MessageCircle size={18} color={ORANGE} strokeWidth={2} />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={ss.recommendName} numberOfLines={1}>{character.name}</Text>
+                {character.title ? (
+                  <Text style={ss.recommendRole} numberOfLines={1}>{character.title}</Text>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// Cho phep nguoi dung danh gia quiz (1-5 sao) ngay sau khi xem ket qua, de
+// tinh nang rating trung binh (Quiz.rating/ratingCount) co du lieu thuc.
+function RateQuizCard({ quizId }: { quizId: string }) {
+  const { data: myRatingData } = useQuery({
+    queryKey: ['quiz-my-rating', quizId],
+    queryFn: () => quizApi.getMyRating(quizId),
+    enabled: !!quizId,
+  });
+  const { mutate: rate, isPending } = useRateQuiz(quizId);
+  const [localValue, setLocalValue] = useState<number | null>(null);
+  const [justRated, setJustRated] = useState(false);
+
+  const value = localValue ?? myRatingData?.myRating ?? 0;
+
+  function handlePress(star: number) {
+    setLocalValue(star);
+    setJustRated(false);
+    rate(star, { onSuccess: () => setJustRated(true) });
+  }
+
+  return (
+    <View style={ss.rateSection}>
+      <Text style={ss.rateTitle}>Bạn thấy quiz này thế nào?</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <TouchableOpacity
+            key={star}
+            onPress={() => handlePress(star)}
+            disabled={isPending}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
+            <Star
+              size={28}
+              color={star <= value ? ORANGE : BORDER}
+              fill={star <= value ? ORANGE : 'transparent'}
+              strokeWidth={1.5}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+      {justRated && <Text style={ss.rateThanks}>Cảm ơn bạn đã đánh giá!</Text>}
+    </View>
+  );
+}
+
 export default function QuizResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
@@ -105,6 +203,17 @@ export default function QuizResultScreen() {
   const clearAll = useQuizStore((s) => s.clearAll);
   const { mutateAsync: startQuiz, isPending: retrying } = useStartQuiz();
   const [reviewFilter, setReviewFilter] = useState<'all' | 'wrong'>('all');
+  const { mutate: reportQuestion } = useReportQuestion();
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+
+  function handleReport(questionId: string) {
+    if (reportedIds.has(questionId)) return;
+    setReportedIds((prev) => new Set(prev).add(questionId));
+    reportQuestion(
+      { questionId },
+      { onError: () => setReportedIds((prev) => { const next = new Set(prev); next.delete(questionId); return next; }) },
+    );
+  }
 
   const { data: detailData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['quiz-result-detail', sessionId],
@@ -116,6 +225,7 @@ export default function QuizResultScreen() {
     ? {
       quizTitle: detailData.quizTitle,
       quizId: detailData.quizId,
+      contextId: detailData.contextId,
       result: {
         resultId: detailData.sessionId,
         score: detailData.score,
@@ -237,6 +347,18 @@ export default function QuizResultScreen() {
           )}
         </View>
 
+        {finished.quizId ? (
+          <View style={{ paddingHorizontal: 20 }}>
+            <RateQuizCard quizId={finished.quizId} />
+          </View>
+        ) : null}
+
+        {wrongCount > 0 && finished.contextId ? (
+          <View style={{ paddingHorizontal: 20 }}>
+            <RecommendCharacters contextId={finished.contextId} wrongCount={wrongCount} />
+          </View>
+        ) : null}
+
         {/* ── Review ──────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 20 }}>
           <View style={ss.sectionHeader}>
@@ -350,6 +472,19 @@ export default function QuizResultScreen() {
                     </Text>
                   </View>
                 )}
+
+                {/* Bao loi cau hoi cho staff */}
+                <TouchableOpacity
+                  onPress={() => handleReport(q.questionId)}
+                  disabled={reportedIds.has(q.questionId)}
+                  activeOpacity={0.7}
+                  style={ss.reportBtn}
+                >
+                  <Flag size={13} color={reportedIds.has(q.questionId) ? GREEN : MUTED} strokeWidth={2} />
+                  <Text style={[ss.reportBtnText, reportedIds.has(q.questionId) && { color: GREEN }]}>
+                    {reportedIds.has(q.questionId) ? 'Đã gửi báo cáo, cảm ơn bạn!' : 'Câu này có vấn đề?'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             );
           })}
@@ -629,6 +764,92 @@ const ss = StyleSheet.create({
     borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: ORANGE,
+  },
+
+  reportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+    alignSelf: 'flex-start',
+  },
+  reportBtnText: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  rateSection: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  rateTitle: {
+    color: TEXT,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  rateThanks: {
+    color: GREEN,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 10,
+  },
+
+  recommendSection: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ORANGE_BORDER_STRONG,
+    padding: 16,
+    marginBottom: 24,
+  },
+  recommendTitle: {
+    color: TEXT,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  recommendSubtitle: {
+    color: MUTED,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  recommendCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  recommendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ORANGE_TINT_FAINT,
+    borderWidth: 1,
+    borderColor: ORANGE_BORDER_STRONG,
+  },
+  recommendName: {
+    color: TEXT,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  recommendRole: {
+    color: MUTED,
+    fontSize: 12,
+    marginTop: 2,
   },
 
   actions: {

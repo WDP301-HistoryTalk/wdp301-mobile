@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Clock, Play, Star, Timer, User, Users } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, Clock, Play, Star, Timer, User, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet,
@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -17,6 +18,8 @@ import { useAuthStore } from '@/features/auth/store';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
 import { useStartQuiz } from '@/features/quiz/hooks/use-start-quiz';
 import { useQuiz } from '@/features/quiz/hooks/use-quiz';
+import { clearQuizProgress, loadQuizProgress, type SavedQuizProgress } from '@/features/quiz/progress-storage';
+import { useQuizStore } from '@/features/quiz/store';
 import type { QuizLevel } from '@/features/quiz/types';
 
 const LEVEL_LABELS: Record<QuizLevel, string> = {
@@ -72,10 +75,14 @@ export default function QuizDetailScreen() {
 
   const { data: quiz, isLoading, isError, refetch, isRefetching } = useQuiz(resolvedId ?? '');
   const { mutateAsync: startQuiz, isPending } = useStartQuiz();
+  const restoreQuiz = useQuizStore((s) => s.restoreQuiz);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [resumeConfirm, setResumeConfirm] = useState<{ saved: SavedQuizProgress; limitedTime?: number } | null>(null);
 
   const [timeEnabled, setTimeEnabled] = useState(false);
   const [timeMins, setTimeMins] = useState('10');
+  // Che do luyen tap: hien dung/sai ngay sau moi cau, chay song song che do thi hien tai.
+  const [mode, setMode] = useState<'exam' | 'practice'>('exam');
   // Gợi ý thời gian theo durationSeconds của quiz — chỉ set 1 lần khi data
   // vừa tải xong, không ghi đè nếu người dùng đã tự gõ số phút khác.
   const didSuggestTimeRef = useRef(false);
@@ -105,12 +112,31 @@ export default function QuizDetailScreen() {
 
     const limitedTime = timeEnabled ? mins * 60 : undefined;
 
+    const saved = await loadQuizProgress(quiz.quizId);
+    if (saved) {
+      setResumeConfirm({ saved, limitedTime });
+      return;
+    }
+    await startFresh(limitedTime);
+  }
+
+  async function startFresh(limitedTime?: number) {
+    if (!quiz) return;
     try {
-      await startQuiz({ quizId: quiz.quizId, limitedTime });
+      await clearQuizProgress(quiz.quizId);
+      await startQuiz({ quizId: quiz.quizId, limitedTime, practiceMode: mode === 'practice' });
       router.push('/quiz/play');
     } catch (e: any) {
       Alert.alert('Không thể bắt đầu quiz', e?.message ?? 'Vui lòng thử lại sau.');
     }
+  }
+
+  function resumeSaved() {
+    if (!resumeConfirm) return;
+    const { saved } = resumeConfirm;
+    restoreQuiz(saved.session, saved.userAnswers, saved.elapsedSeconds, saved.practiceMode);
+    setResumeConfirm(null);
+    router.push('/quiz/play');
   }
 
   return (
@@ -195,6 +221,34 @@ export default function QuizDetailScreen() {
             ) : null}
           </View>
 
+          {/* Che do lam bai: thi (nop roi moi biet dung/sai) vs luyen tap (biet ngay) */}
+          <View style={ss.modeCard}>
+            <Text style={ss.modeCardLabel}>Chế độ làm bài</Text>
+            <View style={ss.modeRow}>
+              <TouchableOpacity
+                onPress={() => setMode('exam')}
+                activeOpacity={0.8}
+                style={[ss.modeBtn, mode === 'exam' && ss.modeBtnActive]}
+              >
+                <Timer size={16} color={mode === 'exam' ? ORANGE : MUTED} strokeWidth={2} />
+                <Text style={[ss.modeBtnText, mode === 'exam' && { color: ORANGE }]}>Chế độ thi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMode('practice')}
+                activeOpacity={0.8}
+                style={[ss.modeBtn, mode === 'practice' && ss.modeBtnActive]}
+              >
+                <BookOpen size={16} color={mode === 'practice' ? ORANGE : MUTED} strokeWidth={2} />
+                <Text style={[ss.modeBtnText, mode === 'practice' && { color: ORANGE }]}>Luyện tập</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={ss.modeHint}>
+              {mode === 'exam'
+                ? 'Làm hết bài rồi mới biết đáp án đúng/sai, giống thi thật.'
+                : 'Biết ngay đúng/sai sau mỗi câu, phù hợp để ôn bài.'}
+            </Text>
+          </View>
+
           {/* Time limit setting */}
           <View style={ss.timeCard}>
             <View style={ss.timeToggleRow}>
@@ -262,6 +316,20 @@ export default function QuizDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      <ConfirmDialog
+        visible={!!resumeConfirm}
+        title="Tiếp tục bài làm dở?"
+        message="Bạn có một bài đang làm dở cho quiz này. Tiếp tục từ chỗ đã dừng hay làm lại từ đầu?"
+        cancelText="Làm lại từ đầu"
+        confirmText="Tiếp tục"
+        onCancel={() => {
+          const limitedTime = resumeConfirm?.limitedTime;
+          setResumeConfirm(null);
+          void startFresh(limitedTime);
+        }}
+        onConfirm={resumeSaved}
+      />
     </SafeAreaView>
   );
 }
@@ -292,6 +360,21 @@ const ss = StyleSheet.create({
   statLabel: { color: MUTED, fontSize: 11, fontWeight: '500', marginBottom: 2 },
   statValue: { color: TEXT, fontSize: 14, fontWeight: '700' },
   divider: { height: 1, backgroundColor: BORDER },
+
+  modeCard: {
+    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, marginBottom: 16,
+  },
+  modeCardLabel: { color: TEXT, fontWeight: '700', fontSize: 15, marginBottom: 10 },
+  modeRow: { flexDirection: 'row', gap: 10 },
+  modeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: BORDER,
+    backgroundColor: SURFACE,
+  },
+  modeBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE_TINT },
+  modeBtnText: { color: MUTED, fontWeight: '700', fontSize: 13 },
+  modeHint: { color: MUTED, fontSize: 12, marginTop: 10, lineHeight: 17 },
 
   timeCard: {
     backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
