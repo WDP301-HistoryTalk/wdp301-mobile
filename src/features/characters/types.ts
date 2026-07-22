@@ -50,8 +50,8 @@ export function getCharacterImageUri(character: Character): string | undefined {
 export const ERA_LABELS: Record<CharacterEra, string> = {
   ANCIENT: 'Cổ đại',
   MEDIEVAL: 'Trung đại',
-  MODERN: 'Cận đại',
-  CONTEMPORARY: 'Hiện đại',
+  MODERN: 'Hiện đại',
+  CONTEMPORARY: 'Đương đại',
 };
 
 // `text` is a dark, saturated color meant for badges sitting on a light (opaque) `bg` pill —

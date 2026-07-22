@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import { ChevronRight, Search } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,12 +20,15 @@ import {
   BORDER,
   MUTED,
   ORANGE,
+  ORANGE_TINT_FAINT,
   SURFACE,
   TEXT,
 } from '@/constants/palette';
 import { useCharacters } from '@/features/characters/hooks/use-characters';
 import {
   ERA_COLORS,
+  ERA_LABELS,
+  type Character,
   type CharacterEra,
 } from '@/features/characters/types';
 
@@ -48,6 +50,71 @@ const ERA_FILTER_OPTIONS: { key: EraFilter; label: string }[] = [
 ];
 
 // CharacterCard is imported from @/components/cards
+
+// ─── Timeline grouping (era = 'ALL', no search) ──────────────────────────────
+// Bien danh sach phang thanh cac "khoi" theo thu tu ky nguyen, moi khoi la 1
+// header ky nguyen hoac 1 hang toi da 2 the — de tao cam giac "di doc lich
+// su" thay vi 1 luoi phang khong phan biet moc thoi gian.
+const ERA_ORDER: CharacterEra[] = ['ANCIENT', 'MEDIEVAL', 'MODERN', 'CONTEMPORARY'];
+// Moi khoi thoi dai chi "nhu" toi da 2 hang (4 the) trong man duyet timeline —
+// xem het thi bam "Xem thêm" de nhay sang che do loc phang theo dung era do.
+const MAX_PER_ERA = 4;
+
+type TimelineBlock =
+  | { type: 'header'; key: string; era: CharacterEra | null }
+  | { type: 'row'; key: string; items: Character[] }
+  | { type: 'more'; key: string; era: CharacterEra; remaining: number };
+
+function buildTimelineBlocks(characters: Character[]): TimelineBlock[] {
+  const groups = new Map<CharacterEra | null, Character[]>();
+  for (const c of characters) {
+    const key = c.era ?? null;
+    const list = groups.get(key);
+    if (list) list.push(c);
+    else groups.set(key, [c]);
+  }
+
+  const orderedKeys: (CharacterEra | null)[] = [...ERA_ORDER.filter((e) => groups.has(e))];
+  if (groups.has(null)) orderedKeys.push(null);
+
+  const blocks: TimelineBlock[] = [];
+  for (const key of orderedKeys) {
+    blocks.push({ type: 'header', key: `header-${key ?? 'unknown'}`, era: key });
+    const items = groups.get(key) ?? [];
+    const shown = items.slice(0, MAX_PER_ERA);
+    for (let i = 0; i < shown.length; i += 2) {
+      const pair = shown.slice(i, i + 2);
+      blocks.push({ type: 'row', key: `row-${pair.map((c) => c.id).join('-')}`, items: pair });
+    }
+    // Chi hien nut "Xem thêm" khi biet ro era (khong co pill loc cho nhom "chua xac dinh").
+    if (key && items.length > MAX_PER_ERA) {
+      blocks.push({ type: 'more', key: `more-${key}`, era: key, remaining: items.length - MAX_PER_ERA });
+    }
+  }
+  return blocks;
+}
+
+function TimelineSectionHeader({ era }: { era: CharacterEra | null }) {
+  const ec = era ? ERA_COLORS[era] : null;
+  const label = era ? ERA_LABELS[era] : 'Chưa xác định';
+  const color = ec?.text ?? MUTED;
+
+  return (
+    <View style={timelineStyles.sectionWrap}>
+      <Text style={[timelineStyles.sectionLabel, { color, borderBottomColor: color }]}>{label}</Text>
+      <View style={[timelineStyles.sectionLine, { backgroundColor: BORDER }]} />
+    </View>
+  );
+}
+
+function TimelineMoreButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={timelineStyles.moreWrap}>
+      <Text style={timelineStyles.moreText}>Xem thêm</Text>
+      <ChevronRight size={14} color={ORANGE} strokeWidth={2.5} />
+    </Pressable>
+  );
+}
 
 // ─── List header ──────────────────────────────────────────────────────────────
 function ListHeader({
@@ -187,60 +254,100 @@ export default function CharactersScreen() {
 
   const characters = data?.pages.flatMap((p) => p.content) ?? [];
 
+  // Che do "duyet theo dong thoi gian": chi bat khi dang xem "Tat ca" va
+  // khong tim kiem — loc theo 1 ky nguyen cu the hoac dang search van tra ve
+  // ket qua phang nhu cu (khong can header ky nguyen lap lai).
+  const isTimeline = era === 'ALL' && !debouncedSearch;
+  const blocks = isTimeline ? buildTimelineBlocks(characters) : [];
+
+  const headerComponent = (
+    <ListHeader
+      search={search}
+      era={era}
+      onSearchChange={handleSearchChange}
+      onEraChange={(v) => setEra(v)}
+    />
+  );
+  const emptyComponent = isLoading ? (
+    <SkeletonGrid />
+  ) : isError ? (
+    <View style={{ paddingTop: 80, alignItems: 'center', paddingHorizontal: H_PADDING }}>
+      <Text muted className="text-center">
+        Không thể tải dữ liệu. Vui lòng thử lại.
+      </Text>
+    </View>
+  ) : (
+    <View style={{ paddingTop: 80, alignItems: 'center', paddingHorizontal: H_PADDING }}>
+      <Text muted className="text-center">
+        Không tìm thấy nhân vật nào.
+      </Text>
+    </View>
+  );
+  const footerComponent = isFetchingNextPage ? (
+    <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
+  ) : null;
+  const handleEndReached = () => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  };
+  const goToCharacter = (id: string) => router.push({ pathname: '/characters/[id]', params: { id } });
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={['top']}>
-      <FlatList
-        data={isLoading ? [] : characters}
-        numColumns={2}
-        keyExtractor={(item) => item.id}
-        columnWrapperStyle={styles.columnWrapper}
-        ItemSeparatorComponent={() => <View style={{ height: COL_GAP }} />}
-        renderItem={({ item }) => (
-          <CharacterCard
-            char={item}
-            size="lg"
-            onPress={() => router.push({ pathname: '/characters/[id]', params: { id: item.id } })}
-          />
-        )}
-        ListHeaderComponent={
-          <ListHeader
-            search={search}
-            era={era}
-            onSearchChange={handleSearchChange}
-            onEraChange={(v) => setEra(v)}
-          />
-        }
-        ListEmptyComponent={
-          isLoading ? (
-            <SkeletonGrid />
-          ) : isError ? (
-            <View style={{ paddingTop: 80, alignItems: 'center', paddingHorizontal: H_PADDING }}>
-              <Text muted className="text-center">
-                Không thể tải dữ liệu. Vui lòng thử lại.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ paddingTop: 80, alignItems: 'center', paddingHorizontal: H_PADDING }}>
-              <Text muted className="text-center">
-                Không tìm thấy nhân vật nào.
-              </Text>
-            </View>
-          )
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <ActivityIndicator color={ORANGE} style={{ marginVertical: 20 }} />
-          ) : null
-        }
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-        }}
-        onEndReachedThreshold={0.4}
-        contentContainerStyle={{ paddingBottom: 130 }}
-        showsVerticalScrollIndicator={false}
-        refreshing={isRefetching}
-        onRefresh={() => void refetch()}
-      />
+      {isTimeline ? (
+        <FlatList
+          key="timeline"
+          data={isLoading ? [] : blocks}
+          keyExtractor={(block) => block.key}
+          renderItem={({ item: block }) => {
+            if (block.type === 'header') return <TimelineSectionHeader era={block.era} />;
+            if (block.type === 'more') {
+              return (
+                <View style={{ paddingHorizontal: H_PADDING, marginBottom: COL_GAP, alignItems: 'center' }}>
+                  <TimelineMoreButton onPress={() => setEra(block.era)} />
+                </View>
+              );
+            }
+            return (
+              <View style={[styles.columnWrapper, { flexDirection: 'row', marginBottom: COL_GAP }]}>
+                {block.items.map((c) => (
+                  <CharacterCard key={c.id} char={c} size="lg" onPress={() => goToCharacter(c.id)} />
+                ))}
+                {block.items.length === 1 ? <View style={{ width: CARD_WIDTH }} /> : null}
+              </View>
+            );
+          }}
+          ListHeaderComponent={headerComponent}
+          ListEmptyComponent={emptyComponent}
+          ListFooterComponent={footerComponent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          showsVerticalScrollIndicator={false}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+        />
+      ) : (
+        <FlatList
+          key="grid"
+          data={isLoading ? [] : characters}
+          numColumns={2}
+          keyExtractor={(item) => item.id}
+          columnWrapperStyle={styles.columnWrapper}
+          ItemSeparatorComponent={() => <View style={{ height: COL_GAP }} />}
+          renderItem={({ item }) => (
+            <CharacterCard char={item} size="lg" onPress={() => goToCharacter(item.id)} />
+          )}
+          ListHeaderComponent={headerComponent}
+          ListEmptyComponent={emptyComponent}
+          ListFooterComponent={footerComponent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          showsVerticalScrollIndicator={false}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -251,5 +358,42 @@ const styles = StyleSheet.create({
   columnWrapper: {
     gap: COL_GAP,
     paddingHorizontal: H_PADDING,
+  },
+});
+
+const timelineStyles = StyleSheet.create({
+  sectionWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: H_PADDING,
+    marginTop: 18,
+    marginBottom: 14,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    borderBottomWidth: 2,
+    paddingBottom: 3,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+  },
+  moreWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: 99,
+    backgroundColor: ORANGE_TINT_FAINT,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  moreText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: ORANGE,
   },
 });

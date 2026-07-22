@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, ChevronRight, Flag, MessageCircle, Minus, RotateCcw, Star, TrendingDown, TrendingUp, XCircle, Zap } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -195,6 +195,57 @@ function RateQuizCard({ quizId }: { quizId: string }) {
   );
 }
 
+// Cho phep nguoi dung mo ta ngan gon van de gap phai truoc khi gui report —
+// giup staff hieu ro hon la chi biet "co report" ma khong ro ly do.
+function ReportQuestionDialog({
+  visible,
+  onCancel,
+  onSubmit,
+}: {
+  visible: boolean;
+  onCancel: () => void;
+  onSubmit: (reason: string) => void;
+}) {
+  const [text, setText] = useState('');
+
+  if (!visible) return null;
+
+  function submit() {
+    onSubmit(text.trim());
+    setText('');
+  }
+
+  return (
+    <View style={ss.reportOverlay}>
+      <Pressable style={ss.reportBackdrop} onPress={onCancel} />
+      <View style={ss.reportCard}>
+        <Text style={ss.reportTitle}>Câu này có vấn đề?</Text>
+        <Text style={ss.reportSubtitle}>
+          Mô tả ngắn gọn vấn đề bạn gặp phải để đội ngũ hỗ trợ xem lại chính xác hơn (không bắt buộc).
+        </Text>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="Ví dụ: đáp án đúng đang bị sai, câu hỏi khó hiểu..."
+          placeholderTextColor={MUTED}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          style={ss.reportInput}
+        />
+        <View style={ss.reportActions}>
+          <TouchableOpacity onPress={onCancel} style={ss.reportCancelBtn}>
+            <Text style={{ color: MUTED, fontWeight: '700' }}>Huỷ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={submit} style={ss.reportSubmitBtn}>
+            <Text style={{ color: '#fff', fontWeight: '800' }}>Gửi báo cáo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function QuizResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const router = useRouter();
@@ -206,11 +257,20 @@ export default function QuizResultScreen() {
   const { mutate: reportQuestion } = useReportQuestion();
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
-  function handleReport(questionId: string) {
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
+
+  function handleReportPress(questionId: string) {
     if (reportedIds.has(questionId)) return;
+    setReportTarget(questionId);
+  }
+
+  function submitReport(reason: string) {
+    const questionId = reportTarget;
+    if (!questionId) return;
+    setReportTarget(null);
     setReportedIds((prev) => new Set(prev).add(questionId));
     reportQuestion(
-      { questionId },
+      { questionId, reason: reason || undefined },
       { onError: () => setReportedIds((prev) => { const next = new Set(prev); next.delete(questionId); return next; }) },
     );
   }
@@ -475,7 +535,7 @@ export default function QuizResultScreen() {
 
                 {/* Bao loi cau hoi cho staff */}
                 <TouchableOpacity
-                  onPress={() => handleReport(q.questionId)}
+                  onPress={() => handleReportPress(q.questionId)}
                   disabled={reportedIds.has(q.questionId)}
                   activeOpacity={0.7}
                   style={ss.reportBtn}
@@ -518,11 +578,61 @@ export default function QuizResultScreen() {
           <ChevronRight size={18} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
       </View>
+
+      <ReportQuestionDialog
+        visible={!!reportTarget}
+        onCancel={() => setReportTarget(null)}
+        onSubmit={submitReport}
+      />
     </SafeAreaView>
   );
 }
 
 const ss = StyleSheet.create({
+  reportOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    elevation: 20,
+  },
+  reportBackdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(43,33,24,0.45)',
+  },
+  reportCard: {
+    width: '88%',
+    maxWidth: 400,
+    backgroundColor: CARD,
+    borderRadius: 20,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  reportTitle: { color: TEXT, fontSize: 16, fontWeight: '800', marginBottom: 6 },
+  reportSubtitle: { color: TEXT2, fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  reportInput: {
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 90,
+    color: TEXT,
+    fontSize: 14,
+    backgroundColor: SURFACE,
+    marginBottom: 16,
+  },
+  reportActions: { flexDirection: 'row', gap: 10 },
+  reportCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: 'rgba(43,33,24,0.06)', alignItems: 'center',
+  },
+  reportSubmitBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: ORANGE, alignItems: 'center',
+  },
   hero: {
     alignItems: 'center',
     padding: 24,

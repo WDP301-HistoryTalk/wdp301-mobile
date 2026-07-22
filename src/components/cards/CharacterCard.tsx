@@ -139,7 +139,16 @@ function LargeCard({
     >
       {/* Photo or placeholder */}
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <>
+          <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          {/* Era tint — subtle color wash so each era has its own "atmosphere" even on real photos */}
+          {ec ? (
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: ec.avatarBg, opacity: 0.16 }]}
+            />
+          ) : null}
+        </>
       ) : (
         <View style={lgStyles.placeholderWrap}>
           <Text style={[lgStyles.placeholderInitial, { color: ec?.glow ?? '#fff' }]}>
