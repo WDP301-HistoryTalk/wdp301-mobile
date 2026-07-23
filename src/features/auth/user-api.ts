@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system/legacy';
+
 import { useAuthStore } from '@/features/auth/store';
 import { BASE_URL, apiClient } from '@/lib/api-client';
 
@@ -23,29 +25,27 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
-  // multipart/form-data — khong dung apiClient vi no luon ep Content-Type
-  // application/json; de fetch tu sinh boundary dung cho FormData.
+  // Dung expo-file-system thay vi fetch()+FormData: FormData voi phan {uri,
+  // name, type} hay bi native networking module bao "Unsupported FormDataPart
+  // implementation" tren mot so thiet bi/kien truc RN — uploadAsync goi thang
+  // API upload native, khong di qua duong FormData hay loi nay.
   uploadAvatar: async (
     userId: string,
     file: { uri: string; name: string; type: string },
   ): Promise<AvatarUrlResponse> => {
     const token = useAuthStore.getState().accessToken;
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type,
-    } as unknown as Blob);
-
-    const res = await fetch(`${BASE_URL}/users/${userId}/avatar`, {
-      method: 'POST',
+    const result = await FileSystem.uploadAsync(`${BASE_URL}/users/${userId}/avatar`, file.uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: file.type,
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: formData,
     });
 
-    const raw = await res.text();
-    const json = raw ? JSON.parse(raw) : null;
-    if (!res.ok) throw new Error(json?.message ?? 'Không thể tải lên avatar');
+    const json = result.body ? JSON.parse(result.body) : null;
+    if (result.status < 200 || result.status >= 300) {
+      throw new Error(json?.message ?? 'Không thể tải lên avatar');
+    }
     return json.data as AvatarUrlResponse;
   },
 

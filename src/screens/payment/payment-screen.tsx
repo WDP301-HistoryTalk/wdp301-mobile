@@ -29,7 +29,7 @@ import {
 } from '@/constants/palette';
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useCreateOrder } from '@/features/payment/hooks/use-create-order';
-import { useOrderStatus } from '@/features/payment/hooks/use-order-status';
+import { useMyOrders } from '@/features/payment/hooks/use-my-orders';
 import { useTiers } from '@/features/payment/hooks/use-tiers';
 import type { OrderStatus, Tier } from '@/features/payment/types';
 
@@ -45,10 +45,10 @@ function tierFeatureSummary(title: string): string {
 }
 
 const RESULT_LABEL: Record<OrderStatus, { label: string; color: string; icon: any }> = {
-  paid: { label: 'Thanh toán thành công! Gói đã được kích hoạt.', color: GREEN, icon: BadgeCheck },
-  pending: { label: 'PayOS đang xử lý. Hãy kiểm tra lại sau ít phút.', color: AMBER, icon: Clock },
-  cancelled: { label: 'Giao dịch đã bị hủy.', color: RED, icon: XCircle },
-  expired: { label: 'Liên kết thanh toán đã hết hạn.', color: RED, icon: XCircle },
+  PAID: { label: 'Thanh toán thành công! Gói đã được kích hoạt.', color: GREEN, icon: BadgeCheck },
+  PENDING: { label: 'PayOS đang xử lý. Hãy kiểm tra lại sau ít phút.', color: AMBER, icon: Clock },
+  CANCELLED: { label: 'Giao dịch đã bị hủy.', color: RED, icon: XCircle },
+  EXPIRED: { label: 'Liên kết thanh toán đã hết hạn.', color: RED, icon: XCircle },
 };
 
 export default function PaymentScreen() {
@@ -56,7 +56,7 @@ export default function PaymentScreen() {
   const { data: profile, refetch: refetchMe } = useMe();
   const { data: tiers, isLoading, refetch: refetchTiers } = useTiers();
   const createOrder = useCreateOrder();
-  const orderStatus = useOrderStatus();
+  const { refetch: refetchOrders } = useMyOrders();
   const [refreshing, setRefreshing] = useState(false);
   async function onRefresh() {
     setRefreshing(true);
@@ -72,15 +72,20 @@ export default function PaymentScreen() {
 
   const activeTiers = (tiers ?? []).filter((t) => t.isActive).sort((a, b) => a.amount - b.amount);
 
+  // Khong co endpoint tra ve trang thai 1 don rieng — sau khi dong trinh duyet
+  // trong app (PayOS da xu ly + goi webhook), doi chieu bang cach doc lai lich
+  // su thanh toan cua minh va tim don vua tao theo orderCode.
   async function handleCheckout(tier: Tier) {
     if (tier.amount <= 0) return;
     setResultStatus(null);
-    setLoadingTierId(tier.id);
+    setLoadingTierId(tier.tierId);
     try {
-      const order = await createOrder.mutateAsync(tier.id);
+      const order = await createOrder.mutateAsync(tier.tierId);
       await WebBrowser.openBrowserAsync(order.checkoutUrl);
-      const status = await orderStatus.mutateAsync(order.orderCode);
-      setResultStatus(status.status);
+
+      const [{ data: history }] = await Promise.all([refetchOrders(), refetchMe(), refetchTiers()]);
+      const matched = history?.find((o) => o.orderCode === order.orderCode);
+      setResultStatus(matched?.status ?? 'PENDING');
     } catch (e: any) {
       Alert.alert('Lỗi', e?.message ?? 'Không thể tạo đơn thanh toán. Vui lòng thử lại.');
     } finally {
@@ -134,12 +139,12 @@ export default function PaymentScreen() {
         <View style={{ paddingHorizontal: 20, gap: 14 }}>
           {activeTiers.map((tier, index) => {
             const isFree = tier.amount === 0;
-            const isCurrent = profile?.tierId === tier.id;
+            const isCurrent = profile?.tierId === tier.tierId;
             const isFeatured = index === activeTiers.length - 1 && !isFree;
-            const isBusy = loadingTierId === tier.id;
+            const isBusy = loadingTierId === tier.tierId;
 
             return (
-              <View key={tier.id} style={[s.tierCard, isFeatured && s.tierCardFeatured]}>
+              <View key={tier.tierId} style={[s.tierCard, isFeatured && s.tierCardFeatured]}>
                 <View style={s.tierHead}>
                   <Crown size={18} color={isFeatured ? ORANGE : MUTED} strokeWidth={2} />
                   <View style={{ flex: 1 }}>

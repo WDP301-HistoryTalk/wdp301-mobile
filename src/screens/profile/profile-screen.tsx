@@ -225,7 +225,7 @@ export default function ProfileScreen() {
     }
   }
 
-  const activeTier = tiers?.find((t) => t.id === profile?.tierId);
+  const activeTier = tiers?.find((t) => t.tierId === profile?.tierId);
   const tierName = activeTier ? activeTier.title : 'Gói Miễn phí';
 
   // edit state

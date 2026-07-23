@@ -92,7 +92,7 @@ export function StreakWidget({ streakCount, questsCompleted, questsTotal, week, 
 
   return (
     <FlexWidget
-      clickAction={character ? undefined : 'OPEN_APP'}
+      clickAction="OPEN_APP"
       style={{
         height: 'match_parent',
         width: 'match_parent',

@@ -1,24 +1,17 @@
 import { apiClient } from '@/lib/api-client';
 
-import type { CreateOrderResponse, OrderHistoryPage, OrderStatusResponse, Tier } from './types';
+import type { CheckoutResponse, PaymentHistoryItem, Tier } from './types';
 
 export const paymentApi = {
-  listTiers: () => apiClient<Tier[]>('/tiers'),
+  getTiers: () => apiClient<Tier[]>('/payments/tiers'),
 
-  createOrder: (tierId: string) =>
-    apiClient<CreateOrderResponse>('/payments/orders', {
+  checkout: (tierId: string) =>
+    apiClient<CheckoutResponse>('/payments/checkout', {
       method: 'POST',
       body: JSON.stringify({ tierId }),
     }),
 
-  getOrderStatus: (orderCode: number) =>
-    apiClient<OrderStatusResponse>(`/payments/orders/${orderCode}`),
-
-  cancelOrder: (orderCode: number) =>
-    apiClient<{ orderCode: number; status: string }>(`/payments/orders/${orderCode}/cancel`, {
-      method: 'POST',
-    }),
-
-  listMyOrders: (page = 0, size = 10) =>
-    apiClient<OrderHistoryPage>(`/payments/orders?page=${page}&size=${size}`),
+  // Khong co endpoint tra cuu/huy 1 don le — backend chi cho xem toan bo lich
+  // su thanh toan cua minh (mang phang, khong phan trang).
+  getMyHistory: () => apiClient<PaymentHistoryItem[]>('/payments/me'),
 };

@@ -1,7 +1,7 @@
-export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'expired';
+export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
 
 export interface Tier {
-  id: string;
+  tierId: string;
   title: 'free' | 'plus' | 'pro' | string;
   amount: number;
   noMonth: number;
@@ -9,49 +9,26 @@ export interface Tier {
   isActive: boolean;
 }
 
-export interface CreateOrderResponse {
+export interface CheckoutResponse {
   orderId: string;
   orderCode: number;
-  amount: number;
-  status: OrderStatus;
+  paymentLinkId: string;
   checkoutUrl: string;
   qrCode: string;
+  amount: number;
+  status: OrderStatus;
+  expiredAt: string | null;
+}
+
+export interface PaymentHistoryItem {
+  orderId: string;
+  orderCode: number;
+  tierId: string | null;
+  tierTitle: string | null;
+  amount: number;
+  status: OrderStatus;
   paymentLinkId: string;
-  bin: string;
-  accountNumber: string;
-  accountName: string;
-  expiresAt: string;
-}
-
-export interface OrderStatusResponse {
-  orderId: string;
-  orderCode: number;
-  amount: number;
-  status: OrderStatus;
-  tierId: string;
-  checkoutUrl?: string;
-  qrCode?: string;
-  paidAt: string | null;
   createdAt: string;
-}
-
-export interface OrderHistoryItem {
-  orderId: string;
-  orderCode: number;
-  amount: number;
-  status: OrderStatus;
-  tier: { title: string; amount: number; noMonth: number } | null;
-  checkoutUrl?: string;
   paidAt: string | null;
-  createdAt: string;
-}
-
-export interface OrderHistoryPage {
-  content: OrderHistoryItem[];
-  totalElements: number;
-  totalPages: number;
-  currentPage: number;
-  pageSize: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
+  expiredAt: string | null;
 }

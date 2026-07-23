@@ -4,6 +4,6 @@ import { paymentApi } from '../api';
 
 export function useCreateOrder() {
   return useMutation({
-    mutationFn: (tierId: string) => paymentApi.createOrder(tierId),
+    mutationFn: (tierId: string) => paymentApi.checkout(tierId),
   });
 }
