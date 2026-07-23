@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import { ScreenBackdrop } from "@/components/screen-backdrop";
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
+import { WidgetSync } from "@/widgets/widget-sync";
 
 const TAB_BAR_HORIZONTAL_PADDING = 12;
 
@@ -51,6 +52,7 @@ export default function AppTabs() {
 
   return (
     <View style={styles.root}>
+      <WidgetSync />
       <View style={styles.content}>
         <ScreenBackdrop />
         <Slot />
