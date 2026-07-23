@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import { ScreenBackdrop } from "@/components/screen-backdrop";
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
+import { useAvatarSync } from "@/features/auth/hooks/use-avatar-sync";
 import { WidgetSync } from "@/widgets/widget-sync";
 
 const TAB_BAR_HORIZONTAL_PADDING = 12;
@@ -29,6 +30,7 @@ function isActive(pathname: string, href: string) {
 export default function AppTabs() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  useAvatarSync();
 
   // Hide the tab bar entirely while an active quiz session is running, so the
   // only way out is the in-screen "Thoát" confirm — no escaping via a tab tap.

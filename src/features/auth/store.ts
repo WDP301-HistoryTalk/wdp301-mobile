@@ -29,10 +29,16 @@ interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
+  // URL avatar da resolve (co the xem duoc ngay) — dung chung 1 nguon cho moi
+  // noi hien avatar (header trang chu, trang ho so...) de doi anh o dau cung
+  // thay doi dong bo o noi khac. Khong persist: chi la cache hien thi, luon
+  // duoc tinh lai tu profile + (neu can) signed URL khi app khoi dong.
+  avatarUrl: string | null;
 
   initialize: () => Promise<void>;
   setAuth: (data: AuthResponse) => Promise<void>;
   updateTokens: (accessToken: string, refreshToken?: string) => void;
+  setAvatarUrl: (url: string | null) => void;
   logout: () => Promise<void>;
 }
 
@@ -42,6 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   refreshToken: null,
+  avatarUrl: null,
 
   initialize: async () => {
     try {
@@ -107,12 +114,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set((s) => ({ accessToken, refreshToken: refreshToken ?? s.refreshToken }));
   },
 
+  setAvatarUrl: (url: string | null) => set({ avatarUrl: url }),
+
   logout: async () => {
     const { accessToken } = get();
     if (accessToken) {
       try { await authApi.logout(accessToken); } catch { /* ignore */ }
     }
     await Promise.all(Object.values(KEYS).map((k) => SecureStore.deleteItemAsync(k)));
-    set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null });
+    set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null, avatarUrl: null });
   },
 }));

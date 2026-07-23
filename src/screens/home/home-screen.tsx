@@ -109,6 +109,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const avatarUrl = useAuthStore((s) => s.avatarUrl);
   const initial = user?.userName?.charAt(0).toUpperCase() ?? "U";
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -175,11 +176,20 @@ export default function HomeScreen() {
               backgroundColor: ORANGE,
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-              {initial}
-            </Text>
+            {avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+              />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+                {initial}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -623,13 +633,22 @@ export default function HomeScreen() {
                     backgroundColor: ORANGE,
                     alignItems: "center",
                     justifyContent: "center",
+                    overflow: "hidden",
                   }}
                 >
-                  <Text
-                    style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}
-                  >
-                    {initial}
-                  </Text>
+                  {avatarUrl ? (
+                    <Image
+                      source={{ uri: avatarUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Text
+                      style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}
+                    >
+                      {initial}
+                    </Text>
+                  )}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text

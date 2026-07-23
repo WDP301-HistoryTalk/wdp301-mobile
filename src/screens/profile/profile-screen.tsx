@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -39,7 +38,6 @@ import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
 import { useUploadAvatar } from '@/features/auth/hooks/use-upload-avatar';
 import { useAuthStore } from '@/features/auth/store';
 import type { UpdateProfileInput } from '@/features/auth/types';
-import { userApi } from '@/features/auth/user-api';
 import { useTiers } from '@/features/payment/hooks/use-tiers';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -168,20 +166,11 @@ export default function ProfileScreen() {
   const { mutateAsync: changePwd, isPending: changingPwd }   = useChangePassword();
   const { mutateAsync: uploadAvatar, isPending: uploadingAvatar } = useUploadAvatar();
 
-  // avatarUrl tra ve tu API co the la link ngoai (vd Google) dung duoc thang,
-  // hoac 1 storage path noi bo (sau khi upload) — phai doi lay signed URL
-  // moi xem duoc. Cache tam URL vua upload de hien ngay, khong doi round-trip.
-  const [freshAvatarUrl, setFreshAvatarUrl] = useState<string | null>(null);
-  const rawAvatarUrl = profile?.avatarUrl;
-  const isDirectAvatarUrl = !!rawAvatarUrl && /^https?:\/\//.test(rawAvatarUrl);
-  const { data: signedAvatar } = useQuery({
-    queryKey: ['avatar-view-url', profile?._id, rawAvatarUrl],
-    queryFn: () => userApi.getAvatarViewUrl(profile!._id),
-    enabled: !!profile?._id && !!rawAvatarUrl && !isDirectAvatarUrl,
-    staleTime: 1000 * 60 * 30,
-  });
-  const avatarDisplayUrl =
-    freshAvatarUrl ?? (isDirectAvatarUrl ? rawAvatarUrl : signedAvatar?.url);
+  // Dung chung 1 nguon avatar voi header trang chu (Zustand store, xem
+  // useAvatarSync) — doi anh o day thi header cung thay ngay, khong can moi
+  // man hinh tu resolve signed URL rieng.
+  const avatarDisplayUrl = useAuthStore((s) => s.avatarUrl);
+  const setAvatarUrl = useAuthStore((s) => s.setAvatarUrl);
 
   function pickAndUploadAvatar() {
     if (!profile) return;
@@ -219,7 +208,7 @@ export default function ProfileScreen() {
           type: asset.mimeType ?? 'image/jpeg',
         },
       });
-      setFreshAvatarUrl(uploaded.url);
+      setAvatarUrl(uploaded.url);
     } catch (e: any) {
       Alert.alert('Lỗi', e?.message ?? 'Không thể tải lên ảnh đại diện.');
     }
