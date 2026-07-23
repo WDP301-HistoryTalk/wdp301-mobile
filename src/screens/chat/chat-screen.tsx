@@ -648,6 +648,9 @@ export default function ChatScreen() {
   const [isCallListening, setIsCallListening] = useState(false);
   const [isCallProcessing, setIsCallProcessing] = useState(false);
   const [isCharacterSpeaking, setIsCharacterSpeaking] = useState(false);
+  // Transcript tam thoi hien ngay khi dang noi, de nguoi dung biet may da nghe
+  // duoc gi — khong phai doi gui xong moi thay (xem onSpeechPartialResults).
+  const [liveTranscript, setLiveTranscript] = useState("");
 
   // Refs mirroring state ma cac callback cua @react-native-voice/voice can
   // doc gia tri moi nhat (cac callback duoc gan 1 lan khi Voice.start(), nen
@@ -870,6 +873,7 @@ export default function ChatScreen() {
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
+    setLiveTranscript("");
     setActiveCall(null);
   }
 
@@ -1027,6 +1031,15 @@ export default function ChatScreen() {
     }
   }
 
+  // Gia han "im lang bao lau thi tu dong gui" moi khi co dau hieu dang noi
+  // (partial result moi) — chi kich hoat khi thuc su khong con noi gi them.
+  function armListenTimeout() {
+    if (listenTimeoutRef.current) clearTimeout(listenTimeoutRef.current);
+    listenTimeoutRef.current = setTimeout(() => {
+      void finishCallListening();
+    }, LISTEN_TIMEOUT_MS);
+  }
+
   async function startCallListening() {
     if (
       !activeCallRef.current ||
@@ -1059,9 +1072,17 @@ export default function ChatScreen() {
       await Voice.destroy().catch(() => {});
 
       callTranscriptRef.current = "";
+      setLiveTranscript("");
       Voice.onSpeechPartialResults = (event) => {
         const t = event.value?.[0]?.trim();
-        if (t) callTranscriptRef.current = t;
+        if (t) {
+          callTranscriptRef.current = t;
+          setLiveTranscript(t);
+        }
+        // Van dang noi (co ket qua tam thoi moi) -> gia han timeout, tranh cat
+        // ngang cau dang noi do. Chi tu dong gui khi im lang that su (khong co
+        // partial result moi) trong LISTEN_TIMEOUT_MS.
+        armListenTimeout();
       };
       Voice.onSpeechResults = (event) => {
         const t = event.value?.[0]?.trim();
@@ -1109,11 +1130,9 @@ export default function ChatScreen() {
 
       // An toan: neu STT khong tu bao ket qua (im lang keo dai, khong co mic
       // that tren emulator...) thi tu dong dung nghe va gui sau 1 khoang thoi
-      // gian co dinh, tranh mic ket o trang thai "dang nghe" mai mai.
-      if (listenTimeoutRef.current) clearTimeout(listenTimeoutRef.current);
-      listenTimeoutRef.current = setTimeout(() => {
-        void finishCallListening();
-      }, LISTEN_TIMEOUT_MS);
+      // gian co dinh, tranh mic ket o trang thai "dang nghe" mai mai. Se duoc
+      // gia han lien tuc trong onSpeechPartialResults mien la con dang noi.
+      armListenTimeout();
     } catch (e: any) {
       setIsCallListening(false);
       // Loi that su (vd: khong co quyen mic) -> bao 1 lan, khong tu dong lap lai
@@ -1138,6 +1157,7 @@ export default function ChatScreen() {
       listenTimeoutRef.current = null;
     }
     setIsCallListening(false);
+    setLiveTranscript("");
     Animated.spring(micScale, { toValue: 1, useNativeDriver: true }).start();
 
     try {
@@ -1358,6 +1378,12 @@ export default function ChatScreen() {
                     <VoiceBars color="#fff" barWidth={3} height={14} />
                     <Text style={s.speakingBadgeText}>Đang nói...</Text>
                   </View>
+                ) : isCallListening ? (
+                  <View style={s.liveCaptionBox}>
+                    <Text style={s.liveCaptionText} numberOfLines={3}>
+                      {liveTranscript || "Đang nghe..."}
+                    </Text>
+                  </View>
                 ) : (
                   <Text style={s.callTimer}>
                     {formatCallDuration(callElapsed)}
@@ -1436,30 +1462,33 @@ export default function ChatScreen() {
           />
         )}
 
-        {suggestions.length > 0 && !isTyping && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.suggestionsBar}
-            contentContainerStyle={{
-              gap: 8,
-              paddingHorizontal: 16,
-              alignItems: 'center',
-            }}
-          >
-            {suggestions.map((q, i) => (
-              <TouchableOpacity
-                key={`${q}-${i}`}
-                onPress={() => void handleSend(q)}
-                activeOpacity={0.75}
-                style={s.suggestionChip}
+        {timelineItems.length > 0 && (
+          <View style={s.suggestionsBar}>
+            {suggestions.length > 0 && !isTyping ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: 8,
+                  paddingHorizontal: 16,
+                  alignItems: 'center',
+                }}
               >
-                <Text style={s.suggestionText} numberOfLines={1}>
-                  {q}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                {suggestions.map((q, i) => (
+                  <TouchableOpacity
+                    key={`${q}-${i}`}
+                    onPress={() => void handleSend(q)}
+                    activeOpacity={0.75}
+                    style={s.suggestionChip}
+                  >
+                    <Text style={s.suggestionText} numberOfLines={1}>
+                      {q}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : null}
+          </View>
         )}
 
         {isCustomer && tokenBalance != null && tokenBalance <= LOW_TOKEN_THRESHOLD ? (
@@ -1693,6 +1722,21 @@ const s = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
+  },
+  liveCaptionBox: {
+    marginTop: 8,
+    maxWidth: "100%",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  liveCaptionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 19,
   },
   speakingBadgeText: {
     color: "#fff",

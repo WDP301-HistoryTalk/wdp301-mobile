@@ -48,6 +48,13 @@
       ],
       "expo-audio",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Cho phep HistoryTalk su dung camera de chup anh dai dien",
+          "photosPermission": "Cho phep HistoryTalk truy cap thu vien anh de chon anh dai dien"
+        }
+      ],
+      [
         "react-native-android-widget",
         {
           "widgets": [

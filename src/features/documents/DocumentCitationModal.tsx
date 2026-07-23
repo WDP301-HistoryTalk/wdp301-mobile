@@ -1,4 +1,5 @@
 import { FileText, TriangleAlert, X } from "lucide-react-native";
+import { useEffect, useMemo, useRef } from "react";
 import { Linking, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,7 +16,7 @@ import {
 } from "@/constants/palette";
 
 import { usePublicCharacterDocuments, usePublicContextDocuments } from "./hooks";
-import { findDocumentForQuote, splitContentByQuote } from "./quote-match";
+import { buildQuoteMatcher, findDocumentForQuote, splitContentByQuote } from "./quote-match";
 import type { RagDocument } from "./types";
 
 interface DocumentCitationModalProps {
@@ -29,6 +30,64 @@ interface DocumentCitationModalProps {
   initialDocumentId?: string | null;
 }
 
+// Tach noi dung theo tung dong de co the do vi tri (onLayout chi dang tin cay
+// tren View, khong tren Text long nhau) roi tu cuon toi dung dong chua trich
+// dan — giu marginBottom 0 de van doc lien mach nhu 1 doan van.
+function DocumentContent({
+  content,
+  quote,
+  scrollRef,
+}: {
+  content: string;
+  quote?: string | null;
+  scrollRef: React.RefObject<ScrollView | null>;
+}) {
+  const lines = useMemo(() => content.split("\n"), [content]);
+  const matcher = useMemo(() => (quote ? buildQuoteMatcher(quote) : null), [quote]);
+  const hasScrolledRef = useRef(false);
+
+  useEffect(() => {
+    hasScrolledRef.current = false;
+  }, [content, quote]);
+
+  return (
+    <>
+      {lines.map((line, i) => {
+        const isMatchLine = matcher ? matcher.test(line) : false;
+        const parts = quote ? splitContentByQuote(line, quote) : [{ text: line, matched: false }];
+
+        return (
+          <View
+            key={i}
+            onLayout={
+              isMatchLine
+                ? (e) => {
+                    if (hasScrolledRef.current) return;
+                    hasScrolledRef.current = true;
+                    const y = Math.max(e.nativeEvent.layout.y - 40, 0);
+                    scrollRef.current?.scrollTo({ y, animated: true });
+                  }
+                : undefined
+            }
+          >
+            <Text style={s.content}>
+              {parts.map((part, j) =>
+                part.matched ? (
+                  <Text key={j} style={s.highlight}>
+                    {part.text}
+                  </Text>
+                ) : (
+                  <Text key={j}>{part.text}</Text>
+                ),
+              )}
+            </Text>
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
 export function DocumentCitationModal({
   visible,
   onClose,
@@ -38,6 +97,7 @@ export function DocumentCitationModal({
   initialDocumentId,
 }: DocumentCitationModalProps) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
   const { data: characterDocs = [], isLoading: isLoadingCharacterDocs } =
     usePublicCharacterDocuments(characterId);
   const { data: contextDocs = [], isLoading: isLoadingContextDocs } =
@@ -53,7 +113,6 @@ export function DocumentCitationModal({
       : null;
 
   const title = matchedDocument?.title || "Nguồn tham khảo";
-  const parts = matchedDocument ? splitContentByQuote(matchedDocument.content, quote) : [];
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
@@ -72,6 +131,7 @@ export function DocumentCitationModal({
           </View>
 
           <ScrollView
+            ref={scrollRef}
             style={s.body}
             contentContainerStyle={{ padding: 18 }}
             showsVerticalScrollIndicator={false}
@@ -85,17 +145,7 @@ export function DocumentCitationModal({
               </View>
             ) : matchedDocument ? (
               <>
-                <Text style={s.content}>
-                  {parts.map((part, i) =>
-                    part.matched ? (
-                      <Text key={i} style={s.highlight}>
-                        {part.text}
-                      </Text>
-                    ) : (
-                      <Text key={i}>{part.text}</Text>
-                    ),
-                  )}
-                </Text>
+                <DocumentContent content={matchedDocument.content} quote={quote} scrollRef={scrollRef} />
                 {matchedDocument.fileUrl ? (
                   <TouchableOpacity
                     onPress={() => void Linking.openURL(matchedDocument.fileUrl!)}

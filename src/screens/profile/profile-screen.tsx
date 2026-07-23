@@ -1,6 +1,9 @@
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
-  AlertCircle, ArrowLeft, Calendar, CheckCircle2, ChevronDown, ChevronUp, Crown,
+  AlertCircle, ArrowLeft, Calendar, Camera, CheckCircle2, ChevronDown, ChevronUp, Crown,
   Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, Trophy, User, UserCircle, X,
 } from 'lucide-react-native';
 import { useState } from 'react';
@@ -33,8 +36,10 @@ import {
 import { useChangePassword } from '@/features/auth/hooks/use-change-password';
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
+import { useUploadAvatar } from '@/features/auth/hooks/use-upload-avatar';
 import { useAuthStore } from '@/features/auth/store';
 import type { UpdateProfileInput } from '@/features/auth/types';
+import { userApi } from '@/features/auth/user-api';
 import { useTiers } from '@/features/payment/hooks/use-tiers';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -161,6 +166,64 @@ export default function ProfileScreen() {
   }
   const { mutateAsync: updateMe, isPending: saving }         = useUpdateMe();
   const { mutateAsync: changePwd, isPending: changingPwd }   = useChangePassword();
+  const { mutateAsync: uploadAvatar, isPending: uploadingAvatar } = useUploadAvatar();
+
+  // avatarUrl tra ve tu API co the la link ngoai (vd Google) dung duoc thang,
+  // hoac 1 storage path noi bo (sau khi upload) — phai doi lay signed URL
+  // moi xem duoc. Cache tam URL vua upload de hien ngay, khong doi round-trip.
+  const [freshAvatarUrl, setFreshAvatarUrl] = useState<string | null>(null);
+  const rawAvatarUrl = profile?.avatarUrl;
+  const isDirectAvatarUrl = !!rawAvatarUrl && /^https?:\/\//.test(rawAvatarUrl);
+  const { data: signedAvatar } = useQuery({
+    queryKey: ['avatar-view-url', profile?._id, rawAvatarUrl],
+    queryFn: () => userApi.getAvatarViewUrl(profile!._id),
+    enabled: !!profile?._id && !!rawAvatarUrl && !isDirectAvatarUrl,
+    staleTime: 1000 * 60 * 30,
+  });
+  const avatarDisplayUrl =
+    freshAvatarUrl ?? (isDirectAvatarUrl ? rawAvatarUrl : signedAvatar?.url);
+
+  function pickAndUploadAvatar() {
+    if (!profile) return;
+    Alert.alert('Đổi ảnh đại diện', undefined, [
+      { text: 'Huỷ', style: 'cancel' },
+      { text: 'Chụp ảnh', onPress: () => void handlePickAvatar('camera') },
+      { text: 'Chọn từ thư viện', onPress: () => void handlePickAvatar('library') },
+    ]);
+  }
+
+  async function handlePickAvatar(source: 'camera' | 'library') {
+    const permission =
+      source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Thiếu quyền truy cập', 'Hãy cấp quyền camera/thư viện ảnh để đổi ảnh đại diện.');
+      return;
+    }
+
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [1, 1] })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [1, 1] });
+
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+
+    try {
+      const uploaded = await uploadAvatar({
+        userId: profile!._id,
+        file: {
+          uri: asset.uri,
+          name: asset.fileName ?? `avatar-${Date.now()}.jpg`,
+          type: asset.mimeType ?? 'image/jpeg',
+        },
+      });
+      setFreshAvatarUrl(uploaded.url);
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message ?? 'Không thể tải lên ảnh đại diện.');
+    }
+  }
 
   const activeTier = tiers?.find((t) => t.id === profile?.tierId);
   const tierName = activeTier ? activeTier.title : 'Gói Miễn phí';
@@ -281,11 +344,23 @@ export default function ProfileScreen() {
             <>
               {/* ── Avatar hero ─────────────────────────────────── */}
               <View style={s.heroSection}>
-                <View style={s.avatarRing}>
+                <Pressable onPress={pickAndUploadAvatar} style={s.avatarRing}>
                   <View style={s.avatar}>
-                    <Text style={s.avatarInitial}>{initial}</Text>
+                    {avatarDisplayUrl ? (
+                      <Image source={{ uri: avatarDisplayUrl }} style={s.avatarImage} contentFit="cover" />
+                    ) : (
+                      <Text style={s.avatarInitial}>{initial}</Text>
+                    )}
+                    {uploadingAvatar ? (
+                      <View style={s.avatarLoadingOverlay}>
+                        <ActivityIndicator color="#fff" size="small" />
+                      </View>
+                    ) : null}
                   </View>
-                </View>
+                  <View style={s.avatarEditBadge}>
+                    <Camera size={13} color="#fff" strokeWidth={2.2} />
+                  </View>
+                </Pressable>
                 <Text style={s.heroName}>{profile.userName}</Text>
                 <Text style={s.heroEmail}>{profile.email}</Text>
                 <View style={s.roleBadge}>
@@ -578,8 +653,22 @@ const s = StyleSheet.create({
   avatar: {
     width: 84, height: 84, borderRadius: 42,
     backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarInitial: { color: '#fff', fontSize: 34, fontWeight: '900' },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute', right: -2, bottom: -2,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: ORANGE,
+    borderWidth: 2, borderColor: CARD,
+    alignItems: 'center', justifyContent: 'center',
+  },
   heroName:      { color: TEXT,  fontSize: 20, fontWeight: '800', marginBottom: 4 },
   heroEmail:     { color: TEXT2, fontSize: 13, marginBottom: 12 },
   roleBadge: {
