@@ -25,6 +25,7 @@ export interface ChatMessage {
   content: string;
   messageType?: ChatMessageType;
   suggestedQuestions?: string[];
+  quotes?: string[];
   token?: number;
   createdAt: string;
 }

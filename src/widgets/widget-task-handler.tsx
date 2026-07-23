@@ -10,10 +10,18 @@ import { readRandomCharacterFromWidgetCache, readStreakWidgetCache } from './wid
 export const widgetTaskHandler: WidgetTaskHandler = async (props) => {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  const [streakCount, character] = await Promise.all([
+  const [streak, character] = await Promise.all([
     readStreakWidgetCache(),
     readRandomCharacterFromWidgetCache(),
   ]);
 
-  props.renderWidget(<StreakWidget streakCount={streakCount} character={character} />);
+  props.renderWidget(
+    <StreakWidget
+      streakCount={streak.streakCount}
+      questsCompleted={streak.questsCompleted}
+      questsTotal={streak.questsTotal}
+      week={streak.week}
+      character={character}
+    />,
+  );
 };

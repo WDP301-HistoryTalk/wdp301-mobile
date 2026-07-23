@@ -20,7 +20,13 @@ export function WidgetSync() {
 
   useEffect(() => {
     if (Platform.OS !== 'android' || today === undefined) return;
-    void saveStreakWidgetCache(today.streakCount).then(() => requestStreakWidgetLiveUpdate());
+    const questsCompleted = today.quests.filter((q) => q.completed).length;
+    void saveStreakWidgetCache({
+      streakCount: today.streakCount,
+      questsCompleted,
+      questsTotal: today.quests.length,
+      week: today.week.map((d) => ({ studied: d.studied, isToday: d.isToday })),
+    }).then(() => requestStreakWidgetLiveUpdate());
   }, [today]);
 
   useEffect(() => {

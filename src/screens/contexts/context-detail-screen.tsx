@@ -2,7 +2,7 @@ import { useEventListener } from "expo";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { ArrowLeft, Play, Trophy, X } from "lucide-react-native";
+import { ArrowLeft, FileText, Play, Trophy, X } from "lucide-react-native";
 import { useState } from "react";
 import {
   Linking,
@@ -31,6 +31,9 @@ import {
 import { BrandColors, Colors } from "@/constants/theme";
 import { useCharactersByContext } from "@/features/characters/hooks/use-characters-by-context";
 import { ERA_COLORS, getCharacterImageUri, type Character } from "@/features/characters/types";
+import { DocumentCitationModal } from "@/features/documents/DocumentCitationModal";
+import { usePublicContextDocuments } from "@/features/documents/hooks";
+import type { RagDocument } from "@/features/documents/types";
 import { useHistoricalContext } from "@/features/historical-contexts/hooks/use-historical-context";
 import { formatContextYear, getContextImageUri } from "@/features/historical-contexts/types";
 
@@ -97,6 +100,26 @@ function CharacterChip({
       >
         {char.name}
       </Text>
+    </TouchableOpacity>
+  );
+}
+
+function DocumentRow({ doc, onPress }: { doc: RagDocument; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.75}
+      style={documentStyles.row}
+    >
+      <View style={documentStyles.iconWrap}>
+        <FileText size={16} color={ORANGE} strokeWidth={2} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={documentStyles.title} numberOfLines={2}>
+          {doc.title || "Tài liệu tham khảo"}
+        </Text>
+      </View>
+      <Text style={{ color: ORANGE, fontSize: 18, fontWeight: "300" }}>›</Text>
     </TouchableOpacity>
   );
 }
@@ -315,8 +338,10 @@ export default function ContextDetailScreen() {
     refetch: refetchCtx,
   } = useHistoricalContext(resolvedId ?? "");
   const { data: relatedCharacters = [], refetch: refetchCharacters } = useCharactersByContext(resolvedId ?? "");
+  const { data: documents = [] } = usePublicContextDocuments(resolvedId ?? "");
   const [skippedIntroId, setSkippedIntroId] = useState<string | null>(null);
   const [manualVideoId, setManualVideoId] = useState<string | null>(null);
+  const [openDocumentId, setOpenDocumentId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   async function onRefresh() {
     setRefreshing(true);
@@ -520,6 +545,22 @@ export default function ContextDetailScreen() {
             </View>
           ) : null}
 
+          {/* Reference documents */}
+          {documents.length > 0 ? (
+            <View style={{ width: "100%", marginBottom: 28, gap: 8 }}>
+              <Heading size="sm" style={{ marginBottom: 4 }}>
+                Tài liệu tham khảo
+              </Heading>
+              {documents.map((doc) => (
+                <DocumentRow
+                  key={doc.id}
+                  doc={doc}
+                  onPress={() => setOpenDocumentId(doc.id)}
+                />
+              ))}
+            </View>
+          ) : null}
+
           {/* Quiz banner */}
           <TouchableOpacity
             onPress={() => router.push("/quiz")}
@@ -581,9 +622,44 @@ export default function ContextDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <DocumentCitationModal
+        visible={!!openDocumentId}
+        onClose={() => setOpenDocumentId(null)}
+        initialDocumentId={openDocumentId}
+        contextId={resolvedId}
+      />
     </View>
   );
 }
+
+const documentStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ORANGE_BORDER,
+    backgroundColor: SURFACE,
+    padding: 12,
+    width: "100%",
+  },
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: CARD,
+  },
+  title: {
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+});
 
 const quizStyles = StyleSheet.create({
   banner: {

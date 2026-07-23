@@ -5,6 +5,8 @@ import * as Speech from "expo-speech";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   Coins,
   Ellipsis,
   History,
@@ -12,6 +14,7 @@ import {
   Mic,
   Phone,
   PhoneOff,
+  Quote,
   Send,
   Trash2,
   UserRound,
@@ -61,6 +64,7 @@ import { useCreateSession } from "@/features/chat/hooks/use-create-session";
 import { useSendMessage } from "@/features/chat/hooks/use-send-message";
 import { useSessionMessages } from "@/features/chat/hooks/use-session-messages";
 import type { ChatMessage, ChatMessageType } from "@/features/chat/types";
+import { DocumentCitationModal } from "@/features/documents/DocumentCitationModal";
 import { speakWithAzure, stopAzureSpeech } from "@/lib/azure-speech";
 
 const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
@@ -398,6 +402,53 @@ const VoiceCallCard = memo(function VoiceCallCard({
   );
 });
 
+// Nguồn trích dẫn AI đã dùng để trả lời — bấm "Xem trong tài liệu" để mở
+// DocumentCitationModal, đối chiếu đoạn trích với tài liệu gốc (giống web).
+function MessageQuotes({
+  quotes,
+  onViewQuote,
+}: {
+  quotes: string[];
+  onViewQuote: (quote: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <View style={{ marginTop: 6 }}>
+      <TouchableOpacity
+        onPress={() => setIsOpen((v) => !v)}
+        activeOpacity={0.7}
+        style={s.quotesToggle}
+      >
+        <Quote size={11} color={MUTED} strokeWidth={2.2} />
+        <Text style={s.quotesToggleText}>{quotes.length} nguồn trích dẫn</Text>
+        {isOpen ? (
+          <ChevronUp size={12} color={MUTED} strokeWidth={2.2} />
+        ) : (
+          <ChevronDown size={12} color={MUTED} strokeWidth={2.2} />
+        )}
+      </TouchableOpacity>
+
+      {isOpen ? (
+        <View style={s.quotesBox}>
+          {quotes.map((quote, i) => (
+            <View key={i} style={i > 0 ? { marginTop: 10 } : undefined}>
+              <Text style={s.quoteText}>{quote}</Text>
+              <TouchableOpacity
+                onPress={() => onViewQuote(quote)}
+                activeOpacity={0.7}
+                hitSlop={6}
+              >
+                <Text style={s.quoteLink}>Xem trong tài liệu</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 // Memo hoá: message reference chỉ đổi khi chính tin nhắn đó đổi (xem
 // handleSend > onToken cập nhật đúng 1 phần tử trong mảng messages), nên các
 // bubble không liên quan không cần re-render mỗi lần 1 token mới stream về.
@@ -405,10 +456,12 @@ const MessageBubble = memo(function MessageBubble({
   message,
   initial,
   characterImageUrl,
+  onViewQuote,
 }: {
   message: ChatMessage;
   initial: string;
   characterImageUrl?: string;
+  onViewQuote: (quote: string) => void;
 }) {
   const isUser = message.role === "USER";
   const isVoice = message.messageType === "VOICE";
@@ -509,6 +562,11 @@ const MessageBubble = memo(function MessageBubble({
           )}
         </TouchableOpacity>
       </View>
+      {message.quotes && message.quotes.length > 0 ? (
+        <View style={{ marginLeft: 38 }}>
+          <MessageQuotes quotes={message.quotes} onViewQuote={onViewQuote} />
+        </View>
+      ) : null}
       {clock ? <Text style={[s.msgTime, { marginLeft: 38 }]}>{clock}</Text> : null}
     </View>
   );
@@ -572,6 +630,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [timelineItems, setTimelineItems] = useState<ChatTimelineItem[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [citationQuote, setCitationQuote] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1114,6 +1173,7 @@ export default function ChatScreen() {
           message={item.message}
           initial={initial}
           characterImageUrl={resolvedCharacterImageUrl}
+          onViewQuote={setCitationQuote}
         />
       ),
     [initial, resolvedCharacterImageUrl],
@@ -1447,6 +1507,14 @@ export default function ChatScreen() {
 
         <View style={{ height: Platform.OS === "ios" ? 0 : 8 }} />
       </KeyboardAvoidingView>
+
+      <DocumentCitationModal
+        visible={!!citationQuote}
+        onClose={() => setCitationQuote(null)}
+        quote={citationQuote}
+        characterId={characterId}
+        contextId={contextId}
+      />
     </SafeAreaView>
   );
 }
@@ -1877,6 +1945,47 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     marginTop: 6,
+  },
+  quotesToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  quotesToggleText: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  quotesBox: {
+    marginTop: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  quoteText: {
+    color: TEXT2,
+    fontSize: 12,
+    lineHeight: 18,
+    borderLeftWidth: 2,
+    borderLeftColor: ORANGE,
+    paddingLeft: 8,
+  },
+  quoteLink: {
+    color: ORANGE,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 4,
+    paddingLeft: 8,
   },
   tokenPill: {
     flexDirection: "row",

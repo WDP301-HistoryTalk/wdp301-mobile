@@ -56,9 +56,9 @@
               "label": "HistoryTalk - Chuỗi ngày học",
               "description": "Xem chuỗi ngày học và một nhân vật lịch sử ngẫu nhiên",
               "minWidth": "250dp",
-              "minHeight": "110dp",
+              "minHeight": "180dp",
               "targetCellWidth": 3,
-              "targetCellHeight": 2,
+              "targetCellHeight": 3,
               "updatePeriodMillis": 1800000
             }
           ]
