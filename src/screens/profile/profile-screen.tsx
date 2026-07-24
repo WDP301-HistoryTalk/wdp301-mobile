@@ -2,13 +2,13 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
-  AlertCircle, ArrowLeft, Calendar, Camera, CheckCircle2, ChevronDown, ChevronUp, Crown,
+  AlertCircle, ArrowLeft, Bell, Calendar, Camera, CheckCircle2, ChevronDown, ChevronUp, Crown,
   Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, Trophy, User, UserCircle, X,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View,
+  Pressable, RefreshControl, ScrollView, StyleSheet, Switch, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -38,7 +38,16 @@ import { useUpdateMe } from '@/features/auth/hooks/use-update-me';
 import { useUploadAvatar } from '@/features/auth/hooks/use-upload-avatar';
 import { useAuthStore } from '@/features/auth/store';
 import type { UpdateProfileInput } from '@/features/auth/types';
+import { notificationsApi } from '@/features/notifications/api';
 import { useTiers } from '@/features/payment/hooks/use-tiers';
+import {
+  cancelDailyReminder,
+  getDevicePushTokenSafe,
+  getPushPreference,
+  isDailyReminderScheduled,
+  scheduleDailyReminder,
+  setPushPreference,
+} from '@/lib/notifications';
 
 const ROLE_LABEL: Record<string, string> = {
   CUSTOMER:      'Người dùng',
@@ -230,6 +239,63 @@ export default function ProfileScreen() {
   const [pwdCurrent, setPwdCurrent] = useState('');
   const [pwdNew,     setPwdNew]     = useState('');
   const [pwdConfirm, setPwdConfirm] = useState('');
+
+  // notifications state
+  const [dailyReminderOn, setDailyReminderOn] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [notifBusy, setNotifBusy] = useState<'daily' | 'push' | null>(null);
+
+  useEffect(() => {
+    void isDailyReminderScheduled().then(setDailyReminderOn);
+    void getPushPreference().then(setPushEnabled);
+  }, []);
+
+  async function toggleDailyReminder(next: boolean) {
+    setNotifBusy('daily');
+    try {
+      if (next) {
+        const ok = await scheduleDailyReminder();
+        if (!ok) {
+          Alert.alert(
+            'Không thể bật nhắc học',
+            'Hãy cấp quyền thông báo cho HistoryTalk trong Cài đặt máy, hoặc cần cài lại bản build mới hơn.',
+          );
+          return;
+        }
+      } else {
+        await cancelDailyReminder();
+      }
+      setDailyReminderOn(next);
+    } finally {
+      setNotifBusy(null);
+    }
+  }
+
+  async function togglePushEnabled(next: boolean) {
+    if (!profile) return;
+    setNotifBusy('push');
+    try {
+      await setPushPreference(next);
+      const token = await getDevicePushTokenSafe();
+      if (token) {
+        if (next) await notificationsApi.registerDeviceToken(token, Platform.OS as 'android' | 'ios');
+        else await notificationsApi.removeDeviceToken(token);
+      } else if (next) {
+        Alert.alert(
+          'Không thể bật thông báo',
+          'Hãy cấp quyền thông báo cho HistoryTalk trong Cài đặt máy, hoặc cần cài lại bản build mới hơn.',
+        );
+        await setPushPreference(false);
+        setPushEnabled(false);
+        return;
+      }
+      setPushEnabled(next);
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message ?? 'Không thể cập nhật cài đặt thông báo.');
+    } finally {
+      setNotifBusy(null);
+    }
+  }
 
   const initial = profile?.userName?.charAt(0).toUpperCase() ?? 'U';
 
@@ -567,6 +633,44 @@ export default function ProfileScreen() {
                 )}
               </View>
 
+              {/* ── Notifications ─────────────────────────────────── */}
+              <View style={s.section}>
+                <View style={s.sectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Bell size={17} color={ORANGE} strokeWidth={1.75} />
+                    <Text style={s.sectionTitle}>Thông báo</Text>
+                  </View>
+                </View>
+
+                <View style={s.notifRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.notifLabel}>Nhắc học hằng ngày (20:00)</Text>
+                    <Text style={s.notifHint}>Thông báo cục bộ, không cần mạng.</Text>
+                  </View>
+                  <Switch
+                    value={dailyReminderOn}
+                    onValueChange={(v) => void toggleDailyReminder(v)}
+                    disabled={notifBusy === 'daily'}
+                    trackColor={{ true: ORANGE, false: BORDER }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                <View style={[s.notifRow, { borderTopWidth: 1, borderTopColor: BORDER, marginTop: 4, paddingTop: 14 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.notifLabel}>Nhận thông báo từ HistoryTalk</Text>
+                    <Text style={s.notifHint}>Thanh toán thành công, gói sắp hết hạn...</Text>
+                  </View>
+                  <Switch
+                    value={pushEnabled}
+                    onValueChange={(v) => void togglePushEnabled(v)}
+                    disabled={notifBusy === 'push'}
+                    trackColor={{ true: ORANGE, false: BORDER }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
+
               {/* ── Logout ──────────────────────────────────────────── */}
               <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
                 <TouchableOpacity onPress={confirmLogout} activeOpacity={0.8} style={s.logoutBtn}>
@@ -740,6 +844,12 @@ const s = StyleSheet.create({
     backgroundColor: ORANGE, borderRadius: 14,
     paddingVertical: 14, marginTop: 4,
   },
+
+  notifRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  notifLabel: { color: TEXT, fontSize: 14, fontWeight: '700' },
+  notifHint: { color: MUTED, fontSize: 11, marginTop: 2 },
 
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,

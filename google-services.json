@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "576313310088",
+    "project_id": "wdp301-historytalkfirebase",
+    "storage_bucket": "wdp301-historytalkfirebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576313310088:android:90466d4139108b0980583d",
+        "android_client_info": {
+          "package_name": "com.anonymous.mobilehistorytalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCl2Uhm2-_nWn4NUKlsfz3XEmVKCZcbYMM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

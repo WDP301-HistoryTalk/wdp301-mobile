@@ -119,6 +119,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     const { accessToken } = get();
     if (accessToken) {
+      // Go device token khoi backend truoc khi mat session — dynamic import
+      // de tranh vong phu thuoc module (notifications/api.ts -> api-client.ts
+      // -> store.ts).
+      try {
+        const [{ getDevicePushTokenSafe }, { notificationsApi }] = await Promise.all([
+          import('@/lib/notifications'),
+          import('@/features/notifications/api'),
+        ]);
+        const token = await getDevicePushTokenSafe();
+        if (token) await notificationsApi.removeDeviceToken(token);
+      } catch { /* ignore — best-effort */ }
+
       try { await authApi.logout(accessToken); } catch { /* ignore */ }
     }
     await Promise.all(Object.values(KEYS).map((k) => SecureStore.deleteItemAsync(k)));

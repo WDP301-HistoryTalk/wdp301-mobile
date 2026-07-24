@@ -1,4 +1,4 @@
-import { Slot, usePathname } from "expo-router";
+import { Slot, usePathname, useRouter } from "expo-router";
 import { BookOpen, Trophy, User, Users } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -9,6 +9,9 @@ import { ScreenBackdrop } from "@/components/screen-backdrop";
 import { TabButton } from "@/components/tab-button";
 import { BG, BORDER, CARD } from "@/constants/palette";
 import { useAvatarSync } from "@/features/auth/hooks/use-avatar-sync";
+import { useAuthStore } from "@/features/auth/store";
+import { useRegisterPush } from "@/features/notifications/hooks/use-register-push";
+import { addNotificationTapListener } from "@/lib/notifications";
 import { WidgetSync } from "@/widgets/widget-sync";
 
 const TAB_BAR_HORIZONTAL_PADDING = 12;
@@ -29,8 +32,18 @@ function isActive(pathname: string, href: string) {
 
 export default function AppTabs() {
   const pathname = usePathname();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   useAvatarSync();
+  useRegisterPush(isAuthenticated);
+
+  // Bam vao push notification (tu background/killed hoac tu foreground) ->
+  // dieu huong theo `data.route` ma backend luon kem trong payload.
+  useEffect(() => {
+    const sub = addNotificationTapListener((route) => router.push(route as never));
+    return () => sub.remove();
+  }, [router]);
 
   // Hide the tab bar entirely while an active quiz session is running, so the
   // only way out is the in-screen "Thoát" confirm — no escaping via a tab tap.
