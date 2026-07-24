@@ -541,11 +541,12 @@ const MessageBubble = memo(function MessageBubble({
               )}
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
                 <Text style={[s.aiText, { flexShrink: 1 }]}>{displayText}</Text>
-                <Volume2
-                  size={14}
-                  color={speaking ? ORANGE : MUTED}
-                  style={{ marginTop: 2, flexShrink: 0 }}
-                />
+                <View style={{ width: 14, height: 14, marginTop: 2, flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
+                  <Volume2
+                    size={14}
+                    color={speaking ? ORANGE : MUTED}
+                  />
+                </View>
               </View>
               {isLong && (
                 <TouchableOpacity
@@ -618,6 +619,13 @@ export default function ChatScreen() {
   const { data: sessionData, isLoading: loadingMessages } =
     useSessionMessages(sessionId);
   const { data: character } = useCharacter(characterId);
+  // contextId từ route param có thể null (session cũ có context đã bị xoá,
+  // hoặc màn hình gọi tới không truyền) — khi đó tra trích dẫn theo tài liệu
+  // context sẽ bị tắt hoàn toàn dù nhân vật vẫn còn context khác. Fallback về
+  // context đầu tiên của nhân vật, giống web (chat-client.tsx), chỉ áp dụng
+  // cho việc tra cứu trích dẫn — không đụng tới contextId dùng khi tạo session.
+  const citationContextId =
+    contextId || character?.contexts?.[0]?.contextId?.id || "";
   const { mutateAsync: sendMessage, isPending: sending } = useSendMessage();
   const { mutateAsync: createSession, isPending: creatingSession } =
     useCreateSession();
@@ -1542,7 +1550,7 @@ export default function ChatScreen() {
         onClose={() => setCitationQuote(null)}
         quote={citationQuote}
         characterId={characterId}
-        contextId={contextId}
+        contextId={citationContextId}
       />
     </SafeAreaView>
   );
