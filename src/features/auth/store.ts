@@ -34,12 +34,17 @@ interface AuthState {
   // thay doi dong bo o noi khac. Khong persist: chi la cache hien thi, luon
   // duoc tinh lai tu profile + (neu can) signed URL khi app khoi dong.
   avatarUrl: string | null;
+  // Set khi logout() bị ép buộc do phiên hết hạn (refresh token invalid/expired),
+  // để phân biệt với logout do người dùng tự bấm — dùng cho modal thông báo
+  // "Phiên đăng nhập đã hết hạn" ở root layout. null nghĩa là không có gì để báo.
+  logoutReason: 'expired' | null;
 
   initialize: () => Promise<void>;
   setAuth: (data: AuthResponse) => Promise<void>;
   updateTokens: (accessToken: string, refreshToken?: string) => void;
   setAvatarUrl: (url: string | null) => void;
-  logout: () => Promise<void>;
+  logout: (reason?: 'expired') => Promise<void>;
+  clearLogoutReason: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -49,6 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
   avatarUrl: null,
+  logoutReason: null,
 
   initialize: async () => {
     try {
@@ -116,7 +122,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setAvatarUrl: (url: string | null) => set({ avatarUrl: url }),
 
-  logout: async () => {
+  clearLogoutReason: () => set({ logoutReason: null }),
+
+  logout: async (reason) => {
     const { accessToken } = get();
     if (accessToken) {
       // Go device token khoi backend truoc khi mat session — dynamic import
@@ -145,6 +153,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch { /* best-effort */ }
 
-    set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null, avatarUrl: null });
+    set({
+      isAuthenticated: false,
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      avatarUrl: null,
+      logoutReason: reason ?? null,
+    });
   },
 }));

@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Slot } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
+import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { BG, ORANGE } from '@/constants/palette';
 import { FontAssets } from '@/constants/theme';
 import { AppProviders } from '@/providers/app-providers';
@@ -28,6 +29,7 @@ export default function RootLayout() {
   return (
     <AppProviders>
       <Slot />
+      <SessionExpiredModal />
     </AppProviders>
   );
 }

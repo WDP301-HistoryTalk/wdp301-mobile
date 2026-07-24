@@ -45,11 +45,11 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
         useAuthStore.getState().updateTokens(tokens.accessToken, tokens.refreshToken);
         res = await doFetch();
       } catch {
-        void useAuthStore.getState().logout();
+        void useAuthStore.getState().logout('expired');
         throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
       }
     } else {
-      void useAuthStore.getState().logout();
+      void useAuthStore.getState().logout('expired');
       throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
     }
   }
