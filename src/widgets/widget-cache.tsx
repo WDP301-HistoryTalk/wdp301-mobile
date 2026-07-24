@@ -83,3 +83,26 @@ export async function requestStreakWidgetLiveUpdate(): Promise<void> {
     ),
   });
 }
+
+// Xoa cache widget khi user dang xuat — tranh widget hien du lieu cu cua user
+// truoc hoac lo thong tin ca nhan khi may da logout.
+export async function clearWidgetCache(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([STREAK_KEY, CHARACTERS_KEY]);
+    // Cap nhat widget ve trang thai rong ngay lap tuc.
+    await requestWidgetUpdate({
+      widgetName: WIDGET_NAME,
+      renderWidget: () => (
+        <StreakWidget
+          streakCount={0}
+          questsCompleted={0}
+          questsTotal={0}
+          week={[]}
+          character={null}
+        />
+      ),
+    });
+  } catch {
+    // best-effort — widget van hien du lieu cu nhung khong crash.
+  }
+}

@@ -134,6 +134,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try { await authApi.logout(accessToken); } catch { /* ignore */ }
     }
     await Promise.all(Object.values(KEYS).map((k) => SecureStore.deleteItemAsync(k)));
+
+    // Xoa cache widget Android de khong hien du lieu cu cua user da logout.
+    // Dynamic import de tranh vong phu thuoc module + Platform check cho iOS.
+    try {
+      const { Platform } = await import('react-native');
+      if (Platform.OS === 'android') {
+        const { clearWidgetCache } = await import('@/widgets/widget-cache');
+        await clearWidgetCache();
+      }
+    } catch { /* best-effort */ }
+
     set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null, avatarUrl: null });
   },
 }));

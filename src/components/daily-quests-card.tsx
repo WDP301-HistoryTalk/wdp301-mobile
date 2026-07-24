@@ -107,7 +107,7 @@ export function DailyQuestsCard() {
               style={[
                 s.weekDot,
                 d.studied && s.weekDotStudied,
-                d.isToday && !d.studied && s.weekDotToday,
+                d.isToday && (d.studied ? s.weekDotTodayRing : s.weekDotToday),
               ]}
             >
               {d.studied ? <Check size={13} color="#fff" strokeWidth={3} /> : null}
@@ -305,6 +305,12 @@ const s = StyleSheet.create({
   },
   weekDotToday: {
     backgroundColor: ORANGE_TINT_MUTED,
+    borderWidth: 1.5,
+    borderColor: ORANGE,
+  },
+  // Hôm nay + đã học: giữ nền xanh đã học nhưng vẫn viền để phân biệt "hôm nay"
+  // với các ngày đã học khác trong tuần.
+  weekDotTodayRing: {
     borderWidth: 1.5,
     borderColor: ORANGE,
   },
