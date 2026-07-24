@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, BookOpen, Clock, Play, Star, Timer, User, Users } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, Clock, History, Play, Star, Timer, User, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet,
@@ -146,7 +146,23 @@ export default function QuizDetailScreen() {
           <ArrowLeft size={20} color={TEXT} strokeWidth={2} />
         </TouchableOpacity>
         <Text style={ss.headerTitle}>Chi tiết bộ đề</Text>
-        <View style={{ width: 40 }} />
+        {quiz ? (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/quiz/history',
+                params: { quizId: quiz.quizId, quizTitle: quiz.title },
+              })
+            }
+            activeOpacity={0.7}
+            style={ss.backBtn}
+            accessibilityLabel="Xem lịch sử quiz này"
+          >
+            <History size={18} color={ORANGE} strokeWidth={2} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       {isLoading && (
@@ -211,12 +227,22 @@ export default function QuizDetailScreen() {
             {quiz.userPlayCount ? (
               <>
                 <View style={ss.divider} />
-                <StatRow
-                  icon={User}
-                  label="Bạn đã làm"
-                  value={`${quiz.userPlayCount} lần`}
-                  color={ORANGE}
-                />
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/quiz/history',
+                      params: { quizId: quiz.quizId, quizTitle: quiz.title },
+                    })
+                  }
+                >
+                  <StatRow
+                    icon={User}
+                    label="Bạn đã làm (Xem lịch sử)"
+                    value={`${quiz.userPlayCount} lần ›`}
+                    color={ORANGE}
+                  />
+                </TouchableOpacity>
               </>
             ) : null}
           </View>
@@ -309,8 +335,8 @@ export default function QuizDetailScreen() {
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Play size={20} color="#fff" strokeWidth={2} fill="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>Bắt đầu làm bài</Text>
+                <Play size={18} color="#fff" strokeWidth={2} fill="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, lineHeight: 20 }}>Bắt đầu làm bài</Text>
               </>
             )}
           </TouchableOpacity>
@@ -397,11 +423,11 @@ const ss = StyleSheet.create({
 
   startWrap: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: 20, paddingBottom: 32,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     backgroundColor: BG, borderTopWidth: 1, borderTopColor: BORDER,
   },
   startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: ORANGE, borderRadius: 18, paddingVertical: 17,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 12,
   },
 });

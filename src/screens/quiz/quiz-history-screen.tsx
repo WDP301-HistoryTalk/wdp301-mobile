@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trophy } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -33,8 +33,12 @@ function scoreColor(percentage: number) {
 
 export default function QuizHistoryScreen() {
   const router = useRouter();
+  const { quizId, quizTitle } = useLocalSearchParams<{ quizId?: string; quizTitle?: string }>();
+  const targetQuizId = Array.isArray(quizId) ? quizId[0] : quizId;
+  const targetTitle = Array.isArray(quizTitle) ? quizTitle[0] : quizTitle;
+
   const [page, setPage] = useState(0);
-  const { data, isLoading, isFetching, refetch, isRefetching } = useQuizResults(page, 10);
+  const { data, isLoading, isFetching, refetch, isRefetching } = useQuizResults(page, 20, targetQuizId);
 
   function renderItem({ item }: { item: MyResult }) {
     const correctCount = Math.round((item.percentage / 100) * item.totalQuestions);
@@ -65,7 +69,9 @@ export default function QuizHistoryScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.iconBtn}>
           <ArrowLeft size={20} color={TEXT} strokeWidth={2} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Lịch sử làm quiz</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>
+          {targetTitle ? `Lịch sử: ${targetTitle}` : 'Lịch sử làm quiz'}
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -84,7 +90,9 @@ export default function QuizHistoryScreen() {
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 60, gap: 10 }}>
               <Trophy size={36} color={MUTED} />
-              <Text style={{ color: TEXT2, fontSize: 14 }}>Bạn chưa làm bài quiz nào</Text>
+              <Text style={{ color: TEXT2, fontSize: 14 }}>
+                {targetQuizId ? 'Bạn chưa làm bài quiz này lần nào' : 'Bạn chưa làm bài quiz nào'}
+              </Text>
             </View>
           }
           ListFooterComponent={

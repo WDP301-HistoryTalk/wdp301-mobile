@@ -26,6 +26,7 @@ import {
   Alert,
   Animated,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   NativeModules,
   Platform,
@@ -39,6 +40,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { FormattedMarkdown } from "@/components/ui/formatted-markdown";
 import { Text } from "@/components/ui/text";
 import {
   BG,
@@ -413,10 +415,20 @@ function MessageQuotes({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleToggle = () => {
+    Keyboard.dismiss();
+    setIsOpen((v) => !v);
+  };
+
+  const handleViewQuote = (quote: string) => {
+    Keyboard.dismiss();
+    onViewQuote(quote);
+  };
+
   return (
     <View style={{ marginTop: 6 }}>
       <TouchableOpacity
-        onPress={() => setIsOpen((v) => !v)}
+        onPress={handleToggle}
         activeOpacity={0.7}
         style={s.quotesToggle}
       >
@@ -435,7 +447,7 @@ function MessageQuotes({
             <View key={i} style={i > 0 ? { marginTop: 10 } : undefined}>
               <Text style={s.quoteText}>{quote}</Text>
               <TouchableOpacity
-                onPress={() => onViewQuote(quote)}
+                onPress={() => handleViewQuote(quote)}
                 activeOpacity={0.7}
                 hitSlop={6}
               >
@@ -540,7 +552,9 @@ const MessageBubble = memo(function MessageBubble({
                 </View>
               )}
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-                <Text style={[s.aiText, { flexShrink: 1 }]}>{displayText}</Text>
+                <View style={{ flexShrink: 1, width: "100%" }}>
+                  <FormattedMarkdown content={displayText} baseStyle={s.aiText} />
+                </View>
                 <View style={{ width: 14, height: 14, marginTop: 2, flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
                   <Volume2
                     size={14}
@@ -1213,7 +1227,7 @@ export default function ChatScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
         <View style={s.header}>

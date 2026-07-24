@@ -552,7 +552,7 @@ export default function QuizResultScreen() {
       </ScrollView>
 
       {/* ── Action buttons ──────────────────────────────────────────── */}
-      <View style={[ss.actions, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={[ss.actions, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <TouchableOpacity
           onPress={() => void retry()}
           disabled={retrying}
@@ -563,8 +563,8 @@ export default function QuizResultScreen() {
             <ActivityIndicator color={ORANGE} size="small" />
           ) : (
             <>
-              <RotateCcw size={18} color={ORANGE} strokeWidth={2} />
-              <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 15 }}>Làm lại</Text>
+              <RotateCcw size={17} color={ORANGE} strokeWidth={2} />
+              <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 15, lineHeight: 20 }}>Làm lại</Text>
             </>
           )}
         </TouchableOpacity>
@@ -574,8 +574,8 @@ export default function QuizResultScreen() {
           activeOpacity={0.85}
           style={ss.actionPrimary}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Về danh sách</Text>
-          <ChevronRight size={18} color="#fff" strokeWidth={2} />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15, lineHeight: 20 }}>Về danh sách</Text>
+          <ChevronRight size={17} color="#fff" strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -968,9 +968,9 @@ const ss = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    paddingBottom: 24,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     backgroundColor: BG,
     borderTopWidth: 1,
     borderTopColor: BORDER,
@@ -980,26 +980,26 @@ const ss = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: ORANGE_TINT,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: ORANGE,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   actionPrimary: {
     flex: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: ORANGE,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 12,
     shadowColor: ORANGE,
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 });
