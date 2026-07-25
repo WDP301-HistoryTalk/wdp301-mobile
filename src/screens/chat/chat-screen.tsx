@@ -38,7 +38,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FormattedMarkdown } from "@/components/ui/formatted-markdown";
 import { Text } from "@/components/ui/text";
@@ -588,6 +588,7 @@ const MessageBubble = memo(function MessageBubble({
 });
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{
     sessionId: string;
@@ -1224,10 +1225,11 @@ export default function ChatScreen() {
   return (
     // Tab bar bi an trong man hoi thoai (xem app-tabs.tsx) nen phai tu chua
     // safe-area duoi — giong quiz-play.
-    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={["top", "bottom"]}>
+    <View style={{ flex: 1, backgroundColor: BG, paddingTop: insets.top }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
+        enabled={true}
         keyboardVerticalOffset={0}
       >
         <View style={s.header}>
@@ -1556,7 +1558,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: Platform.OS === "ios" ? 0 : 8 }} />
+        <View style={{ height: Platform.OS === "ios" ? insets.bottom : 8 }} />
       </KeyboardAvoidingView>
 
       <DocumentCitationModal
@@ -1566,7 +1568,7 @@ export default function ChatScreen() {
         characterId={characterId}
         contextId={citationContextId}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
