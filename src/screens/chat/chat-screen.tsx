@@ -657,7 +657,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callElapsed, setCallElapsed] = useState(0);
 
@@ -1225,7 +1225,7 @@ export default function ChatScreen() {
   return (
     // Tab bar bi an trong man hoi thoai (xem app-tabs.tsx) nen phai tu chua
     // safe-area duoi — giong quiz-play.
-    <View style={{ flex: 1, backgroundColor: BG, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: "transparent", paddingTop: insets.top }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="padding"
@@ -1486,34 +1486,32 @@ export default function ChatScreen() {
           />
         )}
 
-        {timelineItems.length > 0 && (
+        {suggestions.length > 0 && !isTyping ? (
           <View style={s.suggestionsBar}>
-            {suggestions.length > 0 && !isTyping ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  gap: 8,
-                  paddingHorizontal: 16,
-                  alignItems: 'center',
-                }}
-              >
-                {suggestions.map((q, i) => (
-                  <TouchableOpacity
-                    key={`${q}-${i}`}
-                    onPress={() => void handleSend(q)}
-                    activeOpacity={0.75}
-                    style={s.suggestionChip}
-                  >
-                    <Text style={s.suggestionText} numberOfLines={1}>
-                      {q}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : null}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 8,
+                paddingHorizontal: 16,
+                alignItems: 'center',
+              }}
+            >
+              {suggestions.map((q, i) => (
+                <TouchableOpacity
+                  key={`${q}-${i}`}
+                  onPress={() => void handleSend(q)}
+                  activeOpacity={0.75}
+                  style={s.suggestionChip}
+                >
+                  <Text style={s.suggestionText} numberOfLines={1}>
+                    {q}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-        )}
+        ) : null}
 
         {isCustomer && tokenBalance != null && tokenBalance <= LOW_TOKEN_THRESHOLD ? (
           <View style={s.tokenBanner}>

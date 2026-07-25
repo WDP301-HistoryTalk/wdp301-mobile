@@ -456,24 +456,37 @@ export default function CharacterDetailScreen() {
       {/* ── Fixed CTA ─────────────────────────────────────── */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28,
+        paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
         backgroundColor: BG,
         borderTopWidth: 1, borderTopColor: BORDER,
       }}>
-        <Button
-          size="lg"
-          className="rounded-[18px] h-[54px]"
+        <TouchableOpacity
           disabled={!!creatingFor || !char.contexts?.length}
           onPress={() => {
             const first = char.contexts?.[0];
             if (first) void startChat(first.contextId.id, first.name);
           }}
+          activeOpacity={0.85}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            backgroundColor: ORANGE,
+            borderRadius: 14,
+            paddingVertical: 12,
+            opacity: (creatingFor || !char.contexts?.length) ? 0.55 : 1,
+          }}
         >
-          {creatingFor
-            ? <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-            : <ButtonIcon as={MessageCircle} size={20} />}
-          <ButtonText size="md">Chat với {char.name}</ButtonText>
-        </Button>
+          {creatingFor ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <MessageCircle size={18} color="#fff" strokeWidth={2} />
+          )}
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, lineHeight: 20 }}>
+            Chat với {char.name}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Confirm delete modal ───────────────────────────── */}
