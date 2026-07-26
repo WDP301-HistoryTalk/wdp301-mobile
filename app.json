@@ -20,7 +20,21 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.mobilehistorytalk",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "com.googleusercontent.apps.32246262095-4vihpn8j4t6v6r8cv3p7h8fqiid4r3ah"
+            }
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static",
