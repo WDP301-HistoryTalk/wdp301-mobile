@@ -68,6 +68,7 @@ import { useSessionMessages } from "@/features/chat/hooks/use-session-messages";
 import type { ChatMessage, ChatMessageType } from "@/features/chat/types";
 import { DocumentCitationModal } from "@/features/documents/DocumentCitationModal";
 import { speakWithAzure, stopAzureSpeech } from "@/lib/azure-speech";
+import { playEndCallSound } from "@/lib/sound-effects";
 
 const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
 // Nghe qua lau ma STT khong tu ket thuc (vd im lang, khong co mic that) —
@@ -893,6 +894,7 @@ export default function ChatScreen() {
     }
     void nativeVoiceRef.current?.stop().catch(() => {});
     void stopAzureSpeech();
+    void playEndCallSound();
     setIsCallListening(false);
     setIsCallProcessing(false);
     setIsCharacterSpeaking(false);
