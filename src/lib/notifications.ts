@@ -1,11 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 // Toan bo ham o day deu "fail soft": neu native module chua co mat (vd chua
 // rebuild dev client sau khi cai expo-notifications), moi loi deu bi nuot va
 // tra ve gia tri rong — khong lam crash man hinh goi no. Sau khi rebuild,
 // cac ham nay tu hoat dong binh thuong ma khong can sua code.
+//
+// Dung require() (khong phai static import): tren Expo Go Android SDK 53+,
+// ban than expo-notifications throw ngay khi module duoc load (no dang ky mot
+// push-token listener o top-level), truoc khi bat ky try/catch nao trong file
+// nay kip chay. require() trong try/catch la cach duy nhat "bat" duoc loi do.
+type NotificationsModule = typeof import('expo-notifications');
+let Notifications: NotificationsModule | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch {
+  Notifications = null;
+}
+
+function notif(): NotificationsModule {
+  if (!Notifications) throw new Error('expo-notifications unavailable');
+  return Notifications;
+}
 
 const DAILY_REMINDER_ID = 'daily-study-reminder';
 const ANDROID_CHANNEL_ID = 'default';
@@ -32,7 +49,7 @@ export async function setPushPreference(enabled: boolean): Promise<void> {
 }
 
 try {
-  Notifications.setNotificationHandler({
+  notif().setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
@@ -41,19 +58,20 @@ try {
     }),
   });
 } catch {
-  // native module chua san sang — bo qua, khong lam crash luc import module nay
+  // native module chua san sang (hoac dang chay Expo Go) — bo qua, khong lam
+  // crash luc import module nay
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   try {
-    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+    await notif().setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: 'Thông báo chung',
       // HIGH de push hien banner pop-up (heads-up) thay vi chi nam im trong
       // khay thong bao. Luu y: Android khoa importance sau khi channel duoc
       // tao lan dau — doi gia tri nay khong anh huong may da cai app tu
       // truoc, phai xoa channel cu hoac cai lai app moi ap dung.
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: notif().AndroidImportance.HIGH,
     });
   } catch {
     // native module chua san sang — bo qua
@@ -62,9 +80,9 @@ export async function ensureAndroidChannel(): Promise<void> {
 
 export async function requestNotificationPermission(): Promise<boolean> {
   try {
-    const current = await Notifications.getPermissionsAsync();
+    const current = await notif().getPermissionsAsync();
     if (current.status === 'granted') return true;
-    const requested = await Notifications.requestPermissionsAsync();
+    const requested = await notif().requestPermissionsAsync();
     return requested.status === 'granted';
   } catch {
     return false;
@@ -81,7 +99,7 @@ export async function getDevicePushTokenSafe(): Promise<string | null> {
 
     await ensureAndroidChannel();
 
-    const result = await Notifications.getDevicePushTokenAsync();
+    const result = await notif().getDevicePushTokenAsync();
     return result.data;
   } catch {
     return null;
@@ -91,7 +109,7 @@ export async function getDevicePushTokenSafe(): Promise<string | null> {
 export async function scheduleDailyReminder(hour = 20, minute = 0): Promise<boolean> {
   try {
     await cancelDailyReminder();
-    await Notifications.scheduleNotificationAsync({
+    await notif().scheduleNotificationAsync({
       identifier: DAILY_REMINDER_ID,
       content: {
         title: 'Đừng bỏ lỡ chuỗi ngày học! 🔥',
@@ -99,7 +117,7 @@ export async function scheduleDailyReminder(hour = 20, minute = 0): Promise<bool
         data: { route: '/' },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        type: notif().SchedulableTriggerInputTypes.DAILY,
         hour,
         minute,
         channelId: ANDROID_CHANNEL_ID,
@@ -113,7 +131,7 @@ export async function scheduleDailyReminder(hour = 20, minute = 0): Promise<bool
 
 export async function cancelDailyReminder(): Promise<void> {
   try {
-    await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID);
+    await notif().cancelScheduledNotificationAsync(DAILY_REMINDER_ID);
   } catch {
     // chua co lich hoac native module chua san sang — bo qua
   }
@@ -121,7 +139,7 @@ export async function cancelDailyReminder(): Promise<void> {
 
 export async function isDailyReminderScheduled(): Promise<boolean> {
   try {
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const scheduled = await notif().getAllScheduledNotificationsAsync();
     return scheduled.some((n) => n.identifier === DAILY_REMINDER_ID);
   } catch {
     return false;
@@ -132,7 +150,7 @@ export function addNotificationTapListener(
   onRoute: (route: string) => void,
 ): { remove: () => void } {
   try {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = notif().addNotificationResponseReceivedListener((response) => {
       const route = response.notification.request.content.data?.route;
       if (typeof route === 'string') onRoute(route);
     });

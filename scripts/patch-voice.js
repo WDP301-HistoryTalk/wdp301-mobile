@@ -62,3 +62,25 @@ if (fs.existsSync(voiceIndexPath)) {
 } else {
   console.log('@react-native-voice/voice/dist/index.js not found. Run npm install first.');
 }
+
+// @react-native-voice/voice/android/build.gradle depends on the pre-AndroidX
+// `com.android.support:appcompat-v7:28.0.0`. Every other RN module in this app
+// pulls in AndroidX (androidx.core etc.), and Gradle 9 / AGP no longer
+// jetifies that automatically, so the manifest merger fails on a duplicate
+// `android:appComponentFactory` (androidx.core.app.CoreComponentFactory vs.
+// android.support.v4.app.CoreComponentFactory). Swap it for the AndroidX
+// equivalent so it merges cleanly with the rest of the app.
+if (fs.existsSync(targetPath)) {
+  let content = fs.readFileSync(targetPath, 'utf8');
+  if (content.includes('implementation "com.android.support:appcompat-v7:${supportVersion}"')) {
+    console.log('Patching @react-native-voice/voice/android/build.gradle: swapping com.android.support:appcompat-v7 for androidx.appcompat:appcompat');
+    content = content.replace(
+      'implementation "com.android.support:appcompat-v7:${supportVersion}"',
+      'implementation "androidx.appcompat:appcompat:1.6.1"'
+    );
+    fs.writeFileSync(targetPath, content, 'utf8');
+    console.log('Successfully patched!');
+  } else {
+    console.log('@react-native-voice/voice/android/build.gradle is already patched or does not contain com.android.support:appcompat-v7.');
+  }
+}

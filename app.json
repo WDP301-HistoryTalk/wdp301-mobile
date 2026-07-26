@@ -30,6 +30,9 @@
           ],
           "data": [
             {
+              "scheme": "mobilehistorytalk"
+            },
+            {
               "scheme": "com.googleusercontent.apps.32246262095-4vihpn8j4t6v6r8cv3p7h8fqiid4r3ah"
             }
           ]
