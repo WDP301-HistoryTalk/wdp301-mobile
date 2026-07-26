@@ -21,6 +21,7 @@ import {
   MUTED,
   ORANGE,
   ORANGE_TINT_MUTED,
+  RED,
   SURFACE,
   TEXT,
 } from '@/constants/palette';
@@ -46,6 +47,22 @@ const QUEST_META: Record<QuestType, { icon: typeof MessageCircle; color: string;
 
 const WEEKDAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const STREAK_GREEN = '#16A34A';
+
+type WeekDayState = 'done' | 'today' | 'missed' | 'upcoming';
+
+// Ngay da qua ma khong hoc (truoc hom nay, chua studied) → "bo lo", giong
+// widget streak (StreakWidget.getDayState) de 2 UI dong bo voi nhau.
+function getWeekDayState(
+  studied: boolean,
+  isToday: boolean,
+  index: number,
+  todayIndex: number,
+): WeekDayState {
+  if (studied) return 'done';
+  if (isToday) return 'today';
+  if (todayIndex === -1) return 'upcoming';
+  return index < todayIndex ? 'missed' : 'upcoming';
+}
 
 export function DailyQuestsCard() {
   const router = useRouter();
@@ -85,12 +102,9 @@ export function DailyQuestsCard() {
       {/* ── Khối streak (theo mẫu: số to + 7 chấm tuần + 2 chỉ số) ── */}
       <View style={s.streakHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Flame
-            size={17}
-            color={ORANGE}
-            strokeWidth={2.2}
-            fill={data.studiedToday ? ORANGE : 'transparent'}
-          />
+          {/* Luon to mau (giong emoji 🔥 tren widget) thay vi phu thuoc
+              studiedToday — ket qua hoc hom nay da the hien qua streak count. */}
+          <Flame size={17} color={ORANGE} strokeWidth={2.2} fill={ORANGE} />
           <Text style={s.title}>Chuỗi ngày học</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
@@ -101,28 +115,40 @@ export function DailyQuestsCard() {
 
       {/* 7 chấm tuần T2 → CN */}
       <View style={s.weekRow}>
-        {data.week.map((d, i) => (
-          <View key={d.date} style={s.weekDay}>
-            <View
-              style={[
-                s.weekDot,
-                d.studied && s.weekDotStudied,
-                d.isToday && (d.studied ? s.weekDotTodayRing : s.weekDotToday),
-              ]}
-            >
-              {d.studied ? <Check size={13} color="#fff" strokeWidth={3} /> : null}
-            </View>
-            <Text
-              style={[
-                s.weekLabel,
-                d.studied && { color: STREAK_GREEN, fontWeight: '800' },
-                d.isToday && !d.studied && { color: ORANGE, fontWeight: '800' },
-              ]}
-            >
-              {WEEKDAY_LABELS[i]}
-            </Text>
-          </View>
-        ))}
+        {(() => {
+          const todayIndex = data.week.findIndex((d) => d.isToday);
+          return data.week.map((d, i) => {
+            const state = getWeekDayState(d.studied, d.isToday, i, todayIndex);
+            return (
+              <View key={d.date} style={s.weekDay}>
+                <View
+                  style={[
+                    s.weekDot,
+                    d.studied && s.weekDotStudied,
+                    d.isToday && (d.studied ? s.weekDotTodayRing : s.weekDotToday),
+                    state === 'missed' && s.weekDotMissed,
+                  ]}
+                >
+                  {d.studied ? (
+                    <Check size={13} color="#fff" strokeWidth={3} />
+                  ) : state === 'missed' ? (
+                    <Text style={s.weekDotMissedMark}>!</Text>
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    s.weekLabel,
+                    d.studied && { color: STREAK_GREEN, fontWeight: '800' },
+                    d.isToday && !d.studied && { color: ORANGE, fontWeight: '800' },
+                    state === 'missed' && { color: RED, fontWeight: '800' },
+                  ]}
+                >
+                  {WEEKDAY_LABELS[i]}
+                </Text>
+              </View>
+            );
+          });
+        })()}
       </View>
 
       {/* Kỷ lục + tổng ngày học */}
@@ -313,6 +339,19 @@ const s = StyleSheet.create({
   weekDotTodayRing: {
     borderWidth: 1.5,
     borderColor: ORANGE,
+  },
+  // Ngay bo lo (da qua, chua hoc) — vien + nen do nhat, dau "!" o giua,
+  // giong dotSvg 'missed' cua widget (streak-widget.tsx) de tranh cam giac
+  // trong rong khi so voi cac cham da hoc.
+  weekDotMissed: {
+    backgroundColor: 'rgba(154,63,67,0.10)',
+    borderWidth: 1.5,
+    borderColor: RED,
+  },
+  weekDotMissedMark: {
+    color: RED,
+    fontSize: 13,
+    fontWeight: '800',
   },
   weekLabel: {
     color: MUTED,
