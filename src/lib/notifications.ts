@@ -27,6 +27,36 @@ function notif(): NotificationsModule {
 const DAILY_REMINDER_ID = 'daily-study-reminder';
 const ANDROID_CHANNEL_ID = 'default';
 const PUSH_PREFERENCE_KEY = 'notifications:push-enabled';
+const REMINDER_TIME_KEY = 'notifications:daily-reminder-time';
+const DEFAULT_REMINDER_HOUR = 20;
+const DEFAULT_REMINDER_MINUTE = 0;
+
+// Gio nhac hoc nguoi dung tu chon (doc lap voi viec lich co dang bat hay
+// khong) — luu truoc de: (1) hien dung gio da chon ngay ca khi dang tat,
+// (2) scheduleDailyReminder() luon co gio dung de dat lai khi bat lien.
+export async function getReminderTime(): Promise<{ hour: number; minute: number }> {
+  try {
+    const raw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
+    if (!raw) return { hour: DEFAULT_REMINDER_HOUR, minute: DEFAULT_REMINDER_MINUTE };
+    const [hourStr, minuteStr] = raw.split(':');
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+    if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
+      return { hour: DEFAULT_REMINDER_HOUR, minute: DEFAULT_REMINDER_MINUTE };
+    }
+    return { hour, minute };
+  } catch {
+    return { hour: DEFAULT_REMINDER_HOUR, minute: DEFAULT_REMINDER_MINUTE };
+  }
+}
+
+export async function setReminderTime(hour: number, minute: number): Promise<void> {
+  try {
+    await AsyncStorage.setItem(REMINDER_TIME_KEY, `${hour}:${minute}`);
+  } catch {
+    // best-effort
+  }
+}
 
 // Preference rieng cua app (khac voi quyen he thong, thu hoi duoc boi user tu
 // switch trong Profile ma khong can vao Cai dat may): mac dinh bat, de
@@ -106,7 +136,10 @@ export async function getDevicePushTokenSafe(): Promise<string | null> {
   }
 }
 
-export async function scheduleDailyReminder(hour = 20, minute = 0): Promise<boolean> {
+export async function scheduleDailyReminder(
+  hour = DEFAULT_REMINDER_HOUR,
+  minute = DEFAULT_REMINDER_MINUTE,
+): Promise<boolean> {
   try {
     await cancelDailyReminder();
     await notif().scheduleNotificationAsync({

@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowLeft,
   ChevronDown,
   ChevronUp,
@@ -19,6 +20,7 @@ import {
   Trash2,
   UserRound,
   Volume2,
+  X,
 } from "lucide-react-native";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +30,7 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   NativeModules,
   Platform,
   Pressable,
@@ -52,6 +55,7 @@ import {
   ORANGE_BORDER_MEDIUM,
   ORANGE_BORDER_MUTED,
   ORANGE_BORDER_SOFT,
+  ORANGE_TINT_FAINT,
   ORANGE_TINT_MUTED,
   ORANGE_TINT_SOLID,
   SURFACE,
@@ -69,6 +73,14 @@ import type { ChatMessage, ChatMessageType } from "@/features/chat/types";
 import { DocumentCitationModal } from "@/features/documents/DocumentCitationModal";
 import { speakWithAzure, stopAzureSpeech } from "@/lib/azure-speech";
 import { playEndCallSound } from "@/lib/sound-effects";
+
+// Cảnh báo "AI có thể sai" — giống hệt web (xem chat-main.tsx bên FE), gồm
+// badge "!" luôn hiện cạnh tên nhân vật + banner tự ẩn sau vài giây khi vừa
+// vào phiên chat.
+const AI_FEEDBACK_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSeRil6ykImcwwFkgnV0lzFHWo8NLgOrOKNjTHNqq8Tt0-XMEQ/viewform?usp=dialog";
+const AI_WARNING_TEXT =
+  "AI có thể đưa ra thông tin không chính xác. Hãy kiểm chứng lại các thông tin quan trọng.";
 
 const CALL_GROUP_GAP_MS = 2 * 60 * 1000;
 // Nghe qua lau ma STT khong tu ket thuc (vd im lang, khong co mic that) —
@@ -140,6 +152,18 @@ function getMessageTime(message: ChatMessage) {
 // khong co tren web. Chuan hoa de mobile khop web.
 function normalizeMessageText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
+}
+
+// AI doi khi tra loi kem 1 cau hoi goi mo, ngan cach boi "---". Tach thanh
+// cac doan rieng de hien thi nhu nhieu bubble lien tiep thay vi don chung 1
+// bubble (giong het web, xem chat-message-bubble.tsx > splitAssistantContent).
+const ASSISTANT_SPLIT_PATTERN = /\s*-{3,}\s*/;
+
+function splitAssistantContent(content: string): string[] {
+  return content
+    .split(ASSISTANT_SPLIT_PATTERN)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 // Marker "bat dau call" (content = CALL_2D:.../CALL_3D:...) la di san tu ban
@@ -351,8 +375,10 @@ function VoiceBars({ color = "#fff", barWidth = 3, height = 18 }: { color?: stri
 // chính "item" của nó đổi — tránh re-render toàn bộ lịch sử chat mỗi token.
 const VoiceCallCard = memo(function VoiceCallCard({
   item,
+  onViewQuote,
 }: {
   item: Extract<ChatTimelineItem, { type: "voice-call" }>;
+  onViewQuote: (quote: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const startedAt = formatCallTime(item.startedAt);
@@ -389,16 +415,33 @@ const VoiceCallCard = memo(function VoiceCallCard({
 
       {expanded && transcript.length > 0 ? (
         <View style={s.callTranscript}>
-          {transcript.map((m) => (
-            <View key={m.id} style={s.callTranscriptRow}>
-              <Text style={s.callTranscriptRole}>
-                {m.role === "USER" ? "Bạn" : "Nhân vật"}
-              </Text>
-              <Text style={s.callTranscriptText}>
-                {normalizeMessageText(m.content)}
-              </Text>
-            </View>
-          ))}
+          {transcript.map((m) => {
+            const text = normalizeMessageText(m.content);
+            const assistantParts = m.role === "ASSISTANT" ? splitAssistantContent(text) : [];
+            const displayParts = assistantParts.length > 0 ? assistantParts : [text];
+
+            return (
+              <View key={m.id} style={s.callTranscriptRow}>
+                <Text style={s.callTranscriptRole}>
+                  {m.role === "USER" ? "Bạn" : "Nhân vật"}
+                </Text>
+                {displayParts.map((part, i) => {
+                  const isFollowup = m.role === "ASSISTANT" && displayParts.length > 1 && i === displayParts.length - 1;
+                  return (
+                    <Text
+                      key={i}
+                      style={[s.callTranscriptText, i > 0 && { marginTop: 4 }, isFollowup && s.callTranscriptFollowup]}
+                    >
+                      {part}
+                    </Text>
+                  );
+                })}
+                {m.role === "ASSISTANT" && m.quotes && m.quotes.length > 0 ? (
+                  <MessageQuotes quotes={m.quotes} onViewQuote={onViewQuote} />
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -483,9 +526,8 @@ const MessageBubble = memo(function MessageBubble({
   const clock = formatClock(message.createdAt);
 
   const fullText = normalizeMessageText(message.content);
-  const isLong = !isUser && fullText.length > COLLAPSE_THRESHOLD;
-  const displayText =
-    !isLong || expanded ? fullText : `${fullText.slice(0, COLLAPSE_THRESHOLD).trimEnd()}…`;
+  const assistantParts = isUser ? [] : splitAssistantContent(fullText);
+  const displayParts = assistantParts.length > 0 ? assistantParts : [fullText];
 
   const handleSpeak = useCallback(async () => {
     if (!message.content || speaking) return;
@@ -537,46 +579,63 @@ const MessageBubble = memo(function MessageBubble({
             <Text style={s.aiAvatarText}>{initial}</Text>
           )}
         </View>
-        <TouchableOpacity
-          style={[s.aiBubble, isVoice && s.aiBubbleVoice, { maxWidth: "80%" }]}
-          activeOpacity={0.7}
-          disabled={!message.content}
-          onPress={handleSpeak}
-          accessibilityLabel="Nghe đọc tin nhắn"
-        >
-          {message.content ? (
-            <>
-              {isVoice && (
-                <View style={s.voiceBadgeRow}>
-                  <Mic size={11} color={ORANGE} strokeWidth={2.4} />
-                  <Text style={s.voiceBadgeTextAi}>Giọng nói</Text>
-                </View>
-              )}
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-                <View style={{ flexShrink: 1, width: "100%" }}>
-                  <FormattedMarkdown content={displayText} baseStyle={s.aiText} />
-                </View>
-                <View style={{ width: 14, height: 14, marginTop: 2, flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
-                  <Volume2
-                    size={14}
-                    color={speaking ? ORANGE : MUTED}
-                  />
-                </View>
-              </View>
-              {isLong && (
+        {message.content ? (
+          <View style={{ flexShrink: 1, maxWidth: "80%", gap: 6 }}>
+            {displayParts.map((part, index) => {
+              const isFirstPart = index === 0;
+              const isLastPart = index === displayParts.length - 1;
+              const isLong = part.length > COLLAPSE_THRESHOLD;
+              const partText =
+                !isLong || expanded ? part : `${part.slice(0, COLLAPSE_THRESHOLD).trimEnd()}…`;
+
+              const isFollowup = isLastPart && displayParts.length > 1;
+
+              return (
                 <TouchableOpacity
-                  onPress={() => setExpanded((v) => !v)}
-                  hitSlop={8}
-                  accessibilityLabel={expanded ? "Thu gọn tin nhắn" : "Xem toàn bộ tin nhắn"}
+                  key={index}
+                  style={[s.aiBubble, isVoice && s.aiBubbleVoice, isFollowup && s.aiBubbleFollowup]}
+                  activeOpacity={isLastPart ? 0.7 : 1}
+                  disabled={!isLastPart}
+                  onPress={isLastPart ? handleSpeak : undefined}
+                  accessibilityLabel={isLastPart ? "Nghe đọc tin nhắn" : undefined}
                 >
-                  <Text style={s.expandToggle}>{expanded ? "Thu gọn ▲" : "Xem thêm ▼"}</Text>
+                  {isFirstPart && isVoice && (
+                    <View style={s.voiceBadgeRow}>
+                      <Mic size={11} color={ORANGE} strokeWidth={2.4} />
+                      <Text style={s.voiceBadgeTextAi}>Giọng nói</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+                    <View style={{ flexShrink: 1, width: "100%" }}>
+                      <FormattedMarkdown content={partText} baseStyle={s.aiText} />
+                    </View>
+                    {isLastPart && (
+                      <View style={{ width: 14, height: 14, marginTop: 2, flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
+                        <Volume2
+                          size={14}
+                          color={speaking ? ORANGE : MUTED}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  {isLong && (
+                    <TouchableOpacity
+                      onPress={() => setExpanded((v) => !v)}
+                      hitSlop={8}
+                      accessibilityLabel={expanded ? "Thu gọn tin nhắn" : "Xem toàn bộ tin nhắn"}
+                    >
+                      <Text style={s.expandToggle}>{expanded ? "Thu gọn ▲" : "Xem thêm ▼"}</Text>
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
-              )}
-            </>
-          ) : (
+              );
+            })}
+          </View>
+        ) : (
+          <View style={[s.aiBubble, isVoice && s.aiBubbleVoice, { maxWidth: "80%" }]}>
             <TypingDots />
-          )}
-        </TouchableOpacity>
+          </View>
+        )}
       </View>
       {message.quotes && message.quotes.length > 0 ? (
         <View style={{ marginLeft: 38 }}>
@@ -658,6 +717,11 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [aiInfoOpen, setAiInfoOpen] = useState(false);
+  // Hien tu render dau tien vi sessionId co san ngay tu route params (khong
+  // can effect de bat no) — tranh canh bao "khong nen setState dong bo trong
+  // effect" cua react-hooks lint.
+  const [aiWarningVisible, setAiWarningVisible] = useState(() => !!sessionId);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callElapsed, setCallElapsed] = useState(0);
@@ -665,6 +729,7 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList<ChatTimelineItem>>(null);
   const inputRef = useRef<TextInput>(null);
   const micScale = useRef(new Animated.Value(1)).current;
+  const aiWarningOpacity = useRef(new Animated.Value(sessionId ? 1 : 0)).current;
   const callTranscriptRef = useRef("");
   // Timeout an toan: neu STT khong tu ket thuc (vd im lang keo dai, khong co
   // mic that tren emulator) thi tu dong dung nghe va gui sau LISTEN_TIMEOUT_MS.
@@ -704,6 +769,22 @@ export default function ChatScreen() {
     (character ? (getCharacterImageUri(character) ?? "") : "");
   const resolvedCharacterModelUrl =
     characterModelUrlParam || character?.modelUrl || "";
+
+  const dismissAiWarning = useCallback(() => {
+    Animated.timing(aiWarningOpacity, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setAiWarningVisible(false));
+  }, [aiWarningOpacity]);
+
+  // Banner "AI có thể sai" tự ẩn sau 5s khi vừa vào phiên chat — giống hệt
+  // hành vi bên web (xem chat-main.tsx > aiWarningVisible).
+  useEffect(() => {
+    if (!sessionId || !aiWarningVisible) return;
+    const leaveTimer = setTimeout(dismissAiWarning, 5000);
+    return () => clearTimeout(leaveTimer);
+  }, [sessionId, aiWarningVisible, dismissAiWarning]);
 
   useEffect(() => {
     if (!sessionData) return;
@@ -1212,7 +1293,7 @@ export default function ChatScreen() {
   const renderTimelineItem = useCallback(
     ({ item }: { item: ChatTimelineItem }) =>
       item.type === "voice-call" ? (
-        <VoiceCallCard item={item} />
+        <VoiceCallCard item={item} onViewQuote={setCitationQuote} />
       ) : (
         <MessageBubble
           message={item.message}
@@ -1245,10 +1326,30 @@ export default function ChatScreen() {
           </TouchableOpacity>
 
           <View style={{ flex: 1, marginHorizontal: 12 }}>
-            <Text style={s.headerName} numberOfLines={1}>
-              {characterName}
-            </Text>
-            {contextName ? (
+            <View style={s.headerNameRow}>
+              <Text style={s.headerName} numberOfLines={1}>
+                {characterName}
+              </Text>
+              <Pressable
+                onPress={() => setAiInfoOpen((v) => !v)}
+                hitSlop={8}
+                style={s.aiInfoBadge}
+                accessibilityLabel="Lưu ý về độ chính xác của AI"
+              >
+                <Text style={s.aiInfoBadgeText}>!</Text>
+              </Pressable>
+            </View>
+            {aiWarningVisible ? (
+              <Animated.View style={[s.aiWarningRow, { opacity: aiWarningOpacity }]}>
+                <AlertTriangle size={11} color={ORANGE} strokeWidth={2.2} />
+                <Text style={s.aiWarningText} numberOfLines={1}>
+                  {AI_WARNING_TEXT}
+                </Text>
+                <Pressable onPress={dismissAiWarning} hitSlop={8} accessibilityLabel="Đóng cảnh báo">
+                  <X size={11} color={MUTED} strokeWidth={2.2} />
+                </Pressable>
+              </Animated.View>
+            ) : contextName ? (
               <Text style={s.headerContext} numberOfLines={1}>
                 {contextName}
               </Text>
@@ -1374,6 +1475,24 @@ export default function ChatScreen() {
                   <Text style={s.menuDangerLabel}>Xóa cuộc trò chuyện</Text>
                 </View>
               </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
+
+        {aiInfoOpen ? (
+          <>
+            <Pressable
+              style={s.menuBackdrop}
+              onPress={() => setAiInfoOpen(false)}
+            />
+            <View style={s.aiInfoPopover}>
+              <Text style={s.aiInfoPopoverText}>{AI_WARNING_TEXT}</Text>
+              <Pressable
+                onPress={() => Linking.openURL(AI_FEEDBACK_FORM_URL)}
+                hitSlop={6}
+              >
+                <Text style={s.aiInfoPopoverLink}>Báo lỗi qua form</Text>
+              </Pressable>
             </View>
           </>
         ) : null}
@@ -1596,6 +1715,65 @@ const s = StyleSheet.create({
     color: MUTED,
     fontSize: 11,
     marginTop: 1,
+  },
+  headerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  aiInfoBadge: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ORANGE_TINT_MUTED,
+  },
+  aiInfoBadgeText: {
+    color: ORANGE,
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 12,
+  },
+  aiWarningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 1,
+  },
+  aiWarningText: {
+    flex: 1,
+    color: TEXT2,
+    fontSize: 11,
+  },
+  aiInfoPopover: {
+    position: "absolute",
+    left: 60,
+    top: 58,
+    zIndex: 30,
+    width: 260,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    padding: 12,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  aiInfoPopoverText: {
+    color: TEXT,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  aiInfoPopoverLink: {
+    color: ORANGE,
+    fontSize: 12,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   headerAvatar: {
     width: 36,
@@ -1879,6 +2057,12 @@ const s = StyleSheet.create({
     backgroundColor: ORANGE_TINT_MUTED,
     borderColor: ORANGE_BORDER,
   },
+  // Bubble cau hoi goi mo (phan sau "---") — tint nhe hon aiBubbleVoice, chi
+  // du de nguoi dung nhan ra day la 1 loai noi dung khac, khong lam roi mat.
+  aiBubbleFollowup: {
+    backgroundColor: ORANGE_TINT_FAINT,
+    borderColor: ORANGE_BORDER_SOFT,
+  },
   aiText: {
     color: TEXT,
     fontSize: 14,
@@ -1940,6 +2124,11 @@ const s = StyleSheet.create({
     color: TEXT2,
     fontSize: 13,
     lineHeight: 19,
+  },
+  // Doan cau hoi goi mo (phan sau "---") trong transcript call — cung tone
+  // voi aiBubbleFollowup ben tren, chi doi mau chu de phan biet.
+  callTranscriptFollowup: {
+    color: ORANGE,
   },
   typingDot: {
     width: 7,

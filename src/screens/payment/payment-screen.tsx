@@ -201,9 +201,17 @@ export default function PaymentScreen() {
                   </View>
                 </View>
 
-                {isFree || isCurrent ? (
+                {isCurrent ? (
                   <View style={[s.actionBtn, s.actionBtnCurrent]}>
                     <Text style={{ color: TEXT2, fontWeight: '700', fontSize: 14 }}>Gói hiện tại</Text>
+                  </View>
+                ) : isFree ? (
+                  // Goi mien phi khi KHONG phai goi dang dung: khong co luong
+                  // tu ha cap qua nut nay (tu dong ap dung lai khi goi tra phi
+                  // het han — xem subscription.service.ts ben BE), nen chi hien
+                  // trang thai mo nhat thay vi mot nut "Dang ky ngay" vo nghia.
+                  <View style={[s.actionBtn, s.actionBtnDisabled]}>
+                    <Text style={{ color: MUTED, fontWeight: '700', fontSize: 14 }}>Gói mặc định</Text>
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -269,6 +277,7 @@ const s = StyleSheet.create({
   actionBtnDefault: { backgroundColor: ORANGE_TINT_MUTED, borderWidth: 1, borderColor: ORANGE_BORDER },
   actionBtnFeatured: { backgroundColor: ORANGE },
   actionBtnCurrent: { backgroundColor: TEXT_TINT_FAINT, borderWidth: 1, borderColor: BORDER },
+  actionBtnDisabled: { backgroundColor: TEXT_TINT_FAINT, borderWidth: 1, borderColor: BORDER, opacity: 0.6 },
 
   footNote: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

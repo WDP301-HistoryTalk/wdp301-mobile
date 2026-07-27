@@ -1,17 +1,20 @@
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
-  AlertCircle, ArrowLeft, Bell, Calendar, Camera, CheckCircle2, ChevronDown, ChevronUp, Crown,
+  AlertCircle, ArrowLeft, Bell, Calendar, Camera, CheckCircle2, ChevronDown, ChevronUp, Clock, Crown,
   Eye, EyeOff, KeyRound, Lock, LogOut, Mail, MapPin, Phone, Receipt, Save, Trophy, User, UserCircle, X,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
   Pressable, RefreshControl, ScrollView, StyleSheet, Switch, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConfirmModal } from '@/components/confirm-modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -23,9 +26,11 @@ import {
   ORANGE_BORDER,
   ORANGE_BORDER_FOCUS,
   ORANGE_BORDER_MEDIUM,
+  ORANGE_DARK,
   ORANGE_TINT,
   ORANGE_TINT_MUTED,
   ORANGE_TINT_SOFT,
+  ORANGE_TINT_STRONG,
   RED,
   SURFACE,
   TEXT,
@@ -44,9 +49,11 @@ import {
   cancelDailyReminder,
   getDevicePushTokenSafe,
   getPushPreference,
+  getReminderTime,
   isDailyReminderScheduled,
   scheduleDailyReminder,
   setPushPreference,
+  setReminderTime,
 } from '@/lib/notifications';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -162,7 +169,22 @@ export default function ProfileScreen() {
 
   const { data: profile, isLoading, isError, refetch: refetchMe } = useMe();
   const { data: tiers, refetch: refetchTiers } = useTiers();
+
+  // Tab Profile thuong o lai mounted san (bottom tabs khong unmount khi
+  // chuyen tab), nen sau khi mua goi o man /payment roi bam back lai day,
+  // staleTime 5 phut cua useMe()/useTiers() co the khien man hinh nay van
+  // hien du lieu cu (con "Mien phi") cho toi khi qua 5 phut hoac tu keo lam
+  // moi. Refetch lai moi khi man hinh nhan focus de luon khop trang thai
+  // goi moi nhat, khong phai doi.
+  useFocusEffect(
+    useCallback(() => {
+      void refetchMe();
+      void refetchTiers();
+    }, [refetchMe, refetchTiers]),
+  );
+
   const [refreshing, setRefreshing] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   async function onRefresh() {
     setRefreshing(true);
     try {
@@ -244,17 +266,24 @@ export default function ProfileScreen() {
   const [dailyReminderOn, setDailyReminderOn] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [notifBusy, setNotifBusy] = useState<'daily' | 'push' | null>(null);
+  const [reminderHour, setReminderHour] = useState(20);
+  const [reminderMinute, setReminderMinute] = useState(0);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     void isDailyReminderScheduled().then(setDailyReminderOn);
     void getPushPreference().then(setPushEnabled);
+    void getReminderTime().then(({ hour, minute }) => {
+      setReminderHour(hour);
+      setReminderMinute(minute);
+    });
   }, []);
 
   async function toggleDailyReminder(next: boolean) {
     setNotifBusy('daily');
     try {
       if (next) {
-        const ok = await scheduleDailyReminder();
+        const ok = await scheduleDailyReminder(reminderHour, reminderMinute);
         if (!ok) {
           Alert.alert(
             'Không thể bật nhắc học',
@@ -268,6 +297,24 @@ export default function ProfileScreen() {
       setDailyReminderOn(next);
     } finally {
       setNotifBusy(null);
+    }
+  }
+
+  // Android tu dong dong picker sau khi chon (chi ban "set" 1 lan); iOS hien
+  // spinner inline nen phai tu tay dong bang nut "Xong" (xem JSX ben duoi).
+  async function handleReminderTimeChange(event: DateTimePickerEvent, date?: Date) {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (event.type === 'dismissed' || !date) return;
+
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    setReminderHour(hour);
+    setReminderMinute(minute);
+    await setReminderTime(hour, minute);
+    // Doi gio lien khi lich dang bat — scheduleDailyReminder tu huy lich cu
+    // truoc khi dat lich moi nen goi lai la du, khong can logic rieng.
+    if (dailyReminderOn) {
+      await scheduleDailyReminder(hour, minute);
     }
   }
 
@@ -350,10 +397,7 @@ export default function ProfileScreen() {
   }
 
   function confirmLogout() {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
-      { text: 'Huỷ',       style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: () => void logout() },
-    ]);
+    setLogoutConfirmOpen(true);
   }
 
   // ── render ──────────────────────────────────────────────────────────────────
@@ -444,36 +488,69 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 
-                {/* Current Active Package Box */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: SURFACE,
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  borderWidth: 1,
-                  borderColor: BORDER,
-                  marginTop: 8,
-                  marginBottom: 4,
-                }}>
-                  <View style={{ gap: 4 }}>
-                    <Text style={{ color: MUTED, fontSize: 11, fontWeight: '600' }}>Gói hiện tại</Text>
-                    <Text style={{ color: TEXT, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
-                      {tierName}
-                    </Text>
-                  </View>
-                  {activeTier && activeTier.amount > 0 ? (
-                    <View style={{ backgroundColor: ORANGE_TINT, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: ORANGE_BORDER_MEDIUM }}>
-                      <Text style={{ color: ORANGE, fontSize: 10, fontWeight: '800' }}>PRO</Text>
+                {/* Current Active Package Box — noi bat hon voi goi da tra phi
+                    (gradient + icon vien mau), goi mien phi giu trung tinh */}
+                {activeTier && activeTier.amount > 0 ? (
+                  <LinearGradient
+                    colors={[ORANGE_TINT_STRONG, ORANGE_TINT_SOFT]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderRadius: 14,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      marginTop: 8,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{
+                        width: 36, height: 36, borderRadius: 11,
+                        backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Crown size={18} color="#fff" strokeWidth={2.2} />
+                      </View>
+                      <View style={{ gap: 2 }}>
+                        <Text style={{ color: ORANGE_DARK, fontSize: 11, fontWeight: '700' }}>Gói hiện tại</Text>
+                        <Text style={{ color: TEXT, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
+                          {tierName}
+                        </Text>
+                      </View>
                     </View>
-                  ) : (
+                    <View style={{ backgroundColor: ORANGE, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                        {activeTier.title.toUpperCase()}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                ) : (
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: SURFACE,
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: BORDER,
+                    marginTop: 8,
+                    marginBottom: 4,
+                  }}>
+                    <View style={{ gap: 4 }}>
+                      <Text style={{ color: MUTED, fontSize: 11, fontWeight: '600' }}>Gói hiện tại</Text>
+                      <Text style={{ color: TEXT, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
+                        {tierName}
+                      </Text>
+                    </View>
                     <View style={{ backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(100,116,139,0.2)' }}>
                       <Text style={{ color: MUTED, fontSize: 10, fontWeight: '800' }}>FREE</Text>
                     </View>
-                  )}
-                </View>
+                  </View>
+                )}
 
                 <View style={{ gap: 10, marginTop: 8 }}>
                   <TouchableOpacity
@@ -644,7 +721,7 @@ export default function ProfileScreen() {
 
                 <View style={s.notifRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.notifLabel}>Nhắc học hằng ngày (20:00)</Text>
+                    <Text style={s.notifLabel}>Nhắc học hằng ngày</Text>
                     <Text style={s.notifHint}>Thông báo cục bộ, không cần mạng.</Text>
                   </View>
                   <Switch
@@ -655,6 +732,40 @@ export default function ProfileScreen() {
                     thumbColor="#fff"
                   />
                 </View>
+
+                <TouchableOpacity
+                  style={[s.notifRow, { paddingTop: 10 }]}
+                  activeOpacity={0.7}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Clock size={15} color={ORANGE} strokeWidth={1.75} />
+                    <Text style={s.notifLabel}>Giờ nhắc học</Text>
+                  </View>
+                  <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 14 }}>
+                    {`${String(reminderHour).padStart(2, '0')}:${String(reminderMinute).padStart(2, '0')}`}
+                  </Text>
+                </TouchableOpacity>
+
+                {showTimePicker && (
+                  <>
+                    <DateTimePicker
+                      value={new Date(2000, 0, 1, reminderHour, reminderMinute)}
+                      mode="time"
+                      is24Hour
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleReminderTimeChange}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <TouchableOpacity
+                        onPress={() => setShowTimePicker(false)}
+                        style={{ alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 4 }}
+                      >
+                        <Text style={{ color: ORANGE, fontWeight: '700', fontSize: 13 }}>Xong</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
 
                 <View style={[s.notifRow, { borderTopWidth: 1, borderTopColor: BORDER, marginTop: 4, paddingTop: 14 }]}>
                   <View style={{ flex: 1 }}>
@@ -681,12 +792,6 @@ export default function ProfileScreen() {
 
               {/* account status */}
               <View style={{ alignItems: 'center', marginTop: 28 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: profile.isActive ? GREEN : RED }} />
-                  <Text style={{ color: MUTED, fontSize: 12 }}>
-                    Tài khoản {profile.isActive ? 'đang hoạt động' : 'bị khóa'}
-                  </Text>
-                </View>
                 <Text style={{ color: MUTED, fontSize: 11, marginTop: 4 }}>
                   Cập nhật lần cuối: {formatDate(profile.updatedAt)}
                 </Text>
@@ -695,6 +800,21 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ConfirmModal
+        visible={logoutConfirmOpen}
+        title="Đăng xuất"
+        message="Bạn có chắc muốn đăng xuất không?"
+        cancelText="Hủy"
+        confirmText="Đăng xuất"
+        variant="danger"
+        icon={<LogOut size={22} color={RED} />}
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          void logout();
+        }}
+      />
     </SafeAreaView>
   );
 }

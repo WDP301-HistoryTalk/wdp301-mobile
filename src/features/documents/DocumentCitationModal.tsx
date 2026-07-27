@@ -16,8 +16,39 @@ import {
 } from "@/constants/palette";
 
 import { usePublicCharacterDocuments, usePublicContextDocuments } from "./hooks";
-import { buildQuoteMatcher, findDocumentForQuote, splitContentByQuote } from "./quote-match";
+import { findDocumentForQuote, splitContentByQuote, type QuoteTextPart } from "./quote-match";
 import type { RagDocument } from "./types";
+
+interface RenderLine {
+  parts: QuoteTextPart[];
+  hasMatch: boolean;
+}
+
+// splitContentByQuote() so khop tren TOAN BO content (khoang trang lien nhau,
+// ke ca "\n", duoc coi la tuong duong — xem quote-match.ts), nen 1 doan trich
+// dai co the trai qua nhieu dong van khop dung. Truoc day ham nay bi goi rieng
+// tren TUNG DONG (content.split("\n") roi moi split-by-quote tung dong), nen
+// hop khop nao trai qua ranh gioi dong (rat hay gap voi doan mo dau vi do
+// thuong la doan dai nhat/hay duoc trich nhat) se khong dong dong nao chua
+// tron ven ca cau -> mat highlight. Sua: split-by-quote tren toan bo content
+// truoc, roi moi cat lai theo "\n" de dung cho onLayout/scroll-toi-dong.
+function buildRenderLines(content: string, quote?: string | null): RenderLine[] {
+  const globalParts = quote ? splitContentByQuote(content, quote) : [{ text: content, matched: false }];
+  const lines: RenderLine[] = [{ parts: [], hasMatch: false }];
+
+  for (const part of globalParts) {
+    const segments = part.text.split("\n");
+    segments.forEach((segment, idx) => {
+      if (idx > 0) lines.push({ parts: [], hasMatch: false });
+      if (!segment) return;
+      const currentLine = lines[lines.length - 1];
+      currentLine.parts.push({ text: segment, matched: part.matched });
+      if (part.matched) currentLine.hasMatch = true;
+    });
+  }
+
+  return lines;
+}
 
 interface DocumentCitationModalProps {
   visible: boolean;
@@ -42,8 +73,7 @@ function DocumentContent({
   quote?: string | null;
   scrollRef: React.RefObject<ScrollView | null>;
 }) {
-  const lines = useMemo(() => content.split("\n"), [content]);
-  const matcher = useMemo(() => (quote ? buildQuoteMatcher(quote) : null), [quote]);
+  const renderLines = useMemo(() => buildRenderLines(content, quote), [content, quote]);
   const hasScrolledRef = useRef(false);
 
   useEffect(() => {
@@ -52,38 +82,33 @@ function DocumentContent({
 
   return (
     <>
-      {lines.map((line, i) => {
-        const isMatchLine = matcher ? matcher.test(line) : false;
-        const parts = quote ? splitContentByQuote(line, quote) : [{ text: line, matched: false }];
-
-        return (
-          <View
-            key={i}
-            onLayout={
-              isMatchLine
-                ? (e) => {
-                    if (hasScrolledRef.current) return;
-                    hasScrolledRef.current = true;
-                    const y = Math.max(e.nativeEvent.layout.y - 40, 0);
-                    scrollRef.current?.scrollTo({ y, animated: true });
-                  }
-                : undefined
-            }
-          >
-            <Text style={s.content}>
-              {parts.map((part, j) =>
-                part.matched ? (
-                  <Text key={j} style={s.highlight}>
-                    {part.text}
-                  </Text>
-                ) : (
-                  <Text key={j}>{part.text}</Text>
-                ),
-              )}
-            </Text>
-          </View>
-        );
-      })}
+      {renderLines.map((line, i) => (
+        <View
+          key={i}
+          onLayout={
+            line.hasMatch
+              ? (e) => {
+                  if (hasScrolledRef.current) return;
+                  hasScrolledRef.current = true;
+                  const y = Math.max(e.nativeEvent.layout.y - 40, 0);
+                  scrollRef.current?.scrollTo({ y, animated: true });
+                }
+              : undefined
+          }
+        >
+          <Text style={s.content}>
+            {line.parts.map((part, j) =>
+              part.matched ? (
+                <Text key={j} style={s.highlight}>
+                  {part.text}
+                </Text>
+              ) : (
+                <Text key={j}>{part.text}</Text>
+              ),
+            )}
+          </Text>
+        </View>
+      ))}
     </>
   );
 }
