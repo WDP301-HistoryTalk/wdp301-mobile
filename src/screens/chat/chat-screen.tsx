@@ -701,6 +701,14 @@ export default function ChatScreen() {
   // cho việc tra cứu trích dẫn — không đụng tới contextId dùng khi tạo session.
   const citationContextId =
     contextId || character?.contexts?.[0]?.contextId?.id || "";
+  // Đối chiếu trích dẫn phải quét tài liệu của TẤT CẢ bối cảnh nhân vật liên
+  // kết (không chỉ context đầu tiên/đang active) — xem quote-match ở web.
+  const citationContextIds =
+    character?.contexts && character.contexts.length > 0
+      ? character.contexts.map((c) => c.contextId.id)
+      : citationContextId
+        ? [citationContextId]
+        : [];
   const { mutateAsync: sendMessage, isPending: sending } = useSendMessage();
   const { mutateAsync: createSession, isPending: creatingSession } =
     useCreateSession();
@@ -1686,6 +1694,7 @@ export default function ChatScreen() {
         quote={citationQuote}
         characterId={characterId}
         contextId={citationContextId}
+        contextIds={citationContextIds}
       />
     </View>
   );

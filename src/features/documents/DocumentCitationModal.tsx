@@ -15,7 +15,7 @@ import {
   TEXT,
 } from "@/constants/palette";
 
-import { usePublicCharacterDocuments, usePublicContextDocuments } from "./hooks";
+import { usePublicCharacterDocuments, usePublicContextsDocuments } from "./hooks";
 import { findDocumentForQuote, splitContentByQuote, type QuoteTextPart } from "./quote-match";
 import type { RagDocument } from "./types";
 
@@ -55,6 +55,14 @@ interface DocumentCitationModalProps {
   onClose: () => void;
   characterId?: string;
   contextId?: string;
+  /**
+   * Tất cả bối cảnh nhân vật này liên kết (1 nhân vật có thể gắn nhiều hơn 1
+   * bối cảnh/file). Khi đối chiếu quote phải quét tài liệu của TẤT CẢ các
+   * bối cảnh này, không chỉ riêng `contextId` — nếu không sẽ có trường hợp
+   * AI trích dẫn đúng nhưng modal báo "không tìm thấy" chỉ vì tài liệu nguồn
+   * thuộc một bối cảnh khác của cùng nhân vật.
+   */
+  contextIds?: string[];
   /** Đoạn trích cần highlight + dùng để tìm tài liệu tương ứng. */
   quote?: string | null;
   /** Mở thẳng 1 tài liệu cụ thể (vào từ mục "Tài liệu tham khảo", không có quote). */
@@ -118,6 +126,7 @@ export function DocumentCitationModal({
   onClose,
   characterId,
   contextId,
+  contextIds,
   quote,
   initialDocumentId,
 }: DocumentCitationModalProps) {
@@ -125,8 +134,9 @@ export function DocumentCitationModal({
   const scrollRef = useRef<ScrollView>(null);
   const { data: characterDocs = [], isLoading: isLoadingCharacterDocs } =
     usePublicCharacterDocuments(characterId);
-  const { data: contextDocs = [], isLoading: isLoadingContextDocs } =
-    usePublicContextDocuments(contextId);
+  const { data: contextDocs = [], isLoading: isLoadingContextDocs } = usePublicContextsDocuments(
+    contextIds && contextIds.length > 0 ? contextIds : contextId ? [contextId] : [],
+  );
 
   const documents: RagDocument[] = [...characterDocs, ...contextDocs];
   const isLoading = isLoadingCharacterDocs || isLoadingContextDocs;
