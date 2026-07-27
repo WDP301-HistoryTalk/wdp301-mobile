@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import {
   ArrowLeft, BadgeCheck, Check, Clock, Crown, History, ShieldCheck, Sparkles, XCircle,
@@ -30,8 +31,13 @@ import {
 import { useMe } from '@/features/auth/hooks/use-me';
 import { useCreateOrder } from '@/features/payment/hooks/use-create-order';
 import { useMyOrders } from '@/features/payment/hooks/use-my-orders';
+import { useNotifyPayosReturn } from '@/features/payment/hooks/use-notify-payos-return';
 import { useTiers } from '@/features/payment/hooks/use-tiers';
 import type { OrderStatus, Tier } from '@/features/payment/types';
+
+// Phai khop scheme "mobilehistorytalk" dang ky trong app.json — BE dung gia
+// tri nay lam returnUrl/cancelUrl khi tao PayOS checkout link (platform: 'mobile').
+const PAYOS_REDIRECT_URL = Linking.createURL('payment/result');
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
@@ -56,6 +62,7 @@ export default function PaymentScreen() {
   const { data: profile, refetch: refetchMe } = useMe();
   const { data: tiers, isLoading, refetch: refetchTiers } = useTiers();
   const createOrder = useCreateOrder();
+  const notifyReturn = useNotifyPayosReturn();
   const { refetch: refetchOrders } = useMyOrders();
   const [refreshing, setRefreshing] = useState(false);
   async function onRefresh() {
@@ -72,20 +79,45 @@ export default function PaymentScreen() {
 
   const activeTiers = (tiers ?? []).filter((t) => t.isActive).sort((a, b) => a.amount - b.amount);
 
-  // Khong co endpoint tra ve trang thai 1 don rieng — sau khi dong trinh duyet
-  // trong app (PayOS da xu ly + goi webhook), doi chieu bang cach doc lai lich
-  // su thanh toan cua minh va tim don vua tao theo orderCode.
+  // openAuthSessionAsync mo checkout trong trinh duyet trong app va tu dong
+  // dong + resolve ngay khi PayOS redirect ve PAYOS_REDIRECT_URL (deep link
+  // "mobilehistorytalk://payment/result") — khac voi openBrowserAsync truoc day
+  // chi resolve khi nguoi dung tu tay dong trinh duyet.
   async function handleCheckout(tier: Tier) {
     if (tier.amount <= 0) return;
     setResultStatus(null);
     setLoadingTierId(tier.tierId);
     try {
       const order = await createOrder.mutateAsync(tier.tierId);
-      await WebBrowser.openBrowserAsync(order.checkoutUrl);
+      const result = await WebBrowser.openAuthSessionAsync(order.checkoutUrl, PAYOS_REDIRECT_URL);
+
+      let resolvedStatus: OrderStatus | undefined;
+      if (result.type === 'success' && result.url) {
+        const { queryParams } = Linking.parse(result.url);
+        const orderCodeNum = Number(queryParams?.orderCode ?? order.orderCode);
+        if (orderCodeNum) {
+          try {
+            const returned = await notifyReturn.mutateAsync({
+              code: String(queryParams?.code ?? ''),
+              id: String(queryParams?.id ?? ''),
+              cancel: queryParams?.cancel === 'true',
+              status: String(queryParams?.status ?? ''),
+              orderCode: orderCodeNum,
+            });
+            resolvedStatus = returned.resolvedStatus;
+          } catch {
+            // Webhook van la nguon su that chinh — bo qua loi, roi xuong doan
+            // doi chieu qua lich su thanh toan ben duoi.
+          }
+        }
+      }
 
       const [{ data: history }] = await Promise.all([refetchOrders(), refetchMe(), refetchTiers()]);
-      const matched = history?.find((o) => o.orderCode === order.orderCode);
-      setResultStatus(matched?.status ?? 'PENDING');
+      if (!resolvedStatus) {
+        const matched = history?.find((o) => o.orderCode === order.orderCode);
+        resolvedStatus = matched?.status ?? 'PENDING';
+      }
+      setResultStatus(resolvedStatus);
     } catch (e: any) {
       Alert.alert('Lỗi', e?.message ?? 'Không thể tạo đơn thanh toán. Vui lòng thử lại.');
     } finally {

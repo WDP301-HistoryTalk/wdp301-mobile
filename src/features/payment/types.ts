@@ -32,3 +32,25 @@ export interface PaymentHistoryItem {
   paidAt: string | null;
   expiredAt: string | null;
 }
+
+// Query params PayOS appends to the deep link it redirects to after checkout.
+export interface PayosReturnPayload {
+  code: string;
+  id: string;
+  cancel: boolean;
+  status: string;
+  orderCode: number;
+}
+
+export interface PayosReturnResult {
+  orderCode: number;
+  resolvedStatus: OrderStatus;
+  message: string;
+  user: {
+    uid: string;
+    tierId: string | null;
+    tierTitle: string | null;
+    subscriptionEndTime: string | null;
+    token: number;
+  } | null;
+}
