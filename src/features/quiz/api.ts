@@ -37,10 +37,12 @@ export const quizApi = {
       body: JSON.stringify(data),
     }),
 
-  getMyResults: (page = 0, size = 10) =>
-    apiClient<MyResultsPage>(
-      `/quizzes/results/me?page=${page}&size=${size}`
-    ),
+  getMyResults: (page = 0, size = 10, quizId?: string) => {
+    const qs = quizId ? `&quizId=${encodeURIComponent(quizId)}` : '';
+    return apiClient<MyResultsPage>(
+      `/quizzes/results/me?page=${page}&size=${size}${qs}`
+    );
+  },
 
   getMyResultBySession: (sessionId: string) =>
     apiClient<QuizResultDetail>(`/quizzes/results/me/${sessionId}`),
