@@ -563,7 +563,12 @@ export default function ContextDetailScreen() {
 
           {/* Quiz banner */}
           <TouchableOpacity
-            onPress={() => router.push("/quiz")}
+            onPress={() =>
+              router.push({
+                pathname: "/quiz",
+                params: { contextId: resolvedId },
+              })
+            }
             activeOpacity={0.85}
             style={quizStyles.banner}
           >

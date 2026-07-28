@@ -1,8 +1,8 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { History, Search, Star } from "lucide-react-native";
 
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -146,21 +146,49 @@ function QuizSkeletons() {
 // ─── screen ───────────────────────────────────────────────────────────────────
 export default function QuizListScreen() {
   const router = useRouter();
+  const { contextId: contextIdParam } = useLocalSearchParams<{ contextId?: string }>();
+  const initialContextId = Array.isArray(contextIdParam) ? contextIdParam[0] : contextIdParam;
+
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<EraFilter>("ALL");
   const [level, setLevel] = useState<LevelFilter>("ALL");
+  const [contextId, setContextId] = useState<string>(initialContextId ?? "ALL");
+
+  // Den tu banner "Kiem tra kien thuc" o man chi tiet boi canh — moi lan
+  // nhan lai voi 1 contextId khac (vd tu 1 boi canh khac), ap lai filter nay
+  // ngay ca khi man hinh quiz da duoc mount san (tab dieu huong khong remount).
+  useEffect(() => {
+    if (initialContextId) setContextId(initialContextId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContextId]);
 
   const { data: quizzes, isLoading, isError, refetch, isRefetching } = useQuizzes(query || undefined);
+
+  // Danh sach "tran danh" (boi canh lich su) suy ra tu chinh cac quiz da tai,
+  // khong can goi them API rieng.
+  const contextFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const q of quizzes ?? []) {
+      if (q.contextId && q.contextTitle && !seen.has(q.contextId)) {
+        seen.set(q.contextId, q.contextTitle);
+      }
+    }
+    const sorted = Array.from(seen.entries())
+      .sort(([, a], [, b]) => a.localeCompare(b))
+      .map(([key, label]) => ({ key, label }));
+    return [{ key: "ALL", label: "Tất cả" }, ...sorted];
+  }, [quizzes]);
 
   const filtered = useMemo(() => {
     if (!quizzes) return [];
     return quizzes.filter((q) => {
       const eraMatch = era === "ALL" || q.era === era;
       const levelMatch = level === "ALL" || q.level === level;
-      return eraMatch && levelMatch;
+      const contextMatch = contextId === "ALL" || q.contextId === contextId;
+      return eraMatch && levelMatch && contextMatch;
     });
-  }, [quizzes, era, level]);
+  }, [quizzes, era, level, contextId]);
 
   function submitSearch() {
     setQuery(search.trim());
@@ -254,15 +282,23 @@ export default function QuizListScreen() {
       </ScrollView>
       </View>
 
-      {/* count + difficulty filter */}
+      {/* count + difficulty/context filter */}
       <View style={s.countBar}>
         <Text style={s.countText}>{filtered.length} bộ câu hỏi</Text>
-        <FilterDropdown
-          label="Độ khó"
-          options={LEVEL_FILTER}
-          value={level}
-          onChange={(v) => setLevel(v as LevelFilter)}
-        />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <FilterDropdown
+            label="Trận đánh"
+            options={contextFilterOptions}
+            value={contextId}
+            onChange={setContextId}
+          />
+          <FilterDropdown
+            label="Độ khó"
+            options={LEVEL_FILTER}
+            value={level}
+            onChange={(v) => setLevel(v as LevelFilter)}
+          />
+        </View>
       </View>
 
       {/* list */}
@@ -291,7 +327,7 @@ export default function QuizListScreen() {
             <View style={{ alignItems: "center", marginTop: 60, gap: 12 }}>
               <Star size={40} color={MUTED} strokeWidth={1.25} />
               <Text style={{ color: MUTED, fontSize: 15 }}>
-                {query || era !== "ALL" || level !== "ALL"
+                {query || era !== "ALL" || level !== "ALL" || contextId !== "ALL"
                   ? "Không tìm thấy kết quả"
                   : "Chưa có bộ câu hỏi"}
               </Text>

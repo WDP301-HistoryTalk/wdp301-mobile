@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, BookOpen, Clock, History, Play, Star, Timer, User, Users } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, BookOpen, History, Play, Star, Timer, User, Users } from 'lucide-react-native';
+import { useState } from 'react';
 import {
   ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet,
-  Switch, TextInput, TouchableOpacity, View,
+  Switch, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
   AMBER, BG, BORDER, CARD, GREEN, MUTED, ORANGE,
-  ORANGE_TINT, RED, SURFACE, TEXT, TEXT2,
+  ORANGE_TINT, RED, SURFACE, TEXT,
 } from '@/constants/palette';
 import { useAuthStore } from '@/features/auth/store';
 import { ERA_COLORS, ERA_LABELS } from '@/features/characters/types';
@@ -21,6 +21,8 @@ import { useQuiz } from '@/features/quiz/hooks/use-quiz';
 import { clearQuizProgress, loadQuizProgress, type SavedQuizProgress } from '@/features/quiz/progress-storage';
 import { useQuizStore } from '@/features/quiz/store';
 import type { QuizLevel } from '@/features/quiz/types';
+
+const TIME_PRESETS = [5, 10, 15] as const;
 
 const LEVEL_LABELS: Record<QuizLevel, string> = {
   EASY: 'Dễ',
@@ -80,17 +82,9 @@ export default function QuizDetailScreen() {
   const [resumeConfirm, setResumeConfirm] = useState<{ saved: SavedQuizProgress; limitedTime?: number } | null>(null);
 
   const [timeEnabled, setTimeEnabled] = useState(false);
-  const [timeMins, setTimeMins] = useState('10');
+  const [timeMins, setTimeMins] = useState<typeof TIME_PRESETS[number]>(10);
   // Che do luyen tap: hien dung/sai ngay sau moi cau, chay song song che do thi hien tai.
   const [mode, setMode] = useState<'exam' | 'practice'>('exam');
-  // Gợi ý thời gian theo durationSeconds của quiz — chỉ set 1 lần khi data
-  // vừa tải xong, không ghi đè nếu người dùng đã tự gõ số phút khác.
-  const didSuggestTimeRef = useRef(false);
-  useEffect(() => {
-    if (didSuggestTimeRef.current || !quiz?.durationSeconds) return;
-    didSuggestTimeRef.current = true;
-    setTimeMins(String(Math.max(1, Math.round(quiz.durationSeconds / 60))));
-  }, [quiz?.durationSeconds]);
 
   const ec = quiz ? ERA_COLORS[quiz.era as keyof typeof ERA_COLORS] : undefined;
   const eraLabel = quiz ? (ERA_LABELS[quiz.era as keyof typeof ERA_LABELS] ?? quiz.era) : '';
@@ -104,13 +98,10 @@ export default function QuizDetailScreen() {
       return;
     }
 
-    const mins = parseInt(timeMins, 10);
-    if (timeEnabled && (!mins || mins <= 0)) {
-      Alert.alert('Thời gian không hợp lệ', 'Vui lòng nhập số phút lớn hơn 0.');
-      return;
-    }
-
-    const limitedTime = timeEnabled ? mins * 60 : undefined;
+    // 0 nghia la khong gioi han thoi gian — phai gui tuong minh, khong duoc
+    // bo qua param nay, neu khong backend se roi ve durationSeconds mac dinh
+    // cua quiz du nguoi dung da tat cong tac gioi han.
+    const limitedTime = timeEnabled ? timeMins * 60 : 0;
 
     const saved = await loadQuizProgress(quiz.quizId);
     if (saved) {
@@ -300,23 +291,20 @@ export default function QuizDetailScreen() {
             </View>
 
             {timeEnabled && (
-              <View style={ss.timeInputRow}>
-                <Clock size={14} color={MUTED} strokeWidth={1.75} />
-                <Text style={{ color: MUTED, fontSize: 13 }}>Thời gian:</Text>
-                <TextInput
-                  style={ss.timeInput}
-                  value={timeMins}
-                  onChangeText={(v) => setTimeMins(v.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  selectTextOnFocus
-                />
-                <Text style={{ color: TEXT2, fontSize: 13 }}>phút</Text>
-                {timeMins ? (
-                  <Text style={{ color: MUTED, fontSize: 12, marginLeft: 4 }}>
-                    ({parseInt(timeMins, 10) * 60} giây)
-                  </Text>
-                ) : null}
+              <View style={ss.timeChipsRow}>
+                {TIME_PRESETS.map((mins) => {
+                  const active = timeMins === mins;
+                  return (
+                    <TouchableOpacity
+                      key={mins}
+                      onPress={() => setTimeMins(mins)}
+                      activeOpacity={0.8}
+                      style={[ss.timeChip, active && ss.timeChipActive]}
+                    >
+                      <Text style={[ss.timeChipText, active && { color: '#fff' }]}>{mins} phút</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -409,17 +397,18 @@ const ss = StyleSheet.create({
   timeToggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  timeInputRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+  timeChipsRow: {
+    flexDirection: 'row', gap: 8,
     marginTop: 14, paddingTop: 14,
     borderTopWidth: 1, borderTopColor: BORDER,
   },
-  timeInput: {
-    backgroundColor: SURFACE, borderRadius: 10, borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 12, paddingVertical: 6,
-    color: TEXT, fontSize: 16, fontWeight: '700',
-    minWidth: 56, textAlign: 'center',
+  timeChip: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 9, borderRadius: 12,
+    borderWidth: 1.5, borderColor: BORDER, backgroundColor: SURFACE,
   },
+  timeChipActive: { borderColor: ORANGE, backgroundColor: ORANGE },
+  timeChipText: { color: MUTED, fontWeight: '700', fontSize: 13 },
 
   startWrap: {
     position: 'absolute', bottom: 0, left: 0, right: 0,

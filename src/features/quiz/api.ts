@@ -20,7 +20,10 @@ export const quizApi = {
     apiClient<Quiz>(`/quizzes/${quizId}`),
 
   startSession: async (quizId: string, limitedTime?: number) => {
-    const qs = limitedTime ? `?limitedTime=${limitedTime}` : '';
+    // 0 must still be sent explicitly — it means "no time limit", distinct
+    // from omitting the param (which lets the backend fall back to the
+    // quiz's own default duration).
+    const qs = limitedTime !== undefined ? `?limitedTime=${limitedTime}` : '';
     const session = await apiClient<QuizSession>(`/quizzes/${quizId}/start${qs}`, {
       method: 'POST',
       body: JSON.stringify({}),
