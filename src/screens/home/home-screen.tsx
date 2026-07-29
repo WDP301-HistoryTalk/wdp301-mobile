@@ -38,6 +38,7 @@ import {
 import { useAuthStore } from "@/features/auth/store";
 import { useCharacters } from "@/features/characters/hooks/use-characters";
 import { useChatHistory } from "@/features/chat/hooks/use-chat-history";
+import { useGamificationToday } from "@/features/gamification/hooks/use-today";
 import { useHistoricalContexts } from "@/features/historical-contexts/hooks/use-historical-contexts";
 import { useQuizResults } from "@/features/quiz/hooks/use-quiz-results";
 
@@ -117,6 +118,10 @@ export default function HomeScreen() {
   const { data: ctxData, isLoading: ctxLoading, refetch: refetchCtx } = useHistoricalContexts({});
   const { data: chatDataHistory, refetch: refetchChat } = useChatHistory();
   const { data: quizResultsData, refetch: refetchQuiz } = useQuizResults(0, 3);
+  // Cùng queryKey ['gamification', 'today'] với hook nội bộ của DailyQuestsCard —
+  // refetch ở đây cũng làm mới card đó (React Query dedupe theo key), không cần
+  // prop-drilling. Trước đây bị thiếu nên kéo-để-làm-mới không cập nhật quest.
+  const { refetch: refetchGamification } = useGamificationToday();
 
   const characters = charData?.pages[0]?.content?.slice(0, 8) ?? [];
   const contexts = ctxData?.pages[0]?.content?.slice(0, 4) ?? [];
@@ -127,7 +132,13 @@ export default function HomeScreen() {
   async function onRefresh() {
     setRefreshing(true);
     try {
-      await Promise.all([refetchChars(), refetchCtx(), refetchChat(), refetchQuiz()]);
+      await Promise.all([
+        refetchChars(),
+        refetchCtx(),
+        refetchChat(),
+        refetchQuiz(),
+        refetchGamification(),
+      ]);
     } finally {
       setRefreshing(false);
     }
