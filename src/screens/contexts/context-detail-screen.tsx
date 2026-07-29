@@ -177,6 +177,7 @@ function DirectVideoPlayer({
       contentFit="contain"
       nativeControls
       fullscreenOptions={{ enable: true }}
+      surfaceType="textureView"
     />
   );
 }
