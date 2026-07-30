@@ -1,30 +1,29 @@
+import axios from 'axios';
+
 import type { ApiResponse, AuthResponse, RefreshTokenResponse } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
 
-async function parseJsonResponse<T>(res: Response, path: string): Promise<ApiResponse<T> | null> {
-  const raw = await res.text();
-  if (!raw) return null;
+const http = axios.create({ baseURL: BASE_URL, validateStatus: () => true });
 
-  try {
-    return JSON.parse(raw) as ApiResponse<T>;
-  } catch {
-    const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 120);
-    throw new Error(`API trả về dữ liệu không phải JSON (${res.status}) tại ${BASE_URL}${path}: ${preview}`);
+function parseJsonResponse<T>(data: unknown, status: number, path: string): ApiResponse<T> | null {
+  if (data === '' || data === undefined || data === null) return null;
+  if (typeof data === 'string') {
+    const preview = data.replace(/\s+/g, ' ').trim().slice(0, 120);
+    throw new Error(`API trả về dữ liệu không phải JSON (${status}) tại ${BASE_URL}${path}: ${preview}`);
   }
+  return data as ApiResponse<T>;
 }
 
 async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
+  const res = await http.post(path, body, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(body),
   });
-  const json = await parseJsonResponse<T>(res, path);
-  if (!res.ok) throw new Error(json?.message || 'Request failed');
+  const json = parseJsonResponse<T>(res.data, res.status, path);
+  if (res.status < 200 || res.status >= 300) throw new Error(json?.message || 'Request failed');
   return json?.data as T;
 }
 

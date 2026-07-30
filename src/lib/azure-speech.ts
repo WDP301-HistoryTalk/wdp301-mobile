@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { File, Paths } from 'expo-file-system';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 
@@ -24,25 +25,27 @@ async function synthesizeSpeech(text: string): Promise<ArrayBuffer> {
 
   const ssml = `<speak version="1.0" xml:lang="vi-VN"><voice name="${AZURE_SPEECH_VOICE}">${escapeSsml(text)}</voice></speak>`;
 
-  const res = await fetch(
+  const res = await axios.post(
     `https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,
+    ssml,
     {
-      method: 'POST',
       headers: {
         'Ocp-Apim-Subscription-Key': AZURE_SPEECH_KEY,
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
         'User-Agent': 'HistoryTalkMobile',
       },
-      body: ssml,
+      responseType: 'arraybuffer',
+      validateStatus: () => true,
     },
   );
 
-  if (!res.ok) {
-    throw new Error(`Azure Speech loi ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (res.status < 200 || res.status >= 300) {
+    const preview = new TextDecoder().decode(res.data as ArrayBuffer).slice(0, 200);
+    throw new Error(`Azure Speech loi ${res.status}: ${preview}`);
   }
 
-  return res.arrayBuffer();
+  return res.data as ArrayBuffer;
 }
 
 /** Đọc to một đoạn text bằng giọng Azure. Trả về player để theo dõi trạng thái phát. */

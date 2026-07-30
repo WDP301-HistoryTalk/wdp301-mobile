@@ -97,6 +97,8 @@ export const chatApi = {
       body: JSON.stringify({ sessionId, content, messageType }),
     }),
 
+  // Giu fetch() thay vi axios: can res.body.getReader() de doc SSE tung
+  // chunk khi no ve, axios/XHR tren RN khong expose ReadableStream nay.
   streamMessage: async (
     sessionId: string,
     content: string,
@@ -152,36 +154,6 @@ export const chatApi = {
     return apiClient<ChatSession[]>(`/chat/sessions?${qs.toString()}`);
   },
 
-  deleteSession: async (sessionId: string) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await fetch(
-      `${BASE_URL}/chat/sessions/${sessionId}/soft-delete`,
-      {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      },
-    );
-
-    const raw = await res.text();
-    let parsed: any = null;
-
-    if (raw) {
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        parsed = { message: raw };
-      }
-    }
-
-    if (!res.ok) {
-      throw new Error(
-        parsed?.message ?? raw ?? "Không thể xóa cuộc trò chuyện",
-      );
-    }
-
-    return {};
-  },
+  deleteSession: (sessionId: string) =>
+    apiClient<null>(`/chat/sessions/${sessionId}/soft-delete`, { method: "PATCH" }),
 };
